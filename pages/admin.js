@@ -1692,8 +1692,12 @@ export default function Admin({session}){
 
   useEffect(()=>{
     if(!session){window.location.href='/login';return}
-    supabase.from('profiles').select('role').eq('id',session.user.id).single()
-      .then(({data})=>{if(!data||data.role!=='admin'){window.location.href='/card';return};loadAll()})
+    fetch('/api/admin/users?me=1', {
+        headers: { Authorization: 'Bearer ' + session.access_token }
+      }).then(r=>r.json()).then(data=>{
+        if(!data||data.role!=='admin'){window.location.href='/card';return}
+        loadAll()
+      }).catch(()=>{ window.location.href='/card' })
   },[session])
 
   async function loadAll(){
