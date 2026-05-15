@@ -6,6 +6,7 @@ const supabase = createClient(
 )
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store')
   if (req.method === 'GET') {
     const { client_id } = req.query
     if (!client_id) return res.status(400).json({ error: 'client_id required' })
