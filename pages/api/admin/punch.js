@@ -6,6 +6,7 @@ const supabaseAdmin = createClient(
 )
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store')
   if (req.method !== 'POST') return res.status(405).end()
   const { card_id, payment_amount } = req.body
   const { data: card } = await supabaseAdmin.from('loyalty_cards').select('*').eq('id', card_id).single()
