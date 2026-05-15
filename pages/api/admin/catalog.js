@@ -9,7 +9,11 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const { data: items, error } = await supabase
       .from('catalog_items')
-      .select('id, name, description, active, created_at, updated_at')
+      .select(`
+        id, name, description, active, created_at, updated_at,
+        catalog_prices ( id, amount, currency, interval, active ),
+        catalog_costs ( id, cost, notes, suppliers, updated_at )
+      `)
       .order('name')
     if (error) return res.status(500).json({ error: error.message })
     return res.status(200).json({ items: items || [] })
@@ -36,6 +40,7 @@ export default async function handler(req, res) {
       await supabase.from('catalog_costs').insert({ product_id, ...updateData })
     }
 
+    // Save cost to history only when cost changes
     if (cost !== undefined) {
       await supabase.from('catalog_cost_history').insert({
         product_id,
@@ -46,7 +51,11 @@ export default async function handler(req, res) {
 
     const { data: updated } = await supabase
       .from('catalog_items')
-      .select('id, name, description, active')
+      .select(`
+        id, name, description, active,
+        catalog_prices ( id, amount, currency, interval, active ),
+        catalog_costs ( id, cost, notes, suppliers, updated_at )
+      `)
       .eq('id', product_id)
       .single()
 
