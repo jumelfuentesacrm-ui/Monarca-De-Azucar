@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const gold='#E35A1B',black='#1F140E',white='#FBF7EE',gray='#7A6452',gl='rgba(31,20,14,0.10)',ink='#1F140E'
@@ -1669,6 +1669,47 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
   )
 }
 
+
+function LogoButterfly({ color='#E35A1B', bodyColor='#FBF7EE', size=24 }) {
+  const [flap, setFlap] = React.useState(false)
+  React.useEffect(() => {
+    const tick = () => {
+      setFlap(true)
+      setTimeout(() => setFlap(false), 700)
+    }
+    tick() // flap on mount
+    const iv = setInterval(tick, 5000)
+    return () => clearInterval(iv)
+  }, [])
+  const wStyle = {
+    transformOrigin: '50px 41px',
+    transition: 'transform 0.15s ease-in-out',
+  }
+  const flapL = flap ? {
+    ...wStyle,
+    animation: 'adm5s-aletear 0.35s ease-in-out 2',
+  } : wStyle
+  const flapR = flap ? {
+    ...wStyle,
+    animation: 'adm5s-aletear 0.35s ease-in-out 2 0.1s',
+  } : wStyle
+  return (
+    <svg width={size} height={size*0.82} viewBox="0 0 100 82" style={{flexShrink:0}}>
+      <style>{`@keyframes adm5s-aletear{0%,100%{transform:scaleX(1)}50%{transform:scaleX(0.35)}}`}</style>
+      <g style={flapL}>
+        <path d="M50 41 C42 14,20 6,8 16 C-2 28,6 50,24 56 C36 60,46 54,50 41Z" fill={color}/>
+        <path d="M50 41 C44 56,30 68,22 70 C16 70,18 60,28 54 C36 50,46 50,50 41Z" fill={color} opacity=".9"/>
+      </g>
+      <g style={flapR}>
+        <path d="M50 41 C58 14,80 6,92 16 C102 28,94 50,76 56 C64 60,54 54,50 41Z" fill={color}/>
+        <path d="M50 41 C56 56,70 68,78 70 C84 70,82 60,72 54 C64 50,54 50,50 41Z" fill={color} opacity=".9"/>
+      </g>
+      <ellipse cx="50" cy="46" rx="2.2" ry="22" fill={bodyColor}/>
+      <circle cx="50" cy="24" r="2.8" fill={bodyColor}/>
+    </svg>
+  )
+}
+
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
@@ -1877,19 +1918,7 @@ export default function Admin({session}){
       <div style={{background:'#F4EDDD',minHeight:'100vh',fontFamily:ff,paddingBottom:70}}>
         <div style={{background:black,position:'fixed',top:0,left:0,right:0,zIndex:100,height:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 1.25rem'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <svg width="24" height="20" viewBox="0 0 100 82" style={{flexShrink:0,cursor:'pointer'}} onMouseEnter={e=>{e.currentTarget.querySelectorAll('.adm-wing').forEach(w=>w.style.animationPlayState='running')}} onMouseLeave={e=>{e.currentTarget.querySelectorAll('.adm-wing').forEach(w=>w.style.animationPlayState='paused')}}>
-                <style>{'@keyframes adm-aletear{0%,100%{transform:scaleX(1)}50%{transform:scaleX(0.4)}}.adm-wing{transform-origin:50px 41px;animation:adm-aletear 0.5s ease-in-out infinite;animation-play-state:paused}'}</style>
-                <g className="adm-wing" style={{animationDelay:'0s'}}>
-                  <path d="M50 41 C42 14,20 6,8 16 C-2 28,6 50,24 56 C36 60,46 54,50 41Z" fill={gold}/>
-                  <path d="M50 41 C44 56,30 68,22 70 C16 70,18 60,28 54 C36 50,46 50,50 41Z" fill={gold} opacity=".9"/>
-                </g>
-                <g className="adm-wing" style={{animationDelay:'0.12s'}}>
-                  <path d="M50 41 C58 14,80 6,92 16 C102 28,94 50,76 56 C64 60,54 54,50 41Z" fill={gold}/>
-                  <path d="M50 41 C56 56,70 68,78 70 C84 70,82 60,72 54 C64 50,54 50,50 41Z" fill={gold} opacity=".9"/>
-                </g>
-                <ellipse cx="50" cy="46" rx="2.2" ry="22" fill={white}/>
-                <circle cx="50" cy="24" r="2.8" fill={white}/>
-              </svg>
+              <LogoButterfly color={gold} bodyColor={white}/>
               <div style={{fontFamily:ffS,fontSize:'1.05rem',color:white}}>Monarca <em style={{color:gold,fontStyle:'italic',fontWeight:400}}>de</em> Azúcar <span style={{fontSize:'0.48rem',letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.26)',marginLeft:'0.4rem',fontFamily:ff,fontStyle:'normal'}}>Admin</span></div>
             </div>
           <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
@@ -1899,35 +1928,45 @@ export default function Admin({session}){
         </div>
         <div style={{display:'flex',paddingTop:52,minHeight:'100vh'}}>
           {/* SIDEBAR */}
-          <div className="admin-sidebar" style={{width:205,background:ink,flexShrink:0,position:'fixed',top:52,left:0,bottom:0,padding:'1.5rem 0',overflowY:'auto'}}>
-            <button onClick={()=>setPanel('notifications')} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='notifications'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='notifications'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>
-              <span>Alertas</span>
-              {getNotifications(cards).length>0&&<span style={{background:'#c0392b',color:'white',borderRadius:'50%',width:18,height:18,fontSize:'0.6rem',fontWeight:700,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{getNotifications(cards).length}</span>}
-            </button>
-            <button onClick={()=>setPanel('bookings')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='bookings'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='bookings'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Reservas</button>
-            <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.5rem'}}/>
-            {[['dashboard','Resumen'],['clients','Clientes'],['campaigns','Campañas']].map(([id,label])=>(<button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel===id?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>{label}</button>))}
-            <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.5rem'}}/>
-            <button onClick={()=>setLoyaltyOpen(o=>!o)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:['cards','punch'].includes(panel)?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',width:'100%',textAlign:'left',fontFamily:ff}}>
-              <span>Club Monarca</span>
-              <span style={{fontSize:'0.6rem',display:'inline-block',transform:loyaltyOpen?'rotate(180deg)':'rotate(0deg)',transition:'transform 0.2s'}}>▾</span>
-            </button>
-            {loyaltyOpen&&(<div style={{background:'rgba(0,0,0,0.15)'}}>
-              {[['cards','Tarjetas'],['punch','Punchear']].map(([id,label])=>(<button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',padding:'0.68rem 1.5rem 0.68rem 2.25rem',fontSize:'0.68rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel===id?gold:'rgba(255,255,255,0.9)',cursor:'pointer',background:'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>{label}</button>))}
-            </div>)}
-            <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.5rem'}}/>
-            <button onClick={()=>setPanel('catalog')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='catalog'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='catalog'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Catálogo</button>
-            <button onClick={()=>setPanel('supplies')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='supplies'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='supplies'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Insumos</button>
-            <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.5rem'}}/>
-            <button onClick={()=>setPanel('system')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='system'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='system'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Sistema</button>
-            <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'1rem 1.5rem',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-              <div style={{fontSize:'0.5rem',color:'rgba(255,255,255,0.2)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Powered by</div>
-              <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.35)',marginTop:'0.15rem',fontFamily:ffS}}>A<span style={{color:gold}}>+</span> CRM</div>
+          <div className="admin-sidebar" style={{width:220,background:ink,flexShrink:0,position:'fixed',top:52,left:0,bottom:0,overflowY:'auto',display:'flex',flexDirection:'column'}}>
+            <div style={{padding:'1.25rem 1.25rem 0.75rem',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+                <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(227,90,27,0.2)',border:'1px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.72rem',fontWeight:700,color:gold,flexShrink:0,fontFamily:ff}}>
+                  {(users.find(u=>u.id===session?.user?.id)?.full_name||'AD').split(' ').map(w=>w[0]).join('').slice(0,2)}
+                </div>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:'0.78rem',color:white,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
+                  <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.35)'}}>Panadera · Dueña</div>
+                </div>
+              </div>
+            </div>
+            <div style={{padding:'1rem 0 0.25rem'}}>
+              <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',padding:'0 1.25rem',marginBottom:'0.4rem',fontFamily:ff}}>Negocio</div>
+              {[['dashboard','◆','Resumen'],['clients','◌','Clientes'],['bookings','◇','Encargos'],['cards','☰','Tarjetas'],['punch','◯','Sellar visita'],['campaigns','◐','Campañas']].map(([id,icon,label])=>(
+                <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.7rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
+                  <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.3)',flexShrink:0,width:16,textAlign:'center'}}>{icon}</span>
+                  <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.75)'}}>{label}</span>
+                </button>
+              ))}
+            </div>
+            <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.25rem'}}/>
+            <div style={{padding:'0.25rem 0'}}>
+              <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',padding:'0 1.25rem',marginBottom:'0.4rem',fontFamily:ff}}>Operación</div>
+              {[['system','⛭','Configuración'],['notifications','◑','Alertas'],['catalog','◔','Catálogo'],['supplies','◈','Insumos']].map(([id,icon,label])=>(
+                <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.7rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
+                  <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.3)',flexShrink:0,width:16,textAlign:'center'}}>{icon}</span>
+                  <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.75)'}}>{label}</span>
+                </button>
+              ))}
+            </div>
+            <div style={{marginTop:'auto',padding:'1rem 1.25rem',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+              <div style={{fontSize:'0.5rem',color:'rgba(255,255,255,0.2)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.2rem'}}>Powered by</div>
+              <div style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.35)',fontFamily:ffS}}>A<span style={{color:gold}}>+</span> CRM</div>
             </div>
           </div>
 
           {/* MAIN */}
-          <div className="admin-main" style={{marginLeft:205,flex:1,padding:'1.75rem',maxWidth:980}}>
+          <div className="admin-main" style={{marginLeft:220,flex:1,padding:'1.75rem',maxWidth:980}}>
             {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} onSeleccionarClient={(card)=>{setSeleccionaredClient(card);setPanel('client')}} userName={session?.user?.user_metadata?.full_name||users.find(u=>u.id===session?.user?.id)?.full_name}/>}
             {panel==='client'&&selectedClient&&<ClientProfile card={selectedClient} onBack={()=>{setSeleccionaredClient(null);setPanel('dashboard')}}/>}
             {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
@@ -2017,9 +2056,9 @@ export default function Admin({session}){
         {/* MOBILE NAV */}
         <div className="mobile-nav">
           {[
-            ['notifications','Alertas'],
             ['dashboard','Resumen'],
-            ['loyalty','Loyalty'],
+            ['clients','Clientes'],
+            ['cards','Tarjetas'],
           ].map(([id,label])=>(
             <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
               className={panel===id||(['cards','punch','rewards'].includes(panel)&&id==='loyalty')?'active':''}>
