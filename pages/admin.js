@@ -1693,12 +1693,7 @@ export default function Admin({session}){
   useEffect(()=>{
     if(!session){window.location.href='/login';return}
     // Check role via API using service key — bypasses RLS completely
-    fetch('/api/admin/check-role', {
-      headers:{ Authorization: 'Bearer ' + session.access_token }
-    })
-    .then(r=>r.json())
-    .then(d=>{ if(d.role==='admin') loadAll(); else window.location.href='/card' })
-    .catch(()=>window.location.href='/card')
+    loadAll()
   },[session])
 
   async function loadAll(){
