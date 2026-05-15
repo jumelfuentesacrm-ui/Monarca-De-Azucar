@@ -1814,6 +1814,262 @@ function LogoButterfly({ color='#E35A1B', bodyColor='#FBF7EE', size=24 }) {
   )
 }
 
+
+function WebsitePanel({ catalog, showToast, loadAll }) {
+  const [items, setItems] = useState([])
+  const [filter, setFilter] = useState('Todos')
+  const [preview, setPreview] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newItem, setNewItem] = useState({name:'',description:'',category:'Galleta',price:'',active:true})
+
+  const gold='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452'
+  const ffS='"Instrument Serif",serif'
+  const ff='"DM Sans",sans-serif'
+
+  useEffect(()=>{
+    // Initialize from catalog with local state for toggles/badges
+    setItems((catalog||[]).map(item=>({
+      ...item,
+      visible: item.active,
+      badge_hoy: false,
+      badge_nuevo: false,
+      badge_temporada: false,
+      badge_agotado: false,
+      price: item.catalog_prices?.[0]?.amount || item.price || '',
+      category: item.category || 'Galleta',
+    })))
+  },[catalog])
+
+  const categories = ['Todos','Galleta','Pan dulce','Pastel']
+  const filtered = filter==='Todos' ? items : items.filter(i=>i.category===filter)
+  const visibleItems = items.filter(i=>i.visible)
+  const hoyItems = items.filter(i=>i.badge_hoy)
+  const nuevoItems = items.filter(i=>i.badge_nuevo)
+
+  function toggleBadge(id, badge) {
+    setItems(prev=>prev.map(i=>i.id===id?{...i,[badge]:!i[badge]}:i))
+  }
+
+  function toggleVisible(id) {
+    setItems(prev=>prev.map(i=>i.id===id?{...i,visible:!i.visible}:i))
+  }
+
+  async function publish() {
+    setSaving(true)
+    try {
+      // Update catalog_items active status for each item
+      for (const item of items) {
+        await fetch('/api/admin/catalog', {
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            product_id: item.id,
+            active: item.visible,
+            badge_hoy: item.badge_hoy,
+            badge_nuevo: item.badge_nuevo,
+            badge_temporada: item.badge_temporada,
+            badge_agotado: item.badge_agotado,
+          })
+        })
+      }
+      showToast('¡Cambios publicados en el sitio!')
+    } catch(e) {
+      showToast('Error al publicar')
+    }
+    setSaving(false)
+  }
+
+  async function addProduct() {
+    if(!newItem.name){showToast('Nombre requerido');return}
+    const res = await fetch('/api/admin/catalog',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newItem)})
+    if(res.ok){showToast('Producto añadido');setShowAddForm(false);setNewItem({name:'',description:'',category:'Galleta',price:'',active:true});loadAll()}
+    else showToast('Error al añadir producto')
+  }
+
+  const BadgeBtn = ({active,label,color,onClick}) => (
+    <button onClick={onClick} style={{padding:'0.18rem 0.55rem',borderRadius:20,border:'1px solid '+(active?color:'rgba(31,20,14,0.12)'),background:active?color+'18':'transparent',color:active?color:'rgba(31,20,14,0.3)',fontSize:'0.52rem',fontFamily:ff,cursor:'pointer',letterSpacing:'0.06em',textTransform:'uppercase',transition:'all 0.15s'}}>
+      {label}
+    </button>
+  )
+
+  const previewSorted = [...items.filter(i=>i.visible)].sort((a,b)=>(b.badge_hoy?1:0)-(a.badge_hoy?1:0))
+
+  return(
+    <div>
+      {/* Header */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1.25rem',flexWrap:'wrap',gap:'0.75rem'}}>
+        <div>
+          <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Website · <em style={{color:gold,fontStyle:'italic'}}>el menú visible</em></h2>
+          <p style={{fontSize:'0.72rem',color:mu,marginTop:'0.3rem',lineHeight:1.5,maxWidth:480}}>Escoge del catálogo qué productos aparecen en la sección "Lo que se hornea hoy" del sitio web. Sin crear nada nuevo — sólo prendes/apagas y arrastras para ordenar.</p>
+          <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginTop:'0.5rem'}}>
+            <div style={{width:7,height:7,borderRadius:'50%',background:'#2d8a60',animation:'pulse-green 2s ease-in-out infinite'}}/>
+            <style>{'@keyframes pulse-green{0%,100%{opacity:1}50%{opacity:0.4}}'}</style>
+            <span style={{fontSize:'0.62rem',color:mu}}>En vivo en monarcadeazucar.com</span>
+          </div>
+        </div>
+        <button onClick={publish} disabled={saving} style={{background:ink,color:cr,border:'none',padding:'0.75rem 1.5rem',borderRadius:999,fontFamily:ff,fontSize:'0.68rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer',whiteSpace:'nowrap',opacity:saving?0.7:1}}>
+          {saving?'Publicando…':'Publicar cambios →'}
+        </button>
+      </div>
+
+      {/* KPIs */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.75rem',marginBottom:'1.25rem'}}>
+        {[
+          ['Visibles en web', visibleItems.length, `de ${items.length} en catálogo`, ink],
+          ['Marcadas "Hoy"', hoyItems.length, 'aparecen primero', '#E35A1B'],
+          ['Marcadas "Nuevo"', nuevoItems.length, 'con badge verde', '#8e44ad'],
+          ['Última publicación', 'Hoy', new Date().toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'}), '#2d8a60'],
+        ].map(([label,val,sub,color])=>(
+          <div key={label} style={{background:'#FBF7EE',borderRadius:10,padding:'1rem',border:'1px solid rgba(31,20,14,0.07)'}}>
+            <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.4rem'}}>{label}</div>
+            <div style={{fontFamily:ffS,fontSize:'1.6rem',fontWeight:400,color,lineHeight:1}}>{val}</div>
+            <div style={{fontSize:'0.6rem',color:mu,marginTop:'0.25rem'}}>{sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:'1.25rem',alignItems:'start'}}>
+        {/* LEFT — catalog list */}
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.75rem'}}>
+            <div>
+              <div style={{fontSize:'0.52rem',letterSpacing:'0.14em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>Catálogo · Catalog</div>
+              <div style={{fontFamily:ffS,fontSize:'1.05rem',fontWeight:400}}>Prende lo que va al sitio</div>
+            </div>
+            <button onClick={()=>setShowAddForm(s=>!s)} style={{background:ink,color:cr,border:'none',padding:'0.5rem 1rem',borderRadius:999,fontFamily:ff,fontSize:'0.6rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>
+              + Añadir producto
+            </button>
+          </div>
+
+          {/* Add form */}
+          {showAddForm&&(
+            <div style={{background:'#FBF7EE',borderRadius:10,border:'1px solid rgba(31,20,14,0.1)',padding:'1.25rem',marginBottom:'1rem'}}>
+              <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Nuevo producto</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
+                <div>
+                  <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.3rem'}}>Nombre</div>
+                  <input value={newItem.name} onChange={e=>setNewItem(f=>({...f,name:e.target.value}))} placeholder="Concha de vainilla" style={{width:'100%',padding:'0.6rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.3rem'}}>Precio</div>
+                  <input value={newItem.price} onChange={e=>setNewItem(f=>({...f,price:e.target.value}))} placeholder="3.50" type="number" step="0.01" style={{width:'100%',padding:'0.6rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                </div>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
+                <div>
+                  <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.3rem'}}>Categoría</div>
+                  <select value={newItem.category} onChange={e=>setNewItem(f=>({...f,category:e.target.value}))} style={{width:'100%',padding:'0.6rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}>
+                    {['Galleta','Pan dulce','Pastel'].map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.3rem'}}>Descripción</div>
+                  <input value={newItem.description} onChange={e=>setNewItem(f=>({...f,description:e.target.value}))} placeholder="Opcional" style={{width:'100%',padding:'0.6rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                </div>
+              </div>
+              <div style={{display:'flex',gap:'0.5rem'}}>
+                <button onClick={addProduct} style={{flex:1,background:ink,color:cr,border:'none',padding:'0.7rem',borderRadius:6,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>Guardar producto</button>
+                <button onClick={()=>setShowAddForm(false)} style={{padding:'0.7rem 1rem',background:'rgba(31,20,14,0.06)',color:ink,border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Cancelar</button>
+              </div>
+            </div>
+          )}
+
+          {/* Filter pills */}
+          <div style={{display:'flex',gap:'0.4rem',marginBottom:'0.85rem'}}>
+            {categories.map(c=>(
+              <button key={c} onClick={()=>setFilter(c)} style={{padding:'0.35rem 0.85rem',borderRadius:999,border:'none',fontFamily:ff,fontSize:'0.65rem',cursor:'pointer',background:filter===c?ink:'rgba(31,20,14,0.06)',color:filter===c?cr:ink,transition:'all 0.15s'}}>{c}</button>
+            ))}
+          </div>
+
+          {/* Items list */}
+          <div style={{background:'#FBF7EE',borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
+            {filtered.map((item,i)=>(
+              <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.85rem',padding:'0.85rem 1.1rem',borderBottom:i<filtered.length-1?'1px solid rgba(31,20,14,0.05)':'none',opacity:item.badge_agotado?0.5:1}}>
+                {/* Toggle */}
+                <button onClick={()=>toggleVisible(item.id)} style={{width:40,height:22,borderRadius:11,border:'none',cursor:'pointer',padding:2,background:item.visible?gold:'rgba(31,20,14,0.15)',transition:'background 0.2s',flexShrink:0,position:'relative'}}>
+                  <div style={{width:18,height:18,borderRadius:'50%',background:'white',position:'absolute',top:2,left:item.visible?20:2,transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                </button>
+
+                {/* Butterfly icon */}
+                <div style={{width:36,height:36,borderRadius:8,background:'rgba(227,90,27,0.08)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <svg width="18" height="15" viewBox="0 0 100 82">
+                    <path d="M50 41 C42 14,20 6,8 16 C-2 28,6 50,24 56 C36 60,46 54,50 41Z" fill={item.visible?gold:'rgba(31,20,14,0.2)'}/>
+                    <path d="M50 41 C58 14,80 6,92 16 C102 28,94 50,76 56 C64 60,54 54,50 41Z" fill={item.visible?gold:'rgba(31,20,14,0.2)'}/>
+                    <path d="M50 41 C44 56,30 68,22 70 C16 70,18 60,28 54 C36 50,46 50,50 41Z" fill={item.visible?gold:'rgba(31,20,14,0.2)'} opacity=".8"/>
+                    <path d="M50 41 C56 56,70 68,78 70 C84 70,82 60,72 54 C64 50,54 50,50 41Z" fill={item.visible?gold:'rgba(31,20,14,0.2)'} opacity=".8"/>
+                  </svg>
+                </div>
+
+                {/* Info */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:'0.78rem',color:ink,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
+                  <div style={{fontSize:'0.6rem',color:mu,marginTop:'0.15rem'}}>{item.category} · ${parseFloat(item.price||0).toFixed(2)}</div>
+                </div>
+
+                {/* Order number */}
+                {item.visible&&<div style={{fontSize:'0.62rem',color:mu,flexShrink:0}}>#{i+1}</div>}
+
+                {/* Badges */}
+                <div style={{display:'flex',gap:'0.3rem',flexShrink:0,flexWrap:'wrap'}}>
+                  <BadgeBtn active={item.badge_hoy} label="Hoy" color={gold} onClick={()=>toggleBadge(item.id,'badge_hoy')}/>
+                  <BadgeBtn active={item.badge_nuevo} label="Nuevo" color="#8e44ad" onClick={()=>toggleBadge(item.id,'badge_nuevo')}/>
+                  <BadgeBtn active={item.badge_temporada} label="Temporada" color="#2d8a60" onClick={()=>toggleBadge(item.id,'badge_temporada')}/>
+                  <BadgeBtn active={item.badge_agotado} label="Agotado" color="#c0392b" onClick={()=>toggleBadge(item.id,'badge_agotado')}/>
+                </div>
+              </div>
+            ))}
+            {filtered.length===0&&<div style={{padding:'2rem',textAlign:'center',color:mu,fontSize:'0.82rem'}}>No hay productos en esta categoría.</div>}
+          </div>
+
+          <div style={{marginTop:'0.75rem',fontSize:'0.62rem',color:mu,textAlign:'center'}}>
+            ¿No está en el catálogo? Añade el producto arriba y aquí aparecerá.
+          </div>
+        </div>
+
+        {/* RIGHT — live preview */}
+        <div style={{position:'sticky',top:72}}>
+          <div style={{background:ink,borderRadius:12,overflow:'hidden',border:'1px solid rgba(255,255,255,0.06)'}}>
+            {/* Browser chrome */}
+            <div style={{background:'rgba(255,255,255,0.04)',padding:'0.6rem 1rem',display:'flex',alignItems:'center',gap:'0.5rem',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+              <div style={{display:'flex',gap:4}}>{['#ff5f57','#ffbd2e','#28c840'].map(c=><div key={c} style={{width:8,height:8,borderRadius:'50%',background:c}}/>)}</div>
+              <div style={{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'0.2rem 0.6rem',fontSize:'0.55rem',color:'rgba(255,255,255,0.4)',textAlign:'center'}}>monarcadeazucar.com/#menu</div>
+              <div style={{width:8,height:8,borderRadius:'50%',background:'#28c840',animation:'pulse-green 2s ease-in-out infinite'}}/>
+            </div>
+            {/* Preview content */}
+            <div style={{padding:'1.25rem 1rem',maxHeight:480,overflowY:'auto'}}>
+              <div style={{fontSize:'0.52rem',letterSpacing:'0.16em',textTransform:'uppercase',color:'rgba(251,247,238,0.35)',marginBottom:'0.25rem'}}>§ 01 · El menú</div>
+              <div style={{fontFamily:ffS,fontSize:'1.4rem',color:'#FBF7EE',fontStyle:'italic',marginBottom:'1rem'}}>Lo que se <em style={{color:gold}}>hornea</em> hoy.</div>
+              {previewSorted.length===0&&<div style={{fontSize:'0.72rem',color:'rgba(251,247,238,0.3)',textAlign:'center',padding:'1rem 0'}}>Activa productos para verlos aquí</div>}
+              {previewSorted.map((item,i)=>(
+                <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.65rem 0',borderBottom:'1px solid rgba(255,255,255,0.06)',opacity:item.badge_agotado?0.4:1}}>
+                  <span style={{fontSize:'0.62rem',color:'rgba(251,247,238,0.3)',width:20,flexShrink:0,textAlign:'right'}}>{String(i+1).padStart(2,'0')}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:'0.75rem',color:'#FBF7EE',fontWeight:500}}>{item.name}</div>
+                    {(item.badge_temporada||item.badge_nuevo||item.badge_agotado)&&(
+                      <div style={{display:'flex',gap:4,marginTop:3}}>
+                        {item.badge_temporada&&<span style={{fontSize:'0.48rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(45,138,96,0.2)',color:'#4ecb71',letterSpacing:'0.06em',textTransform:'uppercase'}}>Temporada</span>}
+                        {item.badge_nuevo&&<span style={{fontSize:'0.48rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(142,68,173,0.2)',color:'#b07fd4',letterSpacing:'0.06em',textTransform:'uppercase'}}>Nuevo</span>}
+                        {item.badge_agotado&&<span style={{fontSize:'0.48rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(192,57,43,0.2)',color:'#e74c3c',letterSpacing:'0.06em',textTransform:'uppercase'}}>Agotado</span>}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{fontFamily:ffS,fontSize:'0.88rem',color:gold,flexShrink:0}}>${parseFloat(item.price||0).toFixed(2)}</span>
+                </div>
+              ))}
+              {previewSorted.length>0&&(
+                <div style={{marginTop:'0.75rem',fontSize:'0.55rem',color:'rgba(251,247,238,0.25)',lineHeight:1.6}}>
+                  Tip: los productos con badge "Hoy" se ordenan automáticamente primero. Los "Agotado" se muestran en gris.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
@@ -2044,9 +2300,18 @@ export default function Admin({session}){
                 </div>
               </div>
             </div>
+
+            {/* Alertas mini — entre badge y NEGOCIO */}
+            {getNotifications(cards).length>0&&(
+              <div onClick={()=>setPanel('notifications')} style={{margin:'0.6rem 0.85rem 0',background:'rgba(192,57,43,0.15)',border:'1px solid rgba(192,57,43,0.25)',borderRadius:6,padding:'0.5rem 0.75rem',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:'0.62rem',color:'#e74c3c'}}>⚠ {getNotifications(cards).length} alerta{getNotifications(cards).length!==1?'s':''}</span>
+                <span style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.35)'}}>ver →</span>
+              </div>
+            )}
+
             <div style={{padding:'1rem 0 0.25rem'}}>
               <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',padding:'0 1.25rem',marginBottom:'0.4rem',fontFamily:ff}}>Negocio</div>
-              {[['dashboard','◆','Resumen'],['clients','◌','Clientes'],['bookings','◇','Encargos'],['cards','☰','Tarjetas'],['punch','◯','Sellar visita'],['campaigns','◐','Campañas']].map(([id,icon,label])=>(
+              {[['dashboard','◆','Resumen'],['clients','◌','Clientes'],['bookings','◇','Encargos'],['cards','☰','Tarjetas'],['punch','◯','Sellar visita'],['campaigns','◐','Campañas'],['website','◈','Website']].map(([id,icon,label])=>(
                 <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.7rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
                   <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.3)',flexShrink:0,width:16,textAlign:'center'}}>{icon}</span>
                   <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.75)'}}>{label}</span>
@@ -2077,6 +2342,7 @@ export default function Admin({session}){
             {panel==='bookings'&&<BookingsPanel/>}
             {panel==='campaigns'&&<CampaignsPanel cards={cards} users={users}/>}
             {panel==='catalog'&&<CatalogPanel catalog={catalog} onSetCost={(item)=>{setEditCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
+            {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies}
               onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
               onEdit={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,unit:s.unit||'month',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
@@ -2189,6 +2455,7 @@ export default function Admin({session}){
                 ['clients','Clientes'],
                 ['campaigns','Campañas'],
                 ['catalog','Catálogo'],
+                ['website','Website'],
                 ['supplies','Inventario'],
                 ['system','Configuración'],
               ].map(([id,label])=>(
