@@ -1718,6 +1718,12 @@ export default function Admin({session}){
     setLoading(false)
   }
 
+  // Safety net — never stay stuck on loading
+  useEffect(()=>{
+    const t = setTimeout(()=>setLoading(false), 5000)
+    return ()=>clearTimeout(t)
+  },[])
+
   function showToast(msg){setToast(msg);setTimeout(()=>setToast(''),3200)}
 
   async function doPunch(){
