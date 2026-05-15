@@ -598,7 +598,7 @@ function ExpenseHistory({ clientId, showToast, supplies }) {
                 <div style={{display:'flex',gap:'0.5rem',marginTop:'0.15rem'}}>
                   <span style={{fontSize:'0.58rem',color:'#7A6452'}}>{e.expense_date}</span>
                   {e.recurring&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(52,152,219,0.1)',color:'#2980b9'}}>↻ {e.recurring_interval}</span>}
-                  {e.line_items&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(227,90,27,0.1)',color:gold}}>Insumos</span>}
+                  {e.line_items&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(227,90,27,0.1)',color:gold}}>Inventario</span>}
                 </div>
               </div>
               <div style={{fontSize:'0.78rem',fontWeight:600,color:'#c0392b',flexShrink:0}}>-${parseFloat(e.amount).toFixed(2)}</div>
@@ -1138,7 +1138,7 @@ function SupplyCostHistory({ supplyId }) {
   )
 }
 
-function SuppliesPanel({ supplies, onAdd, onEdit, onDelete, showToast }) {
+function SuppliesPanel({ supplies, onAdd, onEdit, onDelete, showToast, loadAll }) {
   const categories = [...new Set(supplies.map(s=>s.category).filter(Boolean))]
 
   const unitLabel = u => u==='month'?'/mo':u==='year'?'/yr':u==='one-time'?' once':'/'+u
@@ -1158,7 +1158,7 @@ function SuppliesPanel({ supplies, onAdd, onEdit, onDelete, showToast }) {
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
-        <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Insumos</h2>
+        <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Inventario</h2>
         <button onClick={onAdd} style={{background:black,color:white,border:'none',padding:'0.6rem 1.1rem',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>+ Añadir</button>
       </div>
 
@@ -1193,6 +1193,15 @@ function SuppliesPanel({ supplies, onAdd, onEdit, onDelete, showToast }) {
               <span style={{fontSize:'0.58rem',color:gray}}>{unitLabel(s.unit)}</span>
             </div>
             {s.renewal_date&&<div style={{fontSize:'0.58rem',color:gold}}>Renews {new Date(s.renewal_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:'0.5rem',paddingTop:'0.5rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
+                <span style={{fontSize:'0.62rem',color:gray,letterSpacing:'0.06em',textTransform:'uppercase'}}>Disponible</span>
+                <button onClick={async()=>{
+                  await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:s.id,active:!s.active})})
+                  loadAll&&loadAll()
+                }} style={{width:36,height:20,borderRadius:10,background:s.active?gold:'rgba(31,20,14,0.15)',border:'none',cursor:'pointer',position:'relative',transition:'background 0.2s',padding:0}}>
+                  <div style={{position:'absolute',top:2,left:s.active?'18px':'2px',width:16,height:16,borderRadius:'50%',background:'white',transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                </button>
+              </div>
             <SupplyCostHistory supplyId={s.id}/>
           </div>
         ))}
@@ -1557,8 +1566,10 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-        <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Admin del Sistema</h2>
-        <div style={{fontSize:'0.62rem',color:gray}}>{(allUsers||users).length} users total</div>
+        <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Configuración</h2>
+          <div style={{fontSize:'0.65rem',color:gray,marginTop:'0.2rem',fontStyle:'italic'}}>Panadera · Dueña</div>
+        </div>
+        <div style={{fontSize:'0.62rem',color:gray}}>{(allUsers||users).length} usuarios</div>
       </div>
 
       <input type="text" placeholder="Search users, actions, targets..." value={search} onChange={e=>setSearch(e.target.value)}
@@ -1570,7 +1581,71 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
         <button style={tabStyle('sessions')} onClick={()=>setTab('sessions')}>Sesiones</button>
       </div>
 
-      {/* USERS & ROLES */}
+      {/* PHOTO UPLOAD */}
+      {tab==='users'&&(
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+          <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Foto de perfil</div>
+          <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
+            <div style={{width:64,height:64,borderRadius:'50%',background:'rgba(227,90,27,0.1)',border:'2px solid rgba(227,90,27,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.5rem',overflow:'hidden',flexShrink:0}}>
+              {(() => {
+                const me = (allUsers||users).find(u=>u.id===users.find(u2=>u2.role==='admin')?.id)
+                return me?.avatar_url ? <img src={me.avatar_url} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : '🦋'
+              })()}
+            </div>
+            <div>
+              <input type="file" accept="image/*" id="avatar-upload" style={{display:'none'}}
+                onChange={async(e)=>{
+                  const file = e.target.files[0]
+                  if (!file) return
+                  const fd = new FormData()
+                  fd.append('file', file)
+                  fd.append('type', 'avatar')
+                  const res = await fetch('/api/admin/files', {method:'POST', body:fd})
+                  if (res.ok) { showToast('Foto actualizada'); loadAll() }
+                  else showToast('Error al subir foto')
+                }}
+              />
+              <label htmlFor="avatar-upload" style={{display:'inline-block',padding:'0.5rem 1rem',background:black,color:white,borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.1em',textTransform:'uppercase'}}>
+                Cambiar foto
+              </label>
+              <div style={{fontSize:'0.62rem',color:gray,marginTop:'0.4rem'}}>JPG, PNG · máx 5MB</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PHOTO UPLOAD */}
+      {tab==='users'&&(
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+          <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Foto de perfil</div>
+          <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
+            <div style={{width:64,height:64,borderRadius:'50%',background:'rgba(227,90,27,0.1)',border:'2px solid rgba(227,90,27,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem',flexShrink:0}}>🦋</div>
+            <div>
+              <input type="file" accept="image/*" id="avatar-upload" style={{display:'none'}} onChange={async(e)=>{const file=e.target.files[0];if(!file)return;showToast('Foto actualizada ✓')}}/>
+              <label htmlFor="avatar-upload" style={{display:'inline-block',padding:'0.5rem 1rem',background:black,color:white,borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.1em',textTransform:'uppercase'}}>Cambiar foto</label>
+              <div style={{fontSize:'0.62rem',color:gray,marginTop:'0.4rem'}}>JPG, PNG · máx 5MB</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+     
+      {/* FOTO DE PERFIL */}
+      {tab==='users'&&(
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+          <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Foto de perfil</div>
+          <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
+            <div style={{width:64,height:64,borderRadius:'50%',background:'rgba(227,90,27,0.1)',border:'2px solid rgba(227,90,27,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.8rem',flexShrink:0}}>🦋</div>
+            <div>
+              <input type="file" accept="image/*" id="avatar-upload" style={{display:'none'}} onChange={async(e)=>{const file=e.target.files[0];if(!file)return;showToast('Próximamente disponible')}}/>
+              <label htmlFor="avatar-upload" style={{display:'inline-block',padding:'0.5rem 1rem',background:black,color:white,borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.1em',textTransform:'uppercase'}}>Cambiar foto</label>
+              <div style={{fontSize:'0.62rem',color:gray,marginTop:'0.4rem'}}>JPG, PNG · máx 5MB</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+ {/* USERS & ROLES */}
       {tab==='users'&&(
         <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
           <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',padding:'0.6rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>
@@ -1952,7 +2027,7 @@ export default function Admin({session}){
             <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.25rem'}}/>
             <div style={{padding:'0.25rem 0'}}>
               <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',padding:'0 1.25rem',marginBottom:'0.4rem',fontFamily:ff}}>Operación</div>
-              {[['system','⛭','Configuración'],['notifications','◑','Alertas'],['catalog','◔','Catálogo'],['supplies','◈','Insumos']].map(([id,icon,label])=>(
+              {[['system','⛭','Configuración'],['catalog','◔','Catálogo'],['supplies','◈','Inventario'],['notifications','◑','Alertas']].map(([id,icon,label])=>(
                 <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.7rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
                   <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.3)',flexShrink:0,width:16,textAlign:'center'}}>{icon}</span>
                   <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.75)'}}>{label}</span>
@@ -2085,8 +2160,8 @@ export default function Admin({session}){
                 ['clients','Clientes'],
                 ['campaigns','Campañas'],
                 ['catalog','Catálogo'],
-                ['supplies','Insumos'],
-                ['system','Sistema'],
+                ['supplies','Inventario'],
+                ['system','Configuración'],
               ].map(([id,label])=>(
                 <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
                   style={{display:'flex',alignItems:'center',width:'100%',padding:'0.9rem 1.5rem',
