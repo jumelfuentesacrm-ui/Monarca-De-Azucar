@@ -43,8 +43,16 @@ function getNotifications(cards) {
   return alerts.sort((a,b) => b.days - a.days)
 }
 
-function DashboardPanel({ cards, sales, onSelectClient }) {
+function DashboardPanel({ cards, sales, onSelectClient, userName }) {
   const totalClients=cards.length
+
+  function getGreeting() {
+    const hour = new Date().toLocaleString('en-US', { timeZone: 'America/Puerto_Rico', hour: 'numeric', hour12: false })
+    const h = parseInt(hour)
+    if (h >= 5 && h < 12) return 'Buenos días'
+    if (h >= 12 && h < 18) return 'Buenas tardes'
+    return 'Buenas noches'
+  }
   const sorted=[...cards].sort((a,b)=>(b.stamps||0)-(a.stamps||0))
   const top5=sorted.slice(0,5)
   const maxStamps=top5[0]?.stamps||1
@@ -64,6 +72,14 @@ function DashboardPanel({ cards, sales, onSelectClient }) {
   const clientSegs=makeSegs(clientDonut)
   return(
     <div>
+      <div style={{marginBottom:'1.75rem'}}>
+        <div style={{fontFamily:ffS,fontSize:'clamp(1.6rem,3vw,2.2rem)',fontWeight:400,color:black,lineHeight:1}}>
+          {getGreeting()}, <em style={{color:gold,fontStyle:'italic'}}>{userName||'Admin'}</em>.
+        </div>
+        <div style={{fontSize:'0.65rem',color:gray,marginTop:'0.5rem',letterSpacing:'0.08em'}}>
+          {new Date().toLocaleDateString('es-PR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}
+        </div>
+      </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1.5rem'}} className="donut-grid">
         <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)'}}>
           <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400,marginBottom:'1.25rem'}}>Clients</div>
@@ -1836,7 +1852,7 @@ export default function Admin({session}){
 
   return(
     <>
-      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
       <style>{`
         html,body{background:#f2f0eb;overscroll-behavior:none;}
         @media(max-width:700px){
@@ -1852,7 +1868,17 @@ export default function Admin({session}){
       `}</style>
       <div style={{background:'#f2f0eb',minHeight:'100vh',fontFamily:ff,paddingBottom:70}}>
         <div style={{background:black,position:'fixed',top:0,left:0,right:0,zIndex:100,height:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 1.25rem'}}>
-          <div style={{fontFamily:ffS,fontSize:'1.1rem',color:white}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM <span style={{fontSize:'0.48rem',letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.26)',marginLeft:'0.4rem',fontFamily:ff}}>Admin</span></div>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <svg width="22" height="18" viewBox="0 0 100 82">
+                <path d="M50 41 C42 14,20 6,8 16 C-2 28,6 50,24 56 C36 60,46 54,50 41Z" fill={gold}/>
+                <path d="M50 41 C58 14,80 6,92 16 C102 28,94 50,76 56 C64 60,54 54,50 41Z" fill={gold}/>
+                <path d="M50 41 C44 56,30 68,22 70 C16 70,18 60,28 54 C36 50,46 50,50 41Z" fill={gold} opacity=".9"/>
+                <path d="M50 41 C56 56,70 68,78 70 C84 70,82 60,72 54 C64 50,54 50,50 41Z" fill={gold} opacity=".9"/>
+                <ellipse cx="50" cy="46" rx="2.2" ry="22" fill={white}/>
+                <circle cx="50" cy="24" r="2.8" fill={white}/>
+              </svg>
+              <div style={{fontFamily:ffS,fontSize:'1.1rem',color:white}}>Monarca <em style={{color:gold,fontStyle:'italic'}}>de</em> Azúcar <span style={{fontSize:'0.48rem',letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.26)',marginLeft:'0.4rem',fontFamily:ff,fontStyle:'normal'}}>Admin</span></div>
+            </div>
           <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
             <button onClick={subscribeToPush} title="Enable notifications" style={{background:'none',border:'1px solid rgba(227,90,27,0.3)',color:'rgba(255,255,255,0.5)',padding:'0.25rem 0.65rem',fontSize:'0.52rem',cursor:'pointer',borderRadius:2,fontFamily:ff,letterSpacing:'0.1em',textTransform:'uppercase'}}>Notis</button>
             <button onClick={signOut} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.38)',padding:'0.25rem 0.75rem',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer',borderRadius:2,fontFamily:ff}}>Sign Out</button>
@@ -1881,11 +1907,15 @@ export default function Admin({session}){
             <button onClick={()=>setPanel('supplies')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='supplies'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='supplies'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Supplies</button>
             <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.5rem'}}/>
             <button onClick={()=>setPanel('system')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='system'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='system'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Admin Panel</button>
+            <div style={{position:'absolute',bottom:0,left:0,right:0,padding:'1rem 1.5rem',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+              <div style={{fontSize:'0.52rem',color:'rgba(255,255,255,0.2)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Powered by</div>
+              <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.35)',marginTop:'0.2rem',fontFamily:ffS}}>A<span style={{color:gold}}>+</span> CRM</div>
+            </div>
           </div>
 
           {/* MAIN */}
           <div className="admin-main" style={{marginLeft:205,flex:1,padding:'1.75rem',maxWidth:980}}>
-            {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}}/>}
+            {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}} userName={session?.user?.user_metadata?.full_name||users.find(u=>u.id===session?.user?.id)?.full_name}/>}
             {panel==='client'&&selectedClient&&<ClientProfile card={selectedClient} onBack={()=>{setSelectedClient(null);setPanel('dashboard')}}/>}
             {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
             {panel==='bookings'&&<BookingsPanel/>}
