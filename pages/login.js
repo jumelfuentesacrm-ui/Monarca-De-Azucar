@@ -18,8 +18,11 @@ export default function Login() {
     setError(''); setLoading(true)
     const { data, error } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password })
     if (error) { setError('Correo o contraseña incorrectos.'); setLoading(false); return }
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
-    window.location.href = profile?.role === 'admin' ? '/admin' : '/card'
+    const roleRes = await fetch('/api/admin/check-role', {
+      headers: { Authorization: 'Bearer ' + data.session.access_token }
+    })
+    const roleData = await roleRes.json()
+    window.location.href = roleData?.role === 'admin' ? '/admin' : '/card'
   }
 
   async function handleSignup(e) {
