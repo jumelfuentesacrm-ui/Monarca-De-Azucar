@@ -1568,7 +1568,6 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
         <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Configuración</h2>
           <div style={{fontSize:'0.65rem',color:gray,marginTop:'0.2rem',fontStyle:'italic'}}>Panadera · Dueña</div>
-        </div>
         <div style={{fontSize:'0.62rem',color:gray}}>{(allUsers||users).length} usuarios</div>
       </div>
 
@@ -2641,3 +2640,4 @@ function FilesListForClient({ userId, showToast }) {
     </div>
   )
 }
+                                                                            
