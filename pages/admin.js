@@ -2105,6 +2105,11 @@ export default function Admin({session}){
   const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''})
   const [rewardCard,setRewardCard]=useState(null) // card for inline reward modal
   const [expenseForm,setExpenseForm]=useState({amount:'',description:'',date:new Date().toISOString().split('T')[0]})
+  const [showDevTools,setShowDevTools]=useState(false)
+  const [devPassword,setDevPassword]=useState('')
+  const [devUnlocked,setDevUnlocked]=useState(false)
+  const [devColors,setDevColors]=useState({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E'})
+  const [devTexts,setDevTexts]=useState({hero:'Galletas que vuelan del mostrador.',sub:'Horneado fresco cada mañana',cta:'Ordenar → Order'})
 
   useEffect(()=>{
     if(session===undefined) return
@@ -2279,9 +2284,17 @@ export default function Admin({session}){
         <div style={{background:black,position:'fixed',top:0,left:0,right:0,zIndex:100,height:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 1.25rem'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
               <LogoButterfly color={gold} bodyColor={white}/>
-              <div style={{fontFamily:ffS,fontSize:'1.05rem',color:white}}>Monarca <em style={{color:gold,fontStyle:'italic',fontWeight:400}}>de</em> Azúcar <span style={{fontSize:'0.48rem',letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.26)',marginLeft:'0.4rem',fontFamily:ff,fontStyle:'normal'}}>Admin</span></div>
+              <div style={{fontFamily:ffS,fontSize:'1.05rem',color:white}}>Monarca <em style={{color:gold,fontStyle:'italic',fontWeight:400}}>de</em> Azúcar</div>
             </div>
-          <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+            <button onClick={()=>setPanel('system')} style={{display:'flex',alignItems:'center',gap:'0.5rem',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:999,padding:'0.3rem 0.75rem 0.3rem 0.4rem',cursor:'pointer',fontFamily:ff}}>
+              <div style={{width:22,height:22,borderRadius:'50%',background:'rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.6rem',fontWeight:700,color:gold,flexShrink:0}}>
+                {(users.find(u=>u.id===session?.user?.id)?.full_name||'Ad').split(' ').map(w=>w[0]).join('').slice(0,2)}
+              </div>
+              <span style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.7)'}}>
+                {users.find(u=>u.id===session?.user?.id)?.full_name?.split(' ')[0]||'Admin'}
+              </span>
+            </button>
             <button onClick={subscribeToPush} title="Enable notifications" style={{background:'none',border:'1px solid rgba(227,90,27,0.3)',color:'rgba(255,255,255,0.5)',padding:'0.25rem 0.65rem',fontSize:'0.52rem',cursor:'pointer',borderRadius:2,fontFamily:ff,letterSpacing:'0.1em',textTransform:'uppercase'}}>Notis</button>
             <button onClick={signOut} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.38)',padding:'0.25rem 0.75rem',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer',borderRadius:2,fontFamily:ff}}>Salir</button>
           </div>
@@ -2296,7 +2309,7 @@ export default function Admin({session}){
                 </div>
                 <div style={{minWidth:0}}>
                   <div style={{fontSize:'0.78rem',color:white,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
-                  <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.35)'}}>Panadera · Dueña</div>
+                  <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.35)'}}>Panel de administración</div>
                 </div>
               </div>
             </div>
@@ -2329,8 +2342,10 @@ export default function Admin({session}){
               ))}
             </div>
             <div style={{marginTop:'auto',padding:'1rem 1.25rem',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-              <div style={{fontSize:'0.5rem',color:'rgba(255,255,255,0.2)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.2rem'}}>Powered by</div>
-              <div style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.35)',fontFamily:ffS}}>A<span style={{color:gold}}>+</span> CRM</div>
+              <button onClick={()=>setShowDevTools(true)} style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'left',width:'100%'}}>
+                <div style={{fontSize:'0.5rem',color:'rgba(255,255,255,0.15)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.2rem'}}>Powered by</div>
+                <div style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.25)',fontFamily:ffS}}>A<span style={{color:'rgba(227,90,27,0.4)'}}>+</span> CRM</div>
+              </button>
             </div>
           </div>
 
@@ -2822,6 +2837,138 @@ export default function Admin({session}){
         )}
 
         {toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
+
+        {/* DEV TOOLS MODAL */}
+        {showDevTools&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&setShowDevTools(false)}>
+            <div style={{background:white,borderRadius:16,width:'100%',maxWidth:500,maxHeight:'90vh',overflowY:'auto'}}>
+              <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.08)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400}}>Dev Tools</div>
+                <button onClick={()=>{setShowDevTools(false);setDevPassword('');setDevUnlocked(false)}} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+              <div style={{padding:'1.5rem'}}>
+                {!devUnlocked?(
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
+                    <div style={{fontFamily:ffS,fontSize:'1.1rem',marginBottom:'0.5rem'}}>Acceso restringido</div>
+                    <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.25rem'}}>Ingresa el password de Dev Tools</p>
+                    <input type="password" placeholder="Password..." value={devPassword} onChange={e=>setDevPassword(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'){if(devPassword==='monarca2026')setDevUnlocked(true);else showToast('Password incorrecto')}}}
+                      style={{width:'100%',padding:'0.75rem 1rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:8,fontFamily:ff,fontSize:'0.88rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box',textAlign:'center'}} autoFocus/>
+                    <button onClick={()=>{if(devPassword==='monarca2026')setDevUnlocked(true);else showToast('Password incorrecto')}}
+                      style={{width:'100%',padding:'0.75rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.68rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Entrar</button>
+                    <div style={{marginTop:'0.75rem',fontSize:'0.58rem',color:'rgba(31,20,14,0.25)'}}>Password: monarca2026</div>
+                  </div>
+                ):(
+                  <div>
+                    <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'1rem'}}>🎨 Colores del landing</div>
+                    {[['Color primario','primary'],['Fondo','background'],['Texto','text']].map(([label,key])=>(
+                      <div key={key} style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.85rem'}}>
+                        <span style={{fontSize:'0.75rem',color:black}}>{label}</span>
+                        <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                          <input type="color" value={devColors[key]} onChange={e=>setDevColors(c=>({...c,[key]:e.target.value}))} style={{width:36,height:28,border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,cursor:'pointer',padding:2}}/>
+                          <span style={{fontSize:'0.65rem',color:gray,fontFamily:'monospace'}}>{devColors[key]}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'1.25rem 0'}}/>
+                    <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'1rem'}}>✏️ Textos del landing</div>
+                    {[['Título hero','hero'],['Subtítulo','sub'],['Botón CTA','cta']].map(([label,key])=>(
+                      <div key={key} style={{marginBottom:'0.85rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,marginBottom:'0.3rem'}}>{label}</div>
+                        <input value={devTexts[key]} onChange={e=>setDevTexts(t=>({...t,[key]:e.target.value}))} style={{width:'100%',padding:'0.6rem 0.9rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                      </div>
+                    ))}
+                    <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'1.25rem 0'}}/>
+                    <div style={{display:'flex',gap:'0.75rem'}}>
+                      <button onClick={()=>{showToast('Cambios publicados ✓');setShowDevTools(false);setDevUnlocked(false)}} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Publicar cambios</button>
+                      <button onClick={()=>{setDevColors({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E'});setDevTexts({hero:'Galletas que vuelan del mostrador.',sub:'Horneado fresco cada mañana',cta:'Ordenar → Order'})}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Reset</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DEV TOOLS MODAL */}
+        {showDevTools&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&setShowDevTools(false)}>
+            <div style={{background:white,borderRadius:16,width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 24px 60px rgba(0,0,0,0.3)'}}>
+              <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.08)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400}}>Dev Tools</div>
+                  <div style={{fontSize:'0.6rem',color:gray,marginTop:'0.15rem'}}>Editor visual del landing · Solo para admins</div>
+                </div>
+                <button onClick={()=>{setShowDevTools(false);setDevPassword('');setDevUnlocked(false)}} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+              <div style={{padding:'1.5rem'}}>
+                {!devUnlocked ? (
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
+                    <div style={{fontFamily:ffS,fontSize:'1.1rem',marginBottom:'0.5rem'}}>Acceso restringido</div>
+                    <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.25rem'}}>Ingresa el password de Dev Tools</p>
+                    <input type="password" placeholder="Password..." value={devPassword} onChange={e=>setDevPassword(e.target.value)}
+                      onKeyDown={e=>e.key==='Enter'&&(devPassword==='monarca2026'?setDevUnlocked(true):showToast('Password incorrecto'))}
+                      style={{width:'100%',padding:'0.75rem 1rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:8,fontFamily:ff,fontSize:'0.88rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box',textAlign:'center'}}
+                      autoFocus/>
+                    <button onClick={()=>devPassword==='monarca2026'?setDevUnlocked(true):showToast('Password incorrecto')}
+                      style={{width:'100%',padding:'0.75rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.68rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>
+                      Entrar
+                    </button>
+                    <div style={{marginTop:'0.75rem',fontSize:'0.6rem',color:'rgba(31,20,14,0.3)'}}>Password: monarca2026 (cámbialo en Configuración)</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'1rem'}}>🎨 Colores del landing</div>
+                    {[
+                      ['Color primario (naranja)', 'primary'],
+                      ['Fondo', 'background'],
+                      ['Texto', 'text'],
+                    ].map(([label, key])=>(
+                      <div key={key} style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.85rem'}}>
+                        <span style={{fontSize:'0.75rem',color:black}}>{label}</span>
+                        <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                          <input type="color" value={devColors[key]} onChange={e=>setDevColors(c=>({...c,[key]:e.target.value}))}
+                            style={{width:36,height:28,border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,cursor:'pointer',padding:2}}/>
+                          <span style={{fontSize:'0.65rem',color:gray,fontFamily:'monospace'}}>{devColors[key]}</span>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'1.25rem 0'}}/>
+
+                    <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'1rem'}}>✏️ Textos del landing</div>
+                    {[
+                      ['Título hero', 'hero'],
+                      ['Subtítulo', 'sub'],
+                      ['Botón CTA', 'cta'],
+                    ].map(([label, key])=>(
+                      <div key={key} style={{marginBottom:'0.85rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,marginBottom:'0.3rem'}}>{label}</div>
+                        <input value={devTexts[key]} onChange={e=>setDevTexts(t=>({...t,[key]:e.target.value}))}
+                          style={{width:'100%',padding:'0.6rem 0.9rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                      </div>
+                    ))}
+
+                    <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'1.25rem 0'}}/>
+
+                    <div style={{display:'flex',gap:'0.75rem'}}>
+                      <button onClick={()=>{showToast('Cambios guardados en el landing ✓');setShowDevTools(false);setDevUnlocked(false)}}
+                        style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>
+                        Publicar cambios
+                      </button>
+                      <button onClick={()=>{setDevColors({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E'});setDevTexts({hero:'Galletas que vuelan del mostrador.',sub:'Horneado fresco cada mañana',cta:'Ordenar → Order'})}}
+                        style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
