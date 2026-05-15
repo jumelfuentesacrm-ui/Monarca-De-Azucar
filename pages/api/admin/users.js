@@ -7,16 +7,14 @@ const supabaseAdmin = createClient(
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    // ?me=1 — return current user's role (used by admin page auth check)
     if (req.query.me === '1') {
       const token = req.headers.authorization?.replace('Bearer ', '')
-      if (!token) return res.status(401).json({ error: 'No token' })
+      if (!token) return res.status(401).json({ role: 'client' })
       const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token)
-      if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
+      if (authErr || !user) return res.status(401).json({ role: 'client' })
       const { data: profile } = await supabaseAdmin.from('profiles').select('role').eq('id', user.id).single()
       return res.status(200).json({ role: profile?.role || 'client' })
     }
-
     const all = req.query.all === '1'
 
     let query = supabaseAdmin
