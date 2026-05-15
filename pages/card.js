@@ -5,6 +5,9 @@ const or='#E35A1B'
 const ff='"DM Sans",system-ui,sans-serif'
 const ffS='"Instrument Serif",serif'
 
+// Default light theme colors (used by standalone components)
+const ink='#1F140E', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE', mu='#7A6452'
+
 function useTheme() {
   const [dark, setDark] = React.useState(false)
   React.useEffect(() => {
