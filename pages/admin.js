@@ -1692,8 +1692,13 @@ export default function Admin({session}){
 
   useEffect(()=>{
     if(!session){window.location.href='/login';return}
-    supabase.from('profiles').select('role').eq('id',session.user.id).single()
-      .then(({data})=>{if(!data||data.role!=='admin'){window.location.href='/card';return};loadAll()})
+    // Check role via API using service key — bypasses RLS completely
+    fetch('/api/admin/check-role', {
+      headers:{ Authorization: 'Bearer ' + session.access_token }
+    })
+    .then(r=>r.json())
+    .then(d=>{ if(d.role==='admin') loadAll(); else window.location.href='/card' })
+    .catch(()=>window.location.href='/card')
   },[session])
 
   async function loadAll(){
