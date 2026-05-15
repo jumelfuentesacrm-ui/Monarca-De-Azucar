@@ -6,6 +6,7 @@ const supabaseAdmin = createClient(
 )
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store')
   if (req.method === 'GET') {
     // If history param, return cost history for a supply
     if (req.query.history) {
