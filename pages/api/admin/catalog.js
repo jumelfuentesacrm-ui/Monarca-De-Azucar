@@ -19,6 +19,23 @@ export default async function handler(req, res) {
     return res.status(200).json({ items: items || [] })
   }
 
+  if (req.method === 'POST') {
+    const { name, description, category, price, active } = req.body
+    if (!name) return res.status(400).json({ error: 'name required' })
+    const id = 'prod_' + Date.now()
+    const { data: item, error } = await supabase.from('catalog_items').insert({
+      id, name, description: description||'', active: active!==false
+    }).select().single()
+    if (error) return res.status(500).json({ error: error.message })
+    if (price && parseFloat(price) > 0) {
+      await supabase.from('catalog_prices').insert({
+        id: 'price_'+Date.now(), product_id: id,
+        amount: parseFloat(price), currency: 'usd', active: true
+      })
+    }
+    return res.status(200).json({ success: true, item })
+  }
+
   if (req.method === 'PATCH') {
     const { product_id, cost, notes, suppliers } = req.body
     if (!product_id) return res.status(400).json({ error: 'product_id required' })
