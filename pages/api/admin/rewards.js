@@ -6,6 +6,7 @@ const supabaseAdmin = createClient(
 )
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store')
   if (req.method === 'GET') {
     const { data: rewards } = await supabaseAdmin.from('rewards')
       .select('*, profiles(full_name,business_name), loyalty_cards(card_number)')
