@@ -6,10 +6,10 @@ const ff='DM Sans,sans-serif',ffS='"Instrument Serif",serif'
 
 function getStatus(card) {
   if (!card) return { label:'New', color:'#8e44ad', bg:'rgba(142,68,173,0.1)' }
-  const sellos = card.sellos || 0
+  const stamps = card.stamps || 0
   let days = null
-  if (card.sello_history && card.sello_history.length > 0) {
-    const last = new Date(card.sello_history[card.sello_history.length-1].created_at)
+  if (card.stamp_history && card.stamp_history.length > 0) {
+    const last = new Date(card.stamp_history[card.stamp_history.length-1].created_at)
     days = (Date.now()-last)/(1000*60*60*24)
   }
   if (days !== null) {
@@ -17,15 +17,15 @@ function getStatus(card) {
     if (days >= 38) return { label:'Late Fee', color:'#e74c3c', bg:'rgba(231,76,60,0.1)' }
     if (days >= 35) return { label:'Grace', color:'#e67e22', bg:'rgba(230,126,34,0.1)' }
   }
-  if (sellos >= 15) return { label:'VIP', color:'#E35A1B', bg:'rgba(#E35A1B,0.12)' }
-  if (sellos >= 10) return { label:'Regular', color:'#2d8a60', bg:'rgba(45,138,96,0.1)' }
-  if (sellos >= 5) return { label:'Active', color:'#3498db', bg:'rgba(52,152,219,0.1)' }
+  if (stamps >= 15) return { label:'VIP', color:'#E35A1B', bg:'rgba(227,90,27,0.12)' }
+  if (stamps >= 10) return { label:'Regular', color:'#2d8a60', bg:'rgba(45,138,96,0.1)' }
+  if (stamps >= 5) return { label:'Active', color:'#3498db', bg:'rgba(52,152,219,0.1)' }
   return { label:'New', color:'#8e44ad', bg:'rgba(142,68,173,0.1)' }
 }
 
 function getDaysSinceLastPurchase(card) {
-  if (!card||!card.sello_history||card.sello_history.length===0) return null
-  const last = new Date(card.sello_history[card.sello_history.length-1].created_at)
+  if (!card||!card.stamp_history||card.stamp_history.length===0) return null
+  const last = new Date(card.stamp_history[card.stamp_history.length-1].created_at)
   return Math.floor((Date.now()-last)/(1000*60*60*24))
 }
 
@@ -45,9 +45,9 @@ function getNotifications(cards) {
 
 function DashboardPanel({ cards, sales, onSelectClient }) {
   const totalClients=cards.length
-  const sorted=[...cards].sort((a,b)=>(b.sellos||0)-(a.sellos||0))
+  const sorted=[...cards].sort((a,b)=>(b.stamps||0)-(a.stamps||0))
   const top5=sorted.slice(0,5)
-  const maxSellos=top5[0]?.sellos||1
+  const maxStamps=top5[0]?.stamps||1
   const clientDonut=[
     {label:'VIP',value:cards.filter(c=>getStatus(c).label==='VIP').length,color:'#E35A1B'},
     {label:'Regular',value:cards.filter(c=>getStatus(c).label==='Regular').length,color:'#2d8a60'},
@@ -65,7 +65,7 @@ function DashboardPanel({ cards, sales, onSelectClient }) {
   return(
     <div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1.5rem'}} className="donut-grid">
-        <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(14,14,12,0.07)'}}>
+        <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)'}}>
           <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400,marginBottom:'1.25rem'}}>Clients</div>
           <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
             <Donut segs={clientSegs} center={<text x="50" y="54" textAnchor="middle" style={{fontSize:14,fontFamily:ffS,fill:black}}>{totalClients}</text>}/>
@@ -73,23 +73,23 @@ function DashboardPanel({ cards, sales, onSelectClient }) {
           </div>
         </div>
         <FinancialCard sales={sales}/>
-        <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(14,14,12,0.07)',position:'relative',display:'none'}}>
+        <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)',position:'relative',display:'none'}}>
           <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400,marginBottom:'1.25rem'}}>Financial Legacy</div>
           <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
-            <svg viewBox="0 0 100 100" style={{width:100,height:100,flexShrink:0}}><path d="M 50 15 A 35 35 0 1 1 49.99 15 Z" fill="rgba(14,14,12,0.06)" opacity="0.85"/><circle cx="50" cy="50" r="22" fill={white}/><text x="50" y="54" textAnchor="middle" style={{fontSize:8,fontFamily:ff,fill:gray}}>Clover</text></svg>
-            <div style={{flex:1}}>{[['Gross Sales','#2d8a60'],['Gross Exp.','#c0392b'],['Net Profit',gold]].map(([label,color])=>(<div key={label} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.4rem'}}><div style={{width:7,height:7,borderRadius:'50%',background:color,flexShrink:0}}/><span style={{fontSize:'0.62rem',color:gray,flex:1}}>{label}</span><span style={{fontSize:'0.62rem',color:'rgba(14,14,12,0.25)'}}>—</span></div>))}</div>
+            <svg viewBox="0 0 100 100" style={{width:100,height:100,flexShrink:0}}><path d="M 50 15 A 35 35 0 1 1 49.99 15 Z" fill="rgba(31,20,14,0.06)" opacity="0.85"/><circle cx="50" cy="50" r="22" fill={white}/><text x="50" y="54" textAnchor="middle" style={{fontSize:8,fontFamily:ff,fill:gray}}>Clover</text></svg>
+            <div style={{flex:1}}>{[['Gross Sales','#2d8a60'],['Gross Exp.','#c0392b'],['Net Profit',gold]].map(([label,color])=>(<div key={label} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.4rem'}}><div style={{width:7,height:7,borderRadius:'50%',background:color,flexShrink:0}}/><span style={{fontSize:'0.62rem',color:gray,flex:1}}>{label}</span><span style={{fontSize:'0.62rem',color:'rgba(31,20,14,0.25)'}}>—</span></div>))}</div>
           </div>
-          <div style={{position:'absolute',bottom:'1rem',left:0,right:0,textAlign:'center',fontSize:'0.54rem',color:'rgba(14,14,12,0.3)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Pending Clover data</div>
+          <div style={{position:'absolute',bottom:'1rem',left:0,right:0,textAlign:'center',fontSize:'0.54rem',color:'rgba(31,20,14,0.3)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Pending Clover data</div>
         </div>
       </div>
-      <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(14,14,12,0.07)',marginBottom:'1.5rem'}}>
+      <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)',marginBottom:'1.5rem'}}>
         <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400,marginBottom:'1.25rem'}}>Top Clients</div>
-        {top5.map((card,i)=>(<div key={card.id} onClick={()=>onSelectClient(card)} style={{display:'flex',alignItems:'center',gap:'0.6rem',marginBottom:'0.75rem',cursor:'pointer'}}><div style={{width:18,height:18,borderRadius:'50%',background:i===0?gold:'rgba(14,14,12,0.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.58rem',fontWeight:600,color:i===0?black:gray,flexShrink:0}}>{i+1}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:'0.72rem',color:black,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card.profiles?.business_name||card.profiles?.full_name}</div><div style={{height:3,background:'rgba(14,14,12,0.06)',borderRadius:2,marginTop:'0.25rem'}}><div style={{height:'100%',width:((card.sellos||0)/maxSellos*100)+'%',background:i===0?gold:'rgba(14,14,12,0.15)',borderRadius:2}}/></div></div><div style={{fontSize:'0.65rem',color:gray,flexShrink:0}}>{card.sellos} sellos</div></div>))}
+        {top5.map((card,i)=>(<div key={card.id} onClick={()=>onSelectClient(card)} style={{display:'flex',alignItems:'center',gap:'0.6rem',marginBottom:'0.75rem',cursor:'pointer'}}><div style={{width:18,height:18,borderRadius:'50%',background:i===0?gold:'rgba(31,20,14,0.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.58rem',fontWeight:600,color:i===0?black:gray,flexShrink:0}}>{i+1}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:'0.72rem',color:black,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card.profiles?.business_name||card.profiles?.full_name}</div><div style={{height:3,background:'rgba(31,20,14,0.06)',borderRadius:2,marginTop:'0.25rem'}}><div style={{height:'100%',width:((card.stamps||0)/maxStamps*100)+'%',background:i===0?gold:'rgba(31,20,14,0.15)',borderRadius:2}}/></div></div><div style={{fontSize:'0.65rem',color:gray,flexShrink:0}}>{card.stamps} stamps</div></div>))}
         {top5.length===0&&<div style={{fontSize:'0.82rem',color:gray,textAlign:'center',padding:'1rem 0'}}>No clients yet.</div>}
       </div>
-      <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}>
-        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:400}}>All Clients</div>
-        {sorted.map(card=>{const status=getStatus(card);const cur=card.sellos%5===0&&card.sellos>0?5:card.sellos%5;return(<div key={card.id} onClick={()=>onSelectClient(card)} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.04)',cursor:'pointer'}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:'0.78rem',color:black,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card.profiles?.business_name||card.profiles?.full_name}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>#{card.card_number}</div></div><div style={{display:'flex',gap:2,flexShrink:0}}>{Array.from({length:5},(_,j)=><div key={j} style={{width:7,height:7,borderRadius:'50%',background:j<cur?gold:'rgba(14,14,12,0.08)'}}/>)}</div><span style={{fontSize:'0.56rem',padding:'0.18rem 0.6rem',borderRadius:20,background:status.bg,color:status.color,whiteSpace:'nowrap',flexShrink:0}}>{status.label}</span><div style={{color:gray,fontSize:'0.75rem'}}>›</div></div>);})}
+      <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
+        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:400}}>All Clients</div>
+        {sorted.map(card=>{const status=getStatus(card);const cur=card.stamps%5===0&&card.stamps>0?5:card.stamps%5;return(<div key={card.id} onClick={()=>onSelectClient(card)} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer'}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:'0.78rem',color:black,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card.profiles?.business_name||card.profiles?.full_name}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>#{card.card_number}</div></div><div style={{display:'flex',gap:2,flexShrink:0}}>{Array.from({length:5},(_,j)=><div key={j} style={{width:7,height:7,borderRadius:'50%',background:j<cur?gold:'rgba(31,20,14,0.08)'}}/>)}</div><span style={{fontSize:'0.56rem',padding:'0.18rem 0.6rem',borderRadius:20,background:status.bg,color:status.color,whiteSpace:'nowrap',flexShrink:0}}>{status.label}</span><div style={{color:gray,fontSize:'0.75rem'}}>›</div></div>);})}
         {sorted.length===0&&<div style={{padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No clients yet.</div>}
       </div>
     </div>
@@ -98,15 +98,15 @@ function DashboardPanel({ cards, sales, onSelectClient }) {
 
 function ClientProfile({card,onBack}){
   if(!card)return null
-  const cur=card.sellos%5===0&&card.sellos>0?5:card.sellos%5
-  const cycle=Math.ceil((card.sellos||1)/5)||1
-  const totalPaid=card.sello_history?.length||0
+  const cur=card.stamps%5===0&&card.stamps>0?5:card.stamps%5
+  const cycle=Math.ceil((card.stamps||1)/5)||1
+  const totalPaid=card.stamp_history?.length||0
   const rewardsClaimed=card.rewards?.filter(r=>r.status==='Canjeado').length||0
   return(
     <div>
       <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:'0.5rem',background:'none',border:'none',cursor:'pointer',color:gray,fontFamily:ff,fontSize:'0.65rem',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'1.5rem',padding:0}}>← Back to Dashboard</button>
       <div style={{background:black,borderRadius:12,padding:'1.75rem',marginBottom:'1.25rem',position:'relative',overflow:'hidden'}}>
-        <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse 60% 50% at 0% 50%,rgba(#E35A1B,0.08) 0%,transparent 70%)'}}/>
+        <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse 60% 50% at 0% 50%,rgba(227,90,27,0.08) 0%,transparent 70%)'}}/>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:'1rem',marginBottom:'1.25rem'}}>
           <div>
             <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400,color:white,marginBottom:'0.2rem'}}>{card.profiles?.full_name}</div>
@@ -114,17 +114,17 @@ function ClientProfile({card,onBack}){
             {card.profiles?.phone&&<div style={{fontSize:'0.68rem',color:'rgba(255,255,255,0.35)',marginTop:'0.2rem'}}>{card.profiles?.phone}</div>}
           </div>
           <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
-            {[['Cycle',cycle],['Sellos',cur+'/5'],['Payments',totalPaid],['Rewards',rewardsClaimed]].map(([label,val])=>(<div key={label} style={{textAlign:'center',background:'rgba(255,255,255,0.05)',borderRadius:8,padding:'0.6rem 0.85rem',border:'1px solid rgba(#E35A1B,0.1)'}}><div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400,color:gold,lineHeight:1}}>{val}</div><div style={{fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',marginTop:'0.2rem'}}>{label}</div></div>))}
+            {[['Cycle',cycle],['Stamps',cur+'/5'],['Visitas',totalPaid],['Rewards',rewardsClaimed]].map(([label,val])=>(<div key={label} style={{textAlign:'center',background:'rgba(255,255,255,0.05)',borderRadius:8,padding:'0.6rem 0.85rem',border:'1px solid rgba(227,90,27,0.1)'}}><div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400,color:gold,lineHeight:1}}>{val}</div><div style={{fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',marginTop:'0.2rem'}}>{label}</div></div>))}
           </div>
         </div>
         <div style={{display:'flex',gap:'0.4rem'}}>{Array.from({length:5},(_,i)=><div key={i} style={{flex:1,height:5,borderRadius:3,background:i<cur?gold:'rgba(255,255,255,0.08)'}}/>)}</div>
-        <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)',marginTop:'0.4rem'}}>{cur===0&&card.sellos>0?'Reward available':cur+'/5 sellos in current cycle'}</div>
+        <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)',marginTop:'0.4rem'}}>{cur===0&&card.stamps>0?'Reward available':cur+'/5 stamps in current cycle'}</div>
       </div>
-      <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden',marginBottom:'1rem'}}>
-        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:400}}>Historial de Visitas</div>
-        {card.sello_history?.length>0?[...card.sello_history].reverse().map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>Visita registrada{h.visita_amount?' · '+h.visita_amount:''}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>{new Date(h.created_at).toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'})}</div></div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(#E35A1B,0.1)',color:gold,border:'1px solid rgba(#E35A1B,0.2)'}}>+1 sello</span></div>)):<div style={{padding:'1.5rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No history yet.</div>}
+      <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1rem'}}>
+        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:400}}>Historial de Visitas</div>
+        {card.stamp_history?.length>0?[...card.stamp_history].reverse().map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>Visita registrada{h.payment_amount?' · '+h.payment_amount:''}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>{new Date(h.created_at).toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'})}</div></div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.2)'}}>+1 stamp</span></div>)):<div style={{padding:'1.5rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No history yet.</div>}
       </div>
-      {card.rewards?.length>0&&(<div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}><div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:400}}>Rewards</div>{card.rewards.map((r,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>{r.reward_type}</div>{r.reward_cost&&<div style={{fontSize:'0.65rem',color:gold,marginTop:'0.1rem'}}>{r.reward_cost}</div>}</div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(45,138,96,0.1)',color:'#2d8a60'}}>{r.status}</span></div>))}</div>)}
+      {card.rewards?.length>0&&(<div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}><div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:400}}>Rewards</div>{card.rewards.map((r,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>{r.reward_type}</div>{r.reward_cost&&<div style={{fontSize:'0.65rem',color:gold,marginTop:'0.1rem'}}>{r.reward_cost}</div>}</div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(45,138,96,0.1)',color:'#2d8a60'}}>{r.status}</span></div>))}</div>)}
     </div>
   )
 }
@@ -132,7 +132,7 @@ function ClientProfile({card,onBack}){
 function ClientsPanel({users,cards,search,setSearch,onEdit,onAddPayment,onCreateCard,onCreateNew,onDelete,onFiles,onExpense,onHistory}){
   const filtered=users.filter(u=>(u.full_name||'').toLowerCase().includes(search.toLowerCase())||(u.business_name||'').toLowerCase().includes(search.toLowerCase()))
   function getCard(uid){return cards.find(c=>c.user_id===uid)}
-  function getClientStatus(uid){const card=getCard(uid);if(!card)return{label:'No Card',color:gray,bg:'rgba(14,14,12,0.06)'};return getStatus(card)}
+  function getClientStatus(uid){const card=getCard(uid);if(!card)return{label:'No Card',color:gray,bg:'rgba(31,20,14,0.06)'};return getStatus(card)}
   return(
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
@@ -143,32 +143,32 @@ function ClientsPanel({users,cards,search,setSearch,onEdit,onAddPayment,onCreate
         </div>
       </div>
       <input type="text" placeholder="Search by name or business..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box',background:white}}/>
-      <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}>
-        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr auto',padding:'0.6rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.06)',fontSize:'0.54rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>
-          <span>Client</span><span>Status</span><span>Sellos</span><span>Actions</span>
+      <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
+        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr auto',padding:'0.6rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontSize:'0.54rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>
+          <span>Client</span><span>Status</span><span>Stamps</span><span>Actions</span>
         </div>
         {filtered.map(user=>{
           const card=getCard(user.id)
           const status=getClientStatus(user.id)
-          const cur=card?(card.sellos%5===0&&card.sellos>0?5:card.sellos%5):0
-          const lastPay=card?.sello_history?.length>0?new Date(card.sello_history[card.sello_history.length-1].created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):null
+          const cur=card?(card.stamps%5===0&&card.stamps>0?5:card.stamps%5):0
+          const lastPay=card?.stamp_history?.length>0?new Date(card.stamp_history[card.stamp_history.length-1].created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):null
           return(
-            <div key={user.id} style={{display:'grid',gridTemplateColumns:'2fr 120px 100px 1fr',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.04)',alignItems:'center',gap:'0.5rem'}}>
+            <div key={user.id} style={{display:'grid',gridTemplateColumns:'2fr 120px 100px 1fr',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',alignItems:'center',gap:'0.5rem'}}>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:'0.78rem',color:black,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontWeight:500}}>{user.business_name||user.full_name}</div>
                 <div style={{fontSize:'0.62rem',color:gray,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user.business_name?user.full_name:user.email}</div>
-                {lastPay&&<div style={{fontSize:'0.58rem',color:'rgba(14,14,12,0.3)',marginTop:'0.1rem'}}>Last visita: {lastPay}</div>}
+                {lastPay&&<div style={{fontSize:'0.58rem',color:'rgba(31,20,14,0.3)',marginTop:'0.1rem'}}>Last visita: {lastPay}</div>}
               </div>
               <span style={{fontSize:'0.58rem',padding:'0.2rem 0.6rem',borderRadius:20,background:status.bg,color:status.color,whiteSpace:'nowrap',width:'fit-content'}}>{status.label}</span>
               <div style={{display:'flex',gap:2,alignItems:'center'}}>
-                {Array.from({length:5},(_,j)=><div key={j} style={{width:8,height:8,borderRadius:'50%',background:j<cur?gold:'rgba(14,14,12,0.08)'}}/>)}
-                <span style={{fontSize:'0.58rem',color:gray,marginLeft:'0.3rem'}}>{card?.sellos||0}</span>
+                {Array.from({length:5},(_,j)=><div key={j} style={{width:8,height:8,borderRadius:'50%',background:j<cur?gold:'rgba(31,20,14,0.08)'}}/>)}
+                <span style={{fontSize:'0.58rem',color:gray,marginLeft:'0.3rem'}}>{card?.stamps||0}</span>
               </div>
               <div style={{display:'flex',gap:'0.35rem',flexWrap:'wrap',justifyContent:'flex-end',alignItems:'center'}}>
-                <button onClick={()=>onEdit(user)} style={{padding:'0.35rem 0.65rem',background:'rgba(14,14,12,0.06)',color:black,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Edit</button>
+                <button onClick={()=>onEdit(user)} style={{padding:'0.35rem 0.65rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Edit</button>
                 {card
                   ?<button onClick={()=>onAddPayment(card)} style={{padding:'0.35rem 0.65rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Pay</button>
-                  :<button onClick={()=>onCreateCard(user.id)} style={{padding:'0.35rem 0.65rem',background:'rgba(#E35A1B,0.1)',color:gold,border:'1px solid rgba(#E35A1B,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Card</button>
+                  :<button onClick={()=>onCreateCard(user.id)} style={{padding:'0.35rem 0.65rem',background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Card</button>
                 }
                 <button onClick={()=>onFiles(user)} style={{padding:'0.35rem 0.65rem',background:'rgba(52,152,219,0.08)',color:'#2980b9',border:'1px solid rgba(52,152,219,0.2)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Files</button>
                 <button onClick={()=>onHistory(user)} style={{padding:'0.35rem 0.65rem',background:'rgba(45,138,96,0.08)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>History</button>
@@ -194,12 +194,12 @@ function NotificationsPanel({ cards, users }) {
         <div style={{fontSize:'0.62rem',color:gray}}>{alerts.length} active alert{alerts.length!==1?'s':''}</div>
       </div>
       {alerts.length===0
-        ?<div style={{background:white,borderRadius:10,padding:'2rem',textAlign:'center',border:'1px solid rgba(14,14,12,0.07)',color:gray,fontSize:'0.82rem'}}>No alerts — all clients are up to date.</div>
+        ?<div style={{background:white,borderRadius:10,padding:'2rem',textAlign:'center',border:'1px solid rgba(31,20,14,0.07)',color:gray,fontSize:'0.82rem'}}>No alerts — all clients are up to date.</div>
         :<div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
           {alerts.map((alert,i)=>{
             const user=users.find(u=>u.id===alert.card.user_id)
             return(
-              <div key={i} style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}>
+              <div key={i} style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
                 <div style={{background:`${levelColor[alert.level]}0d`,borderLeft:'3px solid '+levelColor[alert.level],padding:'1rem 1.25rem',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
                   <div>
                     <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,color:black,marginBottom:'0.2rem'}}>{alert.card.profiles?.business_name||alert.card.profiles?.full_name}</div>
@@ -211,7 +211,7 @@ function NotificationsPanel({ cards, users }) {
                     <span style={{fontSize:'0.62rem',color:levelColor[alert.level],fontWeight:600}}>{alert.days} days</span>
                   </div>
                 </div>
-                {user?.phone&&(<div style={{padding:'0.75rem 1.25rem',borderTop:'1px solid rgba(14,14,12,0.05)'}}><button onClick={()=>{const phone=user.phone.replace(/[^0-9]/g,'');const fp=phone.startsWith('1')?phone:'1'+phone;const msg=`Hi ${alert.card.profiles?.full_name||''}, we noticed your account at ${alert.card.profiles?.business_name||''} has a pending balance of ${alert.days} days. Please contact us to keep your service active.`;window.open(`https://wa.me/${fp}?text=${encodeURIComponent(msg)}`,'_blank')}} style={{padding:'0.4rem 1rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',letterSpacing:'0.08em',textTransform:'uppercase'}}>Send WhatsApp</button></div>)}
+                {user?.phone&&(<div style={{padding:'0.75rem 1.25rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}><button onClick={()=>{const phone=user.phone.replace(/[^0-9]/g,'');const fp=phone.startsWith('1')?phone:'1'+phone;const msg=`Hi ${alert.card.profiles?.full_name||''}, we noticed your account at ${alert.card.profiles?.business_name||''} has a pending balance of ${alert.days} days. Please contact us to keep your service active.`;window.open(`https://wa.me/${fp}?text=${encodeURIComponent(msg)}`,'_blank')}} style={{padding:'0.4rem 1rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',letterSpacing:'0.08em',textTransform:'uppercase'}}>Send WhatsApp</button></div>)}
               </div>
             )
           })}
@@ -235,20 +235,20 @@ function CampaignsPanel({ cards, users }) {
     return 'nuevos'
   }
   const groups = {
-    vip:        { label:'VIP',        desc:'15+ sellos, up to date',      color:'#E35A1B', bg:'rgba(#E35A1B,0.12)', cards: cards.filter(c=>classifyClient(c)==='vip') },
-    regulares:  { label:'Regular',    desc:'10-14 sellos, up to date',    color:'#2d8a60', bg:'rgba(45,138,96,0.1)',   cards: cards.filter(c=>classifyClient(c)==='regulares') },
-    activos:    { label:'Active',     desc:'5-9 sellos, up to date',      color:'#3498db', bg:'rgba(52,152,219,0.1)',  cards: cards.filter(c=>classifyClient(c)==='activos') },
-    nuevos:     { label:'New',        desc:'1-4 sellos, up to date',      color:'#8e44ad', bg:'rgba(142,68,173,0.1)',  cards: cards.filter(c=>classifyClient(c)==='nuevos') },
+    vip:        { label:'VIP',        desc:'15+ stamps, up to date',      color:'#E35A1B', bg:'rgba(227,90,27,0.12)', cards: cards.filter(c=>classifyClient(c)==='vip') },
+    regulares:  { label:'Regular',    desc:'10-14 stamps, up to date',    color:'#2d8a60', bg:'rgba(45,138,96,0.1)',   cards: cards.filter(c=>classifyClient(c)==='regulares') },
+    activos:    { label:'Active',     desc:'5-9 stamps, up to date',      color:'#3498db', bg:'rgba(52,152,219,0.1)',  cards: cards.filter(c=>classifyClient(c)==='activos') },
+    nuevos:     { label:'New',        desc:'1-4 stamps, up to date',      color:'#8e44ad', bg:'rgba(142,68,173,0.1)',  cards: cards.filter(c=>classifyClient(c)==='nuevos') },
     recargo:    { label:'Late Fee',   desc:'35-65 days — $30 applied',    color:'#e74c3c', bg:'rgba(231,76,60,0.1)',   cards: cards.filter(c=>classifyClient(c)==='recargo') },
-    cancelados: { label:'Cancelled',  desc:'66+ days without visita',    color:'#c0392b', bg:'rgba(192,57,43,0.1)',   cards: cards.filter(c=>classifyClient(c)==='cancelados') },
+    cancelados: { label:'Cancelled',  desc:'66+ days without payment',    color:'#c0392b', bg:'rgba(192,57,43,0.1)',   cards: cards.filter(c=>classifyClient(c)==='cancelados') },
   }
   const defaultMessages = {
     vip:        'Hi [name]! Thank you for being a VIP at [business]. Your loyalty means everything to us 🙌',
-    regulares:  'Hi [name]! You keep adding up at [business]. Every visita gets you closer to your next reward 💪',
-    activos:    'Hi [name]! You have sellos saved at [business]. Keep it up, you\'re doing great! ⭐',
+    regulares:  'Hi [name]! You keep adding up at [business]. Every payment gets you closer to your next reward 💪',
+    activos:    'Hi [name]! You have stamps saved at [business]. Keep it up, you\'re doing great! ⭐',
     nuevos:     'Hi [name]! Welcome to [business]. You started your loyalty card, let\'s get more! 🎉',
     recargo:    'Hi [name], you have a pending balance at [business]. Getting current avoids suspension. Thank you!',
-    cancelados: 'Hi [name], your service at [business] is suspended due to non-visita. Contact us to reactivate. We\'re here to help!',
+    cancelados: 'Hi [name], your service at [business] is suspended due to non-payment. Contact us to reactivate. We\'re here to help!',
   }
   function selectGroup(key){setSelectedGroup(key);setMessage(defaultMessages[key]);setSent(false)}
   const group=selectedGroup?groups[selectedGroup]:null
@@ -262,17 +262,17 @@ function CampaignsPanel({ cards, users }) {
         <div style={{fontSize:'0.62rem',color:gray}}>{cards.length} total clients</div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:'0.75rem',marginBottom:'1.5rem'}}>
-        {Object.entries(groups).map(([key,g])=>(<div key={key} onClick={()=>selectGroup(key)} style={{background:selectedGroup===key?g.color:white,borderRadius:10,padding:'1.1rem',border:'2px solid '+(selectedGroup===key?g.color:'rgba(14,14,12,0.07)'),cursor:'pointer'}}><div style={{fontSize:'0.78rem',fontWeight:600,color:selectedGroup===key?white:black,marginBottom:'0.2rem'}}>{g.label}</div><div style={{fontSize:'0.6rem',color:selectedGroup===key?'rgba(255,255,255,0.75)':gray,lineHeight:1.4,marginBottom:'0.5rem'}}>{g.desc}</div><div style={{fontSize:'0.72rem',fontWeight:600,color:selectedGroup===key?white:g.color}}>{g.cards.length} clients</div></div>))}
+        {Object.entries(groups).map(([key,g])=>(<div key={key} onClick={()=>selectGroup(key)} style={{background:selectedGroup===key?g.color:white,borderRadius:10,padding:'1.1rem',border:'2px solid '+(selectedGroup===key?g.color:'rgba(31,20,14,0.07)'),cursor:'pointer'}}><div style={{fontSize:'0.78rem',fontWeight:600,color:selectedGroup===key?white:black,marginBottom:'0.2rem'}}>{g.label}</div><div style={{fontSize:'0.6rem',color:selectedGroup===key?'rgba(255,255,255,0.75)':gray,lineHeight:1.4,marginBottom:'0.5rem'}}>{g.desc}</div><div style={{fontSize:'0.72rem',fontWeight:600,color:selectedGroup===key?white:g.color}}>{g.cards.length} clients</div></div>))}
       </div>
       {selectedGroup&&group&&<>
-        <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',padding:'1.25rem',marginBottom:'1rem'}}>
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',padding:'1.25rem',marginBottom:'1rem'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.85rem'}}>
             <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400}}>Recipients — {group.label}</div>
             <div style={{display:'flex',gap:'0.75rem',fontSize:'0.65rem'}}><span style={{color:'#2d8a60'}}>{recipients.length} with phone</span>{noPhone.length>0&&<span style={{color:'#c0392b'}}>{noPhone.length} no phone</span>}</div>
           </div>
           <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem'}}>{group.cards.map(card=>{const user=users.find(u=>u.id===card.user_id);const hasPhone=!!user?.phone;return(<span key={card.id} style={{fontSize:'0.62rem',padding:'0.2rem 0.65rem',borderRadius:20,background:hasPhone?'rgba(45,138,96,0.1)':'rgba(192,57,43,0.06)',color:hasPhone?'#2d8a60':'#c0392b'}}>{user?.business_name||user?.full_name||'No name'}{!hasPhone?' (no phone)':''}</span>)})}{group.cards.length===0&&<span style={{fontSize:'0.78rem',color:gray}}>No clients in this group.</span>}</div>
         </div>
-        <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',padding:'1.25rem',marginBottom:'1rem'}}>
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',padding:'1.25rem',marginBottom:'1rem'}}>
           <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'0.5rem'}}>Message</div>
           <div style={{fontSize:'0.6rem',color:gray,marginBottom:'0.5rem'}}>Use [name] and [business] to personalize</div>
           <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={5} style={{width:'100%',padding:'0.85rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.82rem',color:black,outline:'none',resize:'vertical',boxSizing:'border-box',lineHeight:1.6}}/>
@@ -284,7 +284,7 @@ function CampaignsPanel({ cards, users }) {
         }
         {noPhone.length>0&&<div style={{marginTop:'0.6rem',fontSize:'0.65rem',color:gray,textAlign:'center'}}>{noPhone.length} client{noPhone.length!==1?'s':''} without phone will not receive the message</div>}
       </>}
-      {!selectedGroup&&<div style={{background:white,borderRadius:10,padding:'2rem',textAlign:'center',border:'1px solid rgba(14,14,12,0.07)',color:gray,fontSize:'0.82rem'}}>Select a group above to see recipients.</div>}
+      {!selectedGroup&&<div style={{background:white,borderRadius:10,padding:'2rem',textAlign:'center',border:'1px solid rgba(31,20,14,0.07)',color:gray,fontSize:'0.82rem'}}>Select a group above to see recipients.</div>}
     </div>
   )
 }
@@ -342,7 +342,7 @@ function CatalogPanel({ catalog, onSetCost, onSetSuppliers }) {
     const margin = getMargin(item)
     const suppliers = item.catalog_costs?.suppliers
     return (
-      <div style={{padding:'0.9rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.05)'}}>
+      <div style={{padding:'0.9rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.6rem'}}>
           <div style={{flex:1,minWidth:0,marginRight:'0.75rem'}}>
             <div style={{fontSize:'0.78rem',fontWeight:600,color:black,lineHeight:1.3}}>{item.name}</div>
@@ -359,20 +359,20 @@ function CatalogPanel({ catalog, onSetCost, onSetSuppliers }) {
           <span style={{color:gray,fontSize:'0.7rem'}}>·</span>
           <div style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
             <span style={{fontSize:'0.48rem',color:gray,letterSpacing:'0.08em',textTransform:'uppercase'}}>Cost</span>
-            <span style={{fontSize:'0.78rem',fontWeight:600,color:cost!==null?black:'rgba(14,14,12,0.25)'}}>{cost!==null?'$'+cost.toFixed(2):'—'}</span>
+            <span style={{fontSize:'0.78rem',fontWeight:600,color:cost!==null?black:'rgba(31,20,14,0.25)'}}>{cost!==null?'$'+cost.toFixed(2):'—'}</span>
           </div>
           <span style={{color:gray,fontSize:'0.7rem'}}>·</span>
           <div style={{display:'flex',alignItems:'center',gap:'0.25rem'}}>
             <span style={{fontSize:'0.48rem',color:gray,letterSpacing:'0.08em',textTransform:'uppercase'}}>Margin</span>
-            <span style={{fontSize:'0.78rem',fontWeight:700,color:margin!==null?mc(margin):'rgba(14,14,12,0.25)'}}>{margin!==null?margin+'%':'—'}</span>
+            <span style={{fontSize:'0.78rem',fontWeight:700,color:margin!==null?mc(margin):'rgba(31,20,14,0.25)'}}>{margin!==null?margin+'%':'—'}</span>
           </div>
-          {margin!==null&&<div style={{flex:1,height:3,background:'rgba(14,14,12,0.06)',borderRadius:2,minWidth:40}}>
+          {margin!==null&&<div style={{flex:1,height:3,background:'rgba(31,20,14,0.06)',borderRadius:2,minWidth:40}}>
             <div style={{height:'100%',width:Math.min(margin,100)+'%',background:mc(margin),borderRadius:2}}/>
           </div>}
         </div>
         {suppliers&&<div style={{fontSize:'0.62rem',color:gray,marginBottom:'0.6rem',fontStyle:'italic'}}>{suppliers.substring(0,80)}{suppliers.length>80?'...':''}</div>}
         <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
-          <button onClick={()=>onSetCost(item)} style={{padding:'0.4rem 0.85rem',background:'rgba(#E35A1B,0.08)',color:gold,border:'1px solid rgba(#E35A1B,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',letterSpacing:'0.08em',textTransform:'uppercase'}}>{cost!==null?'Edit Cost':'Set Cost'}</button>
+          <button onClick={()=>onSetCost(item)} style={{padding:'0.4rem 0.85rem',background:'rgba(227,90,27,0.08)',color:gold,border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',letterSpacing:'0.08em',textTransform:'uppercase'}}>{cost!==null?'Edit Cost':'Set Cost'}</button>
           <button onClick={()=>onSetSuppliers(item)} style={{padding:'0.4rem 0.85rem',background:'rgba(52,152,219,0.08)',color:'#2980b9',border:'1px solid rgba(52,152,219,0.2)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',letterSpacing:'0.08em',textTransform:'uppercase'}}>Suppliers</button>
         </div>
       </div>
@@ -383,8 +383,8 @@ function CatalogPanel({ catalog, onSetCost, onSetSuppliers }) {
     const [open, setOpen] = useState(true)
     if (!items.length) return null
     return (
-      <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden',marginBottom:'1rem'}}>
-        <div onClick={()=>setOpen(o=>!o)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.9rem 1.25rem',cursor:'pointer',background:'rgba(14,14,12,0.02)'}}>
+      <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1rem'}}>
+        <div onClick={()=>setOpen(o=>!o)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.9rem 1.25rem',cursor:'pointer',background:'rgba(31,20,14,0.02)'}}>
           <div style={{fontFamily:ffS,fontSize:'1.05rem',fontWeight:400,color:black}}>{title}</div>
           <div style={{display:'flex',alignItems:'center',gap:'0.6rem'}}>
             <span style={{fontSize:'0.6rem',color:gray}}>{items.length} service{items.length!==1?'s':''}</span>
@@ -405,17 +405,17 @@ function CatalogPanel({ catalog, onSetCost, onSetSuppliers }) {
 
       {/* Best Margin Box */}
       {withMargin.length>0&&(
-        <div style={{background:white,borderRadius:10,border:'1px solid rgba(#E35A1B,0.25)',padding:'0.9rem 1.25rem',marginBottom:'1.25rem'}}>
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(227,90,27,0.25)',padding:'0.9rem 1.25rem',marginBottom:'1.25rem'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.65rem'}}>
             <span style={{fontSize:'0.6rem',fontWeight:700,color:gold,letterSpacing:'0.1em',textTransform:'uppercase'}}>★ Best Margin</span>
             <button onClick={()=>setExpandMargin(e=>!e)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.6rem',color:gray,fontFamily:ff,letterSpacing:'0.08em',textTransform:'uppercase'}}>{expandMargin?'Collapse':'See all'}</button>
           </div>
           {showList.map((item,i)=>(
             <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.6rem',marginBottom:'0.45rem'}}>
-              <div style={{width:16,height:16,borderRadius:'50%',background:i===0&&!expandMargin?gold:'rgba(14,14,12,0.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.5rem',fontWeight:700,color:i===0&&!expandMargin?black:gray,flexShrink:0}}>{i+1}</div>
+              <div style={{width:16,height:16,borderRadius:'50%',background:i===0&&!expandMargin?gold:'rgba(31,20,14,0.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.5rem',fontWeight:700,color:i===0&&!expandMargin?black:gray,flexShrink:0}}>{i+1}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:'0.68rem',color:black,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
-                <div style={{height:3,background:'rgba(14,14,12,0.06)',borderRadius:2,marginTop:'0.2rem'}}>
+                <div style={{height:3,background:'rgba(31,20,14,0.06)',borderRadius:2,marginTop:'0.2rem'}}>
                   <div style={{height:'100%',width:Math.min(item._margin,100)+'%',background:mc(item._margin),borderRadius:2}}/>
                 </div>
               </div>
@@ -432,7 +432,7 @@ function CatalogPanel({ catalog, onSetCost, onSetSuppliers }) {
       <Section title="Setup" items={setup}/>
       <Section title="Maintenance" items={maintenance}/>
       <Section title="Extras" items={extras}/>
-      {!filtered.length&&<div style={{background:white,borderRadius:10,padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem',border:'1px solid rgba(14,14,12,0.07)'}}>No services found.</div>}
+      {!filtered.length&&<div style={{background:white,borderRadius:10,padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem',border:'1px solid rgba(31,20,14,0.07)'}}>No services found.</div>}
     </div>
   )
 }
@@ -454,14 +454,14 @@ function CostHistory({ productId }) {
 
   return(
     <div style={{marginTop:'0.75rem'}}>
-      <button onClick={()=>setOpen(o=>!o)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:'rgba(14,14,12,0.03)',border:'1px solid rgba(14,14,12,0.07)',borderRadius:6,padding:'0.5rem 0.85rem',cursor:'pointer',fontFamily:ff}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',background:'rgba(31,20,14,0.03)',border:'1px solid rgba(31,20,14,0.07)',borderRadius:6,padding:'0.5rem 0.85rem',cursor:'pointer',fontFamily:ff}}>
         <span style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray}}>Cost History ({history.length})</span>
         <span style={{fontSize:'0.6rem',color:gray,transform:open?'rotate(180deg)':'rotate(0)',display:'inline-block',transition:'transform 0.2s'}}>▾</span>
       </button>
       {open&&(
-        <div style={{border:'1px solid rgba(14,14,12,0.07)',borderTop:'none',borderRadius:'0 0 6px 6px',overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
+        <div style={{border:'1px solid rgba(31,20,14,0.07)',borderTop:'none',borderRadius:'0 0 6px 6px',overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
           {history.map((h,i)=>(
-            <div key={h.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.6rem 0.85rem',borderBottom:i<history.length-1?'1px solid rgba(14,14,12,0.05)':'none'}}>
+            <div key={h.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.6rem 0.85rem',borderBottom:i<history.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
               <div>
                 <span style={{fontSize:'0.78rem',fontWeight:600,color:'#1F140E'}}>${parseFloat(h.cost).toFixed(2)}</span>
                 {h.notes&&<span style={{fontSize:'0.6rem',color:'#7A6452',marginLeft:'0.5rem'}}>{h.notes.substring(0,40)}</span>}
@@ -532,7 +532,7 @@ function ExpenseHistory({ clientId, showToast, supplies }) {
       {/* Toggle */}
       <div style={{display:'flex',gap:'0.4rem',marginBottom:'1rem'}}>
         {[['manual','Manual'],['supplies','From Supplies']].map(([m,label])=>(
-          <button key={m} onClick={()=>setMode(m)} style={{padding:'0.35rem 0.85rem',borderRadius:20,border:'none',cursor:'pointer',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.08em',textTransform:'uppercase',background:mode===m?black:'rgba(14,14,12,0.06)',color:mode===m?white:gray,transition:'all 0.15s'}}>{label}</button>
+          <button key={m} onClick={()=>setMode(m)} style={{padding:'0.35rem 0.85rem',borderRadius:20,border:'none',cursor:'pointer',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.08em',textTransform:'uppercase',background:mode===m?black:'rgba(31,20,14,0.06)',color:mode===m?white:gray,transition:'all 0.15s'}}>{label}</button>
         ))}
       </div>
 
@@ -543,7 +543,7 @@ function ExpenseHistory({ clientId, showToast, supplies }) {
             ?<div style={{fontSize:'0.72rem',color:gray,padding:'0.75rem 0'}}>No supplies added yet. Add them in the Supplies section.</div>
             :<>
               {supplies.map(s=>(
-                <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.6rem 0',borderBottom:'1px solid rgba(14,14,12,0.05)'}}>
+                <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.6rem 0',borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:'0.72rem',color:black,fontWeight:500}}>{s.name}</div>
                     <div style={{fontSize:'0.6rem',color:gray}}>${parseFloat(s.cost).toFixed(2)}{unitLabel(s.unit)}</div>
@@ -558,7 +558,7 @@ function ExpenseHistory({ clientId, showToast, supplies }) {
                   </div>
                 </div>
               ))}
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:'0.75rem',marginTop:'0.25rem',borderTop:'1px solid rgba(14,14,12,0.08)'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:'0.75rem',marginTop:'0.25rem',borderTop:'1px solid rgba(31,20,14,0.08)'}}>
                 <span style={{fontSize:'0.62rem',color:gray,letterSpacing:'0.08em',textTransform:'uppercase'}}>Total</span>
                 <span style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400,color:'#c0392b'}}>${suppliesTotal.toFixed(2)}</span>
               </div>
@@ -575,15 +575,15 @@ function ExpenseHistory({ clientId, showToast, supplies }) {
       </div>
       {expenses.length===0
         ?<div style={{fontSize:'0.72rem',color:'#7A6452',textAlign:'center',padding:'0.75rem 0'}}>No expenses logged yet.</div>
-        :<div style={{border:'1px solid rgba(14,14,12,0.07)',borderRadius:8,overflow:'hidden'}}>
+        :<div style={{border:'1px solid rgba(31,20,14,0.07)',borderRadius:8,overflow:'hidden'}}>
           {expenses.map((e,i)=>(
-            <div key={e.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.75rem 1rem',borderBottom:i<expenses.length-1?'1px solid rgba(14,14,12,0.05)':'none'}}>
+            <div key={e.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.75rem 1rem',borderBottom:i<expenses.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:'0.72rem',color:'#1F140E',fontWeight:500}}>{e.description||'—'}</div>
                 <div style={{display:'flex',gap:'0.5rem',marginTop:'0.15rem'}}>
                   <span style={{fontSize:'0.58rem',color:'#7A6452'}}>{e.expense_date}</span>
                   {e.recurring&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(52,152,219,0.1)',color:'#2980b9'}}>↻ {e.recurring_interval}</span>}
-                  {e.line_items&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(#E35A1B,0.1)',color:gold}}>Supplies</span>}
+                  {e.line_items&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(227,90,27,0.1)',color:gold}}>Supplies</span>}
                 </div>
               </div>
               <div style={{fontSize:'0.78rem',fontWeight:600,color:'#c0392b',flexShrink:0}}>-${parseFloat(e.amount).toFixed(2)}</div>
@@ -825,7 +825,7 @@ function FinancialCard({ sales }) {
             const label = val>=1000 ? '$'+(val/1000).toFixed(1)+'k' : prefix+val.toFixed(0)
             return <g key={pct}>
               <line x1={padX} y1={y} x2={w-padR} y2={y}
-                stroke={pct===0?'rgba(14,14,12,0.12)':'rgba(14,14,12,0.06)'}
+                stroke={pct===0?'rgba(31,20,14,0.12)':'rgba(31,20,14,0.06)'}
                 strokeWidth={pct===0?1.5:1} strokeDasharray={pct===0?'none':'4,4'}/>
               {pct>0&&<text x={padX-6} y={y+4} fontSize={9} fill={gray} textAnchor="end">{label}</text>}
             </g>
@@ -884,13 +884,13 @@ function FinancialCard({ sales }) {
                   <span style={{fontSize:'0.82rem',fontWeight:600,color:black,fontFamily:ffS}}>{prefix}{val.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                 </div>
               </div>
-              <div style={{height:8,background:'rgba(14,14,12,0.06)',borderRadius:4,overflow:'hidden'}}>
+              <div style={{height:8,background:'rgba(31,20,14,0.06)',borderRadius:4,overflow:'hidden'}}>
                 <div style={{height:'100%',width:(val/maxVal*100)+'%',background:hovered===i?color:color+'cc',borderRadius:4,transition:'width 0.4s, background 0.15s'}}/>
               </div>
             </div>
           )
         })}
-        <div style={{marginTop:'1.25rem',paddingTop:'1rem',borderTop:'1px solid rgba(14,14,12,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{marginTop:'1.25rem',paddingTop:'1rem',borderTop:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <span style={{fontSize:'0.58rem',color:gray,letterSpacing:'0.08em',textTransform:'uppercase'}}>Total Revenue</span>
           <span style={{fontSize:'1.1rem',fontFamily:ffS,fontWeight:400,color:black}}>{prefix}{total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
         </div>
@@ -914,9 +914,9 @@ function FinancialCard({ sales }) {
     <>
       {/* SALES HISTORY MODAL */}
       {salesHistoryOpen&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(14,14,12,0.6)',zIndex:400,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setSalesHistoryOpen(false)}>
+        <div style={{position:'fixed',inset:0,background:'rgba(31,20,14,0.6)',zIndex:400,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setSalesHistoryOpen(false)}>
           <div style={{background:white,borderRadius:'14px 14px 0 0',width:'100%',maxWidth:640,maxHeight:'85vh',display:'flex',flexDirection:'column',boxShadow:'0 -8px 40px rgba(0,0,0,0.15)'}}>
-            <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(14,14,12,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+            <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
               <div>
                 <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400}}>All Transactions</div>
                 <div style={{fontSize:'0.6rem',color:gray,marginTop:'0.15rem'}}>{(sales||[]).length} records · tap Void to cancel</div>
@@ -929,15 +929,15 @@ function FinancialCard({ sales }) {
                 const isVoided = s.status==='voided'
                 const isRefunded = s.status==='refunded'
                 return(
-                  <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 0',borderBottom:'1px solid rgba(14,14,12,0.05)',opacity:isVoided?0.45:1}}>
+                  <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 0',borderBottom:'1px solid rgba(31,20,14,0.05)',opacity:isVoided?0.45:1}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:'0.75rem',color:black,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.customer_name||s.customer_email||'—'}</div>
                       <div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.product_name||'—'}</div>
-                      <div style={{fontSize:'0.58rem',color:'rgba(14,14,12,0.35)',marginTop:'0.1rem'}}>{s.sale_date?new Date(s.sale_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):''} · {s.type||'stripe'}</div>
+                      <div style={{fontSize:'0.58rem',color:'rgba(31,20,14,0.35)',marginTop:'0.1rem'}}>{s.sale_date?new Date(s.sale_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):''} · {s.type||'stripe'}</div>
                     </div>
                     <div style={{textAlign:'right',flexShrink:0}}>
                       <div style={{fontSize:'0.85rem',fontWeight:600,fontFamily:ffS,color:isVoided?gray:isRefunded?'#c0392b':'#2d8a60'}}>{isRefunded?'-':''}${Math.abs(parseFloat(s.amount||0)).toFixed(2)}</div>
-                      <span style={{fontSize:'0.52rem',padding:'0.15rem 0.5rem',borderRadius:20,background:isVoided?'rgba(14,14,12,0.06)':isRefunded?'rgba(192,57,43,0.08)':'rgba(45,138,96,0.08)',color:isVoided?gray:isRefunded?'#c0392b':'#2d8a60',display:'inline-block',marginTop:'0.2rem'}}>{s.status}</span>
+                      <span style={{fontSize:'0.52rem',padding:'0.15rem 0.5rem',borderRadius:20,background:isVoided?'rgba(31,20,14,0.06)':isRefunded?'rgba(192,57,43,0.08)':'rgba(45,138,96,0.08)',color:isVoided?gray:isRefunded?'#c0392b':'#2d8a60',display:'inline-block',marginTop:'0.2rem'}}>{s.status}</span>
                     </div>
                     {!isVoided&&!isRefunded&&(
                       <button onClick={()=>voidSale(s.id)} style={{flexShrink:0,padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.08)',color:'#c0392b',border:'1px solid rgba(192,57,43,0.15)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.54rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Void</button>
@@ -951,10 +951,10 @@ function FinancialCard({ sales }) {
       )}
       {/* Chart Modal */}
       {activeChart && activeChartDef && (
-        <div style={{position:'fixed',inset:0,background:'rgba(14,14,12,0.55)',zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&openChart(activeChart)}>
+        <div style={{position:'fixed',inset:0,background:'rgba(31,20,14,0.55)',zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&openChart(activeChart)}>
           <div style={{background:white,borderRadius:14,width:'100%',maxWidth:640,maxHeight:'88vh',overflowY:'auto',boxShadow:'0 24px 60px rgba(0,0,0,0.18)',transition:'opacity 0.22s',opacity:chartVisible?1:0}}>
             {/* Modal header */}
-            <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(14,14,12,0.07)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.07)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div>
                 <div style={{fontFamily:ffS,fontSize:'1.15rem',fontWeight:400,color:black}}>{activeChartDef.label}</div>
                 <div style={{fontSize:'0.58rem',color:gray,marginTop:'0.2rem'}}>{activeChartDef.desc}</div>
@@ -963,13 +963,13 @@ function FinancialCard({ sales }) {
             </div>
 
             {/* Period selector + chart switcher */}
-            <div style={{padding:'0.85rem 1.5rem',borderBottom:'1px solid rgba(14,14,12,0.05)',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'0.5rem'}}>
+            <div style={{padding:'0.85rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.05)',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'0.5rem'}}>
               {/* Period pills */}
               <div style={{display:'flex',gap:'0.3rem'}}>
                 {[['weekly','Weekly'],['monthly','Monthly'],['ytd','YTD'],['yearly','Yearly']].map(([p,label])=>(
                   <button key={p} onClick={()=>setPeriod(p)} style={{
                     padding:'0.3rem 0.75rem',borderRadius:20,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer',
-                    border:'1px solid '+(period===p?black:'rgba(14,14,12,0.12)'),
+                    border:'1px solid '+(period===p?black:'rgba(31,20,14,0.12)'),
                     background:period===p?black:'transparent',
                     color:period===p?white:gray,
                     transition:'all 0.15s'
@@ -979,7 +979,7 @@ function FinancialCard({ sales }) {
               {/* Chart switcher */}
               <div style={{display:'flex',gap:'0.3rem',flexWrap:'wrap'}}>
                 {getCharts(period).map(c=>(
-                  <button key={c.id} onClick={()=>openChart(c.id)} style={{padding:'0.3rem 0.65rem',borderRadius:20,border:`1px solid ${activeChart===c.id?c.color:'rgba(14,14,12,0.1)'}`,background:activeChart===c.id?c.color+'18':'transparent',color:activeChart===c.id?c.color:gray,fontSize:'0.56rem',fontFamily:ff,cursor:'pointer',display:'flex',alignItems:'center',gap:'0.25rem',transition:'all 0.15s'}}>
+                  <button key={c.id} onClick={()=>openChart(c.id)} style={{padding:'0.3rem 0.65rem',borderRadius:20,border:`1px solid ${activeChart===c.id?c.color:'rgba(31,20,14,0.1)'}`,background:activeChart===c.id?c.color+'18':'transparent',color:activeChart===c.id?c.color:gray,fontSize:'0.56rem',fontFamily:ff,cursor:'pointer',display:'flex',alignItems:'center',gap:'0.25rem',transition:'all 0.15s'}}>
                     <span style={{width:5,height:5,borderRadius:'50%',background:c.color,display:'inline-block',flexShrink:0}}/>
                     {c.label}
                   </button>
@@ -1005,7 +1005,7 @@ function FinancialCard({ sales }) {
                           ['Avg',activeChartDef.prefix+avg.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),gold],
                           ['Peak',peakLabel,'#5b8dee']
                         ].map(([label,val,color])=>(
-                          <div key={label} style={{textAlign:'center',background:'rgba(14,14,12,0.025)',borderRadius:8,padding:'0.75rem 0.5rem'}}>
+                          <div key={label} style={{textAlign:'center',background:'rgba(31,20,14,0.025)',borderRadius:8,padding:'0.75rem 0.5rem'}}>
                             <div style={{fontSize:'0.95rem',fontFamily:ffS,fontWeight:400,color,lineHeight:1}}>{val}</div>
                             <div style={{fontSize:'0.5rem',color:gray,letterSpacing:'0.07em',textTransform:'uppercase',marginTop:'0.25rem'}}>{label}</div>
                           </div>
@@ -1026,7 +1026,7 @@ function FinancialCard({ sales }) {
       )}
 
       {/* Financial Card */}
-      <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden',marginBottom:'1.5rem'}}>
+      <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1.5rem'}}>
 
         {/* HEADER — always shows KPIs */}
         <div style={{padding:'1rem 1.5rem 0'}}>
@@ -1035,7 +1035,7 @@ function FinancialCard({ sales }) {
               <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400}}>Financial <span style={{fontSize:'0.52rem',color:gold,letterSpacing:'0.1em',textTransform:'uppercase',marginLeft:'0.5rem'}}>Stripe</span></div>
               <button onClick={()=>setSalesHistoryOpen(true)} style={{fontSize:'0.58rem',color:'#2980b9',background:'rgba(52,152,219,0.08)',border:'1px solid rgba(52,152,219,0.2)',borderRadius:20,padding:'0.22rem 0.65rem',cursor:'pointer',fontFamily:ff,letterSpacing:'0.06em',textTransform:'uppercase'}}>{paid.length} sales ›</button>
             </div>
-            <button onClick={()=>setExpanded(e=>!e)} style={{display:'flex',alignItems:'center',gap:'0.3rem',background:'none',border:'1px solid rgba(14,14,12,0.1)',borderRadius:20,cursor:'pointer',color:gray,fontSize:'0.58rem',padding:'0.22rem 0.65rem',fontFamily:ff,letterSpacing:'0.06em',textTransform:'uppercase',transition:'all 0.15s'}}>
+            <button onClick={()=>setExpanded(e=>!e)} style={{display:'flex',alignItems:'center',gap:'0.3rem',background:'none',border:'1px solid rgba(31,20,14,0.1)',borderRadius:20,cursor:'pointer',color:gray,fontSize:'0.58rem',padding:'0.22rem 0.65rem',fontFamily:ff,letterSpacing:'0.06em',textTransform:'uppercase',transition:'all 0.15s'}}>
               {expanded?'Less':'More'} <span style={{display:'inline-block',transform:expanded?'rotate(180deg)':'rotate(0)',transition:'transform 0.2s',lineHeight:1}}>▾</span>
             </button>
           </div>
@@ -1047,7 +1047,7 @@ function FinancialCard({ sales }) {
               ['This Month',  '$'+thisMonthSales.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}), gold],
               ['Avg Order',   '$'+avgOrder.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}), '#5b8dee'],
             ].map(([label,val,color])=>(
-              <div key={label} style={{textAlign:'center',background:'rgba(14,14,12,0.025)',borderRadius:8,padding:'0.65rem 0.25rem'}}>
+              <div key={label} style={{textAlign:'center',background:'rgba(31,20,14,0.025)',borderRadius:8,padding:'0.65rem 0.25rem'}}>
                 <div style={{fontSize:'0.95rem',fontFamily:ffS,fontWeight:400,color,lineHeight:1}}>{val}</div>
                 <div style={{fontSize:'0.5rem',color:gray,letterSpacing:'0.07em',textTransform:'uppercase',marginTop:'0.25rem'}}>{label}</div>
               </div>
@@ -1057,14 +1057,14 @@ function FinancialCard({ sales }) {
 
         {/* EXPANDED — chart chips */}
         {expanded&&(
-          <div style={{borderTop:'1px solid rgba(14,14,12,0.06)',padding:'0.85rem 1.5rem'}}>
+          <div style={{borderTop:'1px solid rgba(31,20,14,0.06)',padding:'0.85rem 1.5rem'}}>
             <div style={{fontSize:'0.5rem',letterSpacing:'0.14em',textTransform:'uppercase',color:gray,marginBottom:'0.6rem'}}>Charts — tap to view</div>
             <div style={{display:'flex',flexWrap:'wrap',gap:'0.4rem'}}>
               {getCharts('yearly').map(c=>(
                 <button key={c.id} onClick={()=>openChart(c.id)} style={{
                   padding:'0.4rem 0.85rem',
                   borderRadius:20,
-                  border:`1px solid ${activeChart===c.id?c.color:'rgba(14,14,12,0.12)'}`,
+                  border:`1px solid ${activeChart===c.id?c.color:'rgba(31,20,14,0.12)'}`,
                   background: activeChart===c.id?c.color+'18':'transparent',
                   color: c.color,
                   fontSize:'0.6rem',
@@ -1108,11 +1108,11 @@ function SupplyCostHistory({ supplyId }) {
         Cost History {open?'▴':'▾'}
       </button>
       {open&&(
-        <div style={{marginTop:'0.4rem',border:'1px solid rgba(14,14,12,0.07)',borderRadius:6,overflow:'hidden',maxHeight:140,overflowY:'auto'}}>
+        <div style={{marginTop:'0.4rem',border:'1px solid rgba(31,20,14,0.07)',borderRadius:6,overflow:'hidden',maxHeight:140,overflowY:'auto'}}>
           {loading&&<div style={{padding:'0.5rem 0.85rem',fontSize:'0.62rem',color:gray}}>Loading...</div>}
           {!loading&&history.length===0&&<div style={{padding:'0.5rem 0.85rem',fontSize:'0.62rem',color:gray}}>No history yet.</div>}
           {!loading&&history.map((h,i)=>(
-            <div key={h.id||i} style={{display:'flex',justifyContent:'space-between',padding:'0.5rem 0.85rem',borderBottom:i<history.length-1?'1px solid rgba(14,14,12,0.05)':'none'}}>
+            <div key={h.id||i} style={{display:'flex',justifyContent:'space-between',padding:'0.5rem 0.85rem',borderBottom:i<history.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
               <span style={{fontSize:'0.7rem',fontWeight:600,color:black}}>${parseFloat(h.cost).toFixed(2)}</span>
               <span style={{fontSize:'0.6rem',color:gray}}>{new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
             </div>
@@ -1152,7 +1152,7 @@ function SuppliesPanel({ supplies, onAdd, onEdit, onDelete, showToast }) {
         {[['Monthly Cost','$'+monthlyTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),'#c0392b'],
           ['Annual Cost','$'+yearlyTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),'#c0392b']
         ].map(([label,val,color])=>(
-          <div key={label} style={{background:white,borderRadius:10,padding:'1.25rem',border:'1px solid rgba(14,14,12,0.07)',textAlign:'center'}}>
+          <div key={label} style={{background:white,borderRadius:10,padding:'1.25rem',border:'1px solid rgba(31,20,14,0.07)',textAlign:'center'}}>
             <div style={{fontFamily:ffS,fontSize:'1.4rem',fontWeight:400,color}}>{val}</div>
             <div style={{fontSize:'0.56rem',color:gray,letterSpacing:'0.1em',textTransform:'uppercase',marginTop:'0.25rem'}}>{label}</div>
           </div>
@@ -1160,10 +1160,10 @@ function SuppliesPanel({ supplies, onAdd, onEdit, onDelete, showToast }) {
       </div>
 
       {/* Grid */}
-      {supplies.length===0&&<div style={{background:white,borderRadius:10,padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem',border:'1px solid rgba(14,14,12,0.07)'}}>No supplies yet. Add your first one.</div>}
+      {supplies.length===0&&<div style={{background:white,borderRadius:10,padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem',border:'1px solid rgba(31,20,14,0.07)'}}>No supplies yet. Add your first one.</div>}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'0.85rem'}}>
         {supplies.map(s=>(
-          <div key={s.id} style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',padding:'1.1rem',display:'flex',flexDirection:'column',gap:'0.4rem',opacity:s.active?1:0.5}}>
+          <div key={s.id} style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',padding:'1.1rem',display:'flex',flexDirection:'column',gap:'0.4rem',opacity:s.active?1:0.5}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
               <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,color:black,lineHeight:1.3,flex:1,marginRight:'0.5rem'}}>{s.name}</div>
               <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
@@ -1171,9 +1171,9 @@ function SuppliesPanel({ supplies, onAdd, onEdit, onDelete, showToast }) {
                 <button onClick={()=>onDelete(s.id)} style={{background:'none',border:'none',cursor:'pointer',color:'rgba(192,57,43,0.5)',fontSize:'0.75rem',padding:'0.1rem 0.3rem'}}>×</button>
               </div>
             </div>
-            {s.category&&<span style={{fontSize:'0.52rem',padding:'0.15rem 0.5rem',borderRadius:20,background:'rgba(14,14,12,0.05)',color:gray,width:'fit-content',letterSpacing:'0.06em',textTransform:'uppercase'}}>{s.category}</span>}
+            {s.category&&<span style={{fontSize:'0.52rem',padding:'0.15rem 0.5rem',borderRadius:20,background:'rgba(31,20,14,0.05)',color:gray,width:'fit-content',letterSpacing:'0.06em',textTransform:'uppercase'}}>{s.category}</span>}
             {s.provider&&<div style={{fontSize:'0.62rem',color:gray,fontStyle:'italic'}}>{s.provider}</div>}
-            <div style={{marginTop:'auto',paddingTop:'0.5rem',borderTop:'1px solid rgba(14,14,12,0.05)',display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
+            <div style={{marginTop:'auto',paddingTop:'0.5rem',borderTop:'1px solid rgba(31,20,14,0.05)',display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
               <span style={{fontFamily:ffS,fontSize:'1.15rem',fontWeight:400,color:'#c0392b'}}>${parseFloat(s.cost).toFixed(2)}</span>
               <span style={{fontSize:'0.58rem',color:gray}}>{unitLabel(s.unit)}</span>
             </div>
@@ -1224,8 +1224,8 @@ function AgendaEvent({ ev, todayFlag }) {
   }
 
   return (
-    <div style={{borderBottom:'1px solid rgba(14,14,12,0.05)'}}>
-      <div onClick={handleOpen} style={{display:'flex',alignItems:'center',gap:'1rem',padding:'0.85rem 1.25rem',cursor:'pointer',background:open?'rgba(14,14,12,0.02)':'transparent'}}>
+    <div style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
+      <div onClick={handleOpen} style={{display:'flex',alignItems:'center',gap:'1rem',padding:'0.85rem 1.25rem',cursor:'pointer',background:open?'rgba(31,20,14,0.02)':'transparent'}}>
         <div style={{flexShrink:0,textAlign:'center',minWidth:44}}>
           <div style={{fontSize:'0.55rem',color:'#7A6452',textTransform:'uppercase'}}>{d.toLocaleDateString('en-US',{month:'short'})}</div>
           <div style={{fontSize:'1.3rem',fontFamily:ffS,fontWeight:400,color:todayFlag?gold:black,lineHeight:1}}>{d.getDate()}</div>
@@ -1236,12 +1236,12 @@ function AgendaEvent({ ev, todayFlag }) {
           <div style={{fontSize:'0.6rem',color:gold,marginTop:'0.1rem'}}>{formatCalendarTime(ev)}</div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexShrink:0}}>
-          {todayFlag&&<span style={{fontSize:'0.52rem',padding:'0.15rem 0.5rem',borderRadius:20,background:'rgba(#E35A1B,0.12)',color:gold}}>Today</span>}
+          {todayFlag&&<span style={{fontSize:'0.52rem',padding:'0.15rem 0.5rem',borderRadius:20,background:'rgba(227,90,27,0.12)',color:gold}}>Today</span>}
           <span style={{fontSize:'0.65rem',color:'#7A6452',transform:open?'rotate(180deg)':'rotate(0)',display:'inline-block',transition:'transform 0.2s'}}>▾</span>
         </div>
       </div>
       {open&&(
-        <div style={{padding:'0 1.25rem 1.25rem',borderTop:'1px solid rgba(14,14,12,0.04)'}}>
+        <div style={{padding:'0 1.25rem 1.25rem',borderTop:'1px solid rgba(31,20,14,0.04)'}}>
           {ev.description&&(()=>{
             // Parse Google Calendar HTML description into label/value pairs
             const raw = ev.description
@@ -1262,18 +1262,18 @@ function AgendaEvent({ ev, todayFlag }) {
               }
             })
             return (
-              <div style={{marginBottom:'1rem',borderRadius:8,overflow:'hidden',border:'1px solid rgba(14,14,12,0.07)'}}>
-                <div style={{padding:'0.6rem 0.85rem',background:'rgba(14,14,12,0.03)',fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,borderBottom:'1px solid rgba(14,14,12,0.06)'}}>Client Info</div>
+              <div style={{marginBottom:'1rem',borderRadius:8,overflow:'hidden',border:'1px solid rgba(31,20,14,0.07)'}}>
+                <div style={{padding:'0.6rem 0.85rem',background:'rgba(31,20,14,0.03)',fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,borderBottom:'1px solid rgba(31,20,14,0.06)'}}>Client Info</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0'}}>
                   {fields.filter(f=>f.label).map((f,j)=>(
-                    <div key={j} style={{padding:'0.65rem 0.85rem',borderBottom:'1px solid rgba(14,14,12,0.04)',borderRight:j%2===0?'1px solid rgba(14,14,12,0.04)':'none'}}>
+                    <div key={j} style={{padding:'0.65rem 0.85rem',borderBottom:'1px solid rgba(31,20,14,0.04)',borderRight:j%2===0?'1px solid rgba(31,20,14,0.04)':'none'}}>
                       <div style={{fontSize:'0.5rem',color:gray,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:'0.2rem'}}>{f.label}</div>
-                      <div style={{fontSize:'0.72rem',color:f.value?black:'rgba(14,14,12,0.25)',fontWeight:f.value?500:400}}>{f.value||'—'}</div>
+                      <div style={{fontSize:'0.72rem',color:f.value?black:'rgba(31,20,14,0.25)',fontWeight:f.value?500:400}}>{f.value||'—'}</div>
                     </div>
                   ))}
                 </div>
                 {fields.filter(f=>!f.label).map((f,j)=>(
-                  <div key={'n'+j} style={{padding:'0.65rem 0.85rem',borderTop:'1px solid rgba(14,14,12,0.04)',fontSize:'0.65rem',color:gray,lineHeight:1.6,fontStyle:'italic'}}>{f.value}</div>
+                  <div key={'n'+j} style={{padding:'0.65rem 0.85rem',borderTop:'1px solid rgba(31,20,14,0.04)',fontSize:'0.65rem',color:gray,lineHeight:1.6,fontStyle:'italic'}}>{f.value}</div>
                 ))}
               </div>
             )
@@ -1372,26 +1372,26 @@ function BookingsPanel() {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem',flexWrap:'wrap',gap:'0.75rem'}}>
         <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Bookings</h2>
         <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexWrap:'wrap'}}>
-          <button onClick={navPrev} style={{background:'none',border:'1px solid rgba(14,14,12,0.1)',borderRadius:20,padding:'0.3rem 0.75rem',cursor:'pointer',fontFamily:ff,fontSize:'0.72rem',color:gray}}>‹</button>
+          <button onClick={navPrev} style={{background:'none',border:'1px solid rgba(31,20,14,0.1)',borderRadius:20,padding:'0.3rem 0.75rem',cursor:'pointer',fontFamily:ff,fontSize:'0.72rem',color:gray}}>‹</button>
           <span style={{fontSize:'0.72rem',color:black,fontWeight:500,minWidth:140,textAlign:'center'}}>{navLabel}</span>
-          <button onClick={navNext} style={{background:'none',border:'1px solid rgba(14,14,12,0.1)',borderRadius:20,padding:'0.3rem 0.75rem',cursor:'pointer',fontFamily:ff,fontSize:'0.72rem',color:gray}}>›</button>
+          <button onClick={navNext} style={{background:'none',border:'1px solid rgba(31,20,14,0.1)',borderRadius:20,padding:'0.3rem 0.75rem',cursor:'pointer',fontFamily:ff,fontSize:'0.72rem',color:gray}}>›</button>
           <div style={{display:'flex',gap:'0.3rem'}}>
             {[['month','Month'],['week','Week'],['agenda','Agenda']].map(([v,l])=>(
-              <button key={v} onClick={()=>setView(v)} style={{padding:'0.35rem 0.75rem',borderRadius:20,border:'none',cursor:'pointer',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.08em',textTransform:'uppercase',background:view===v?black:'rgba(14,14,12,0.06)',color:view===v?white:gray,transition:'all 0.15s'}}>{l}</button>
+              <button key={v} onClick={()=>setView(v)} style={{padding:'0.35rem 0.75rem',borderRadius:20,border:'none',cursor:'pointer',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.08em',textTransform:'uppercase',background:view===v?black:'rgba(31,20,14,0.06)',color:view===v?white:gray,transition:'all 0.15s'}}>{l}</button>
             ))}
           </div>
-          <button onClick={fetchEvents} style={{background:'none',border:'1px solid rgba(14,14,12,0.08)',borderRadius:20,padding:'0.3rem 0.65rem',cursor:'pointer',fontFamily:ff,fontSize:'0.6rem',color:gray}}>↺</button>
+          <button onClick={fetchEvents} style={{background:'none',border:'1px solid rgba(31,20,14,0.08)',borderRadius:20,padding:'0.3rem 0.65rem',cursor:'pointer',fontFamily:ff,fontSize:'0.6rem',color:gray}}>↺</button>
         </div>
       </div>
 
-      <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}>
+      <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
         {loading&&<div style={{padding:'3rem',textAlign:'center',color:gray,fontSize:'0.78rem'}}>Loading...</div>}
         {error&&<div style={{padding:'3rem',textAlign:'center',color:'#c0392b',fontSize:'0.78rem'}}>{error}<br/><button onClick={fetchEvents} style={{marginTop:'0.75rem',background:black,color:white,border:'none',padding:'0.5rem 1rem',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem'}}>Retry</button></div>}
 
         {/* MONTH */}
         {!loading&&!error&&view==='month'&&(
           <div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',borderBottom:'1px solid rgba(14,14,12,0.06)'}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
               {weekDayNames.map(d=><div key={d} style={{padding:'0.5rem',textAlign:'center',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>{d}</div>)}
             </div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
@@ -1399,9 +1399,9 @@ function BookingsPanel() {
                 const dayEvs=getEventsForDay(date)
                 const today=date&&date.toDateString()===new Date().toDateString()
                 return(
-                  <div key={i} style={{minHeight:80,padding:'0.4rem',borderRight:'1px solid rgba(14,14,12,0.04)',borderBottom:'1px solid rgba(14,14,12,0.04)',background:today?'rgba(#E35A1B,0.04)':'transparent'}}>
-                    {date&&<div style={{fontSize:'0.65rem',fontWeight:today?700:400,color:today?gold:black,width:22,height:22,borderRadius:'50%',background:today?'rgba(#E35A1B,0.15)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'0.25rem'}}>{date.getDate()}</div>}
-                    {dayEvs.slice(0,2).map((ev,j)=><div key={j} title={ev.summary} style={{fontSize:'0.52rem',background:'rgba(#E35A1B,0.12)',color:gold,borderRadius:3,padding:'0.15rem 0.35rem',marginBottom:'0.15rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div>)}
+                  <div key={i} style={{minHeight:80,padding:'0.4rem',borderRight:'1px solid rgba(31,20,14,0.04)',borderBottom:'1px solid rgba(31,20,14,0.04)',background:today?'rgba(227,90,27,0.04)':'transparent'}}>
+                    {date&&<div style={{fontSize:'0.65rem',fontWeight:today?700:400,color:today?gold:black,width:22,height:22,borderRadius:'50%',background:today?'rgba(227,90,27,0.15)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'0.25rem'}}>{date.getDate()}</div>}
+                    {dayEvs.slice(0,2).map((ev,j)=><div key={j} title={ev.summary} style={{fontSize:'0.52rem',background:'rgba(227,90,27,0.12)',color:gold,borderRadius:3,padding:'0.15rem 0.35rem',marginBottom:'0.15rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div>)}
                     {dayEvs.length>2&&<div style={{fontSize:'0.5rem',color:gray}}>+{dayEvs.length-2}</div>}
                   </div>
                 )
@@ -1420,10 +1420,10 @@ function BookingsPanel() {
                 const today=d.toDateString()===new Date().toDateString()
                 const dayEvs=getEventsForDay(d)
                 return(
-                  <div key={i} style={{padding:'0.75rem 0.5rem',borderRight:'1px solid rgba(14,14,12,0.04)',background:today?'rgba(#E35A1B,0.04)':'transparent',minHeight:150}}>
+                  <div key={i} style={{padding:'0.75rem 0.5rem',borderRight:'1px solid rgba(31,20,14,0.04)',background:today?'rgba(227,90,27,0.04)':'transparent',minHeight:150}}>
                     <div style={{fontSize:'0.52rem',color:gray,textTransform:'uppercase',letterSpacing:'0.08em'}}>{weekDayNames[i]}</div>
                     <div style={{fontSize:'0.88rem',fontWeight:today?700:400,color:today?gold:black,marginBottom:'0.4rem'}}>{d.getDate()}</div>
-                    {dayEvs.map((ev,j)=><div key={j} style={{fontSize:'0.54rem',background:'rgba(#E35A1B,0.1)',color:gold,borderRadius:3,padding:'0.2rem 0.4rem',marginBottom:'0.2rem',lineHeight:1.3}}><div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div><div style={{opacity:0.7}}>{formatTime(ev)}</div></div>)}
+                    {dayEvs.map((ev,j)=><div key={j} style={{fontSize:'0.54rem',background:'rgba(227,90,27,0.1)',color:gold,borderRadius:3,padding:'0.2rem 0.4rem',marginBottom:'0.2rem',lineHeight:1.3}}><div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div><div style={{opacity:0.7}}>{formatTime(ev)}</div></div>)}
                   </div>
                 )
               })}
@@ -1534,7 +1534,7 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
   const tabStyle = (t) => ({
     padding:'0.5rem 1rem', borderRadius:20, border:'none', cursor:'pointer', fontFamily:ff,
     fontSize:'0.62rem', letterSpacing:'0.08em', textTransform:'uppercase',
-    background: tab===t ? black : 'rgba(14,14,12,0.06)',
+    background: tab===t ? black : 'rgba(31,20,14,0.06)',
     color: tab===t ? white : gray,
     transition:'all 0.15s'
   })
@@ -1557,21 +1557,21 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
 
       {/* USERS & ROLES */}
       {tab==='users'&&(
-        <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}>
-          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',padding:'0.6rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.06)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
+          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',padding:'0.6rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>
             <span>User</span><span>Role</span><span>Card</span><span>Actions</span>
           </div>
           {displayUsers.map(u=>{
             const card = getCard(u.id)
             const isAdmin = u.role === 'admin'
             return (
-              <div key={u.id} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.04)',alignItems:'center',gap:'0.5rem'}}>
+              <div key={u.id} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',alignItems:'center',gap:'0.5rem'}}>
                 <div style={{minWidth:0}}>
                   <div style={{fontSize:'0.75rem',color:black,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.business_name||u.full_name}</div>
                   <div style={{fontSize:'0.6rem',color:gray,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email||'—'}</div>
                 </div>
                 <span style={{fontSize:'0.58rem',padding:'0.18rem 0.55rem',borderRadius:20,
-                  background:isAdmin?'rgba(#E35A1B,0.12)':'rgba(52,152,219,0.08)',
+                  background:isAdmin?'rgba(227,90,27,0.12)':'rgba(52,152,219,0.08)',
                   color:isAdmin?gold:'#2980b9',width:'fit-content',whiteSpace:'nowrap'}}>
                   {isAdmin?'Admin':'Client'}
                 </span>
@@ -1580,8 +1580,8 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
                 </span>
                 <div style={{display:'flex',gap:'0.35rem',flexWrap:'wrap'}}>
                   <button onClick={()=>changeRole(u)} disabled={roleChanging===u.id}
-                    style={{padding:'0.3rem 0.6rem',background:isAdmin?'rgba(192,57,43,0.08)':'rgba(#E35A1B,0.1)',
-                      color:isAdmin?'#c0392b':gold,border:isAdmin?'none':'1px solid rgba(#E35A1B,0.25)',
+                    style={{padding:'0.3rem 0.6rem',background:isAdmin?'rgba(192,57,43,0.08)':'rgba(227,90,27,0.1)',
+                      color:isAdmin?'#c0392b':gold,border:isAdmin?'none':'1px solid rgba(227,90,27,0.25)',
                       borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.54rem',letterSpacing:'0.06em',textTransform:'uppercase',opacity:roleChanging===u.id?0.5:1}}>
                     {roleChanging===u.id?'Saving…':isAdmin?'Revoke Admin':'Make Admin'}
                   </button>
@@ -1601,15 +1601,15 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
 
       {/* ACTIVITY LOG */}
       {tab==='log'&&(
-        <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}>
-          <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
+          <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <span style={{fontSize:'0.6rem',color:gray,letterSpacing:'0.1em',textTransform:'uppercase'}}>Recent activity</span>
             <button onClick={loadLog} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.6rem',color:gray,fontFamily:ff,letterSpacing:'0.08em',textTransform:'uppercase'}}>↺ Refresh</button>
           </div>
           {logLoading&&<div style={{padding:'2rem',textAlign:'center',color:gray,fontSize:'0.78rem'}}>Loading...</div>}
           {!logLoading&&filteredLog.length===0&&<div style={{padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No activity yet.</div>}
           {!logLoading&&filteredLog.map((l,i)=>(
-            <div key={l.id} style={{display:'flex',alignItems:'center',gap:'0.85rem',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.04)'}}>
+            <div key={l.id} style={{display:'flex',alignItems:'center',gap:'0.85rem',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
               <div style={{width:28,height:28,borderRadius:'50%',background:(typeColor[l.type]||gray)+'18',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',color:typeColor[l.type]||gray,flexShrink:0,fontWeight:700}}>
                 {typeIcon[l.type]||'·'}
               </div>
@@ -1619,7 +1619,7 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
               </div>
               <div style={{textAlign:'right',flexShrink:0}}>
                 <div style={{fontSize:'0.6rem',color:gray}}>{l.created_at?new Date(l.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+new Date(l.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'—'}</div>
-                <div style={{fontSize:'0.56rem',color:'rgba(14,14,12,0.3)',marginTop:'0.1rem'}}>{l.user_name||'Admin'}</div>
+                <div style={{fontSize:'0.56rem',color:'rgba(31,20,14,0.3)',marginTop:'0.1rem'}}>{l.user_name||'Admin'}</div>
               </div>
             </div>
           ))}
@@ -1628,19 +1628,19 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
 
       {/* SESSIONS */}
       {tab==='sessions'&&(
-        <div style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}>
-          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',padding:'0.6rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.06)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
+          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',padding:'0.6rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>
             <span>User</span><span>Role</span><span>Last Sign In</span>
           </div>
           {sessionsLoading&&<div style={{padding:'2rem',textAlign:'center',color:gray,fontSize:'0.78rem'}}>Loading...</div>}
           {!sessionsLoading&&filteredSessions.map((u,i)=>(
-            <div key={u.id} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(14,14,12,0.04)',alignItems:'center',gap:'0.5rem'}}>
+            <div key={u.id} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',alignItems:'center',gap:'0.5rem'}}>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:'0.75rem',color:black,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.business_name||u.full_name||'—'}</div>
                 <div style={{fontSize:'0.6rem',color:gray,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email||'—'}</div>
               </div>
               <span style={{fontSize:'0.58rem',padding:'0.18rem 0.55rem',borderRadius:20,
-                background:u.role==='admin'?'rgba(#E35A1B,0.12)':'rgba(52,152,219,0.08)',
+                background:u.role==='admin'?'rgba(227,90,27,0.12)':'rgba(52,152,219,0.08)',
                 color:u.role==='admin'?gold:'#2980b9',width:'fit-content'}}>
                 {u.role==='admin'?'Admin':'Client'}
               </span>
@@ -1717,7 +1717,7 @@ export default function Admin({session}){
   async function doPunch(){
     if(!punchId){showToast('Select a client');return}
     if(!punchAmt||parseFloat(punchAmt)<=0){showToast('Amount is required');return}
-    const res=await fetch('/api/admin/punch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({card_id:punchId,visita_amount:punchAmt})})
+    const res=await fetch('/api/admin/punch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({card_id:punchId,payment_amount:punchAmt})})
     const data=await res.json()
     if(res.ok){
       showToast(data.message)
@@ -1834,15 +1834,15 @@ export default function Admin({session}){
           .punch-row{grid-template-columns:1fr!important;}
           .mobile-nav{display:flex!important;}
         }
-        .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:${ink};z-index:200;border-top:1px solid rgba(#E35A1B,0.15);}
+        .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:${ink};z-index:200;border-top:1px solid rgba(227,90,27,0.15);}
         .mobile-nav button{flex:1;padding:0.75rem 0.1rem;background:none;border:none;color:rgba(255,255,255,0.4);font-family:${ff};font-size:0.65rem;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.2rem;}
         .mobile-nav button.active{color:${gold};}
       `}</style>
       <div style={{background:'#f2f0eb',minHeight:'100vh',fontFamily:ff,paddingBottom:70}}>
         <div style={{background:black,position:'fixed',top:0,left:0,right:0,zIndex:100,height:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 1.25rem'}}>
-          <div style={{fontFamily:ffS,fontSize:'1.1rem',color:white}}>Monarca <em style={{color:gold,fontStyle:'italic'}}>de</em> Azúcar <span style={{fontSize:'0.48rem',letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.26)',marginLeft:'0.4rem',fontFamily:ff}}>Admin</span></div>
+          <div style={{fontFamily:ffS,fontSize:'1.1rem',color:white}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM <span style={{fontSize:'0.48rem',letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(255,255,255,0.26)',marginLeft:'0.4rem',fontFamily:ff}}>Admin</span></div>
           <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-            <button onClick={subscribeToPush} title="Enable notifications" style={{background:'none',border:'1px solid rgba(#E35A1B,0.3)',color:'rgba(255,255,255,0.5)',padding:'0.25rem 0.65rem',fontSize:'0.52rem',cursor:'pointer',borderRadius:2,fontFamily:ff,letterSpacing:'0.1em',textTransform:'uppercase'}}>Notis</button>
+            <button onClick={subscribeToPush} title="Enable notifications" style={{background:'none',border:'1px solid rgba(227,90,27,0.3)',color:'rgba(255,255,255,0.5)',padding:'0.25rem 0.65rem',fontSize:'0.52rem',cursor:'pointer',borderRadius:2,fontFamily:ff,letterSpacing:'0.1em',textTransform:'uppercase'}}>Notis</button>
             <button onClick={signOut} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.38)',padding:'0.25rem 0.75rem',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer',borderRadius:2,fontFamily:ff}}>Sign Out</button>
           </div>
         </div>
@@ -1886,7 +1886,7 @@ export default function Admin({session}){
               showToast={showToast}
             />}
             {panel==='system'&&<AdminSystemPanel users={users} cards={cards} allUsers={allUsers} loadAll={loadAll} showToast={showToast}/>}
-            {panel==='loyalty'&&(<div><h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400,marginBottom:'1.5rem'}}>Loyalty Program</h2><div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>{[['cards','Cards','Create and manage loyalty cards'],['punch','Punch','Register visitas and sellos']].map(([id,label,desc])=>(<div key={id} onClick={()=>setPanel(id)} style={{background:white,borderRadius:10,padding:'1.25rem 1.5rem',border:'1px solid rgba(14,14,12,0.07)',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400,color:black,marginBottom:'0.2rem'}}>{label}</div><div style={{fontSize:'0.68rem',color:gray}}>{desc}</div></div><div style={{color:gold,fontSize:'1rem'}}>›</div></div>))}</div></div>)}
+            {panel==='loyalty'&&(<div><h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400,marginBottom:'1.5rem'}}>Loyalty Program</h2><div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>{[['cards','Cards','Create and manage loyalty cards'],['punch','Punch','Register visitas and stamps']].map(([id,label,desc])=>(<div key={id} onClick={()=>setPanel(id)} style={{background:white,borderRadius:10,padding:'1.25rem 1.5rem',border:'1px solid rgba(31,20,14,0.07)',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400,color:black,marginBottom:'0.2rem'}}>{label}</div><div style={{fontSize:'0.68rem',color:gray}}>{desc}</div></div><div style={{color:gold,fontSize:'1rem'}}>›</div></div>))}</div></div>)}
             {panel==='clients'&&<ClientsPanel users={users} cards={cards} search={clientSearch} setSearch={setClientSearch}
               onEdit={(u)=>{setEditingClient(u);setEditForm({name:u.full_name||'',business:u.business_name||'',phone:u.phone||'',email:'',password:''});setModal('editclient')}}
               onAddPayment={(card)=>{setPunchId(card.id);setPanel('punch')}}
@@ -1905,15 +1905,15 @@ export default function Admin({session}){
               <input type="text" placeholder="Search client..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box',background:white}}/>
               <div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
                 {cards.filter(c=>(c.profiles?.full_name||'').toLowerCase().includes(search.toLowerCase())||(c.profiles?.business_name||'').toLowerCase().includes(search.toLowerCase())).map(card=>{
-                  const cur=card.sellos%5===0&&card.sellos>0?5:card.sellos%5
-                  const cycle=Math.ceil((card.sellos||1)/5)||1
-                  const hasR=card.sellos>0&&card.sellos%5===0
-                  return(<div key={card.id} style={{background:white,borderRadius:10,border:'1px solid rgba(14,14,12,0.07)',overflow:'hidden'}}>
+                  const cur=card.stamps%5===0&&card.stamps>0?5:card.stamps%5
+                  const cycle=Math.ceil((card.stamps||1)/5)||1
+                  const hasR=card.stamps>0&&card.stamps%5===0
+                  return(<div key={card.id} style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
                     <div style={{background:'linear-gradient(135deg,#1a1917,#252320)',padding:'1rem 1.25rem',color:white,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                       <div>
                         <div style={{fontFamily:ffS,fontSize:'0.9rem',marginBottom:'0.15rem'}}>Monarca <em style={{color:gold,fontStyle:'italic'}}>de</em> Azúcar</div>
                         <div style={{fontSize:'0.72rem',color:'rgba(255,255,255,0.8)',marginBottom:'0.5rem'}}>{card.profiles?.business_name||card.profiles?.full_name}</div>
-                        <div style={{display:'flex',gap:3}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:10,height:10,borderRadius:'50%',border:'1px solid rgba(#E35A1B,0.22)',background:i<cur?gold:'transparent'}}/>)}</div>
+                        <div style={{display:'flex',gap:3}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:10,height:10,borderRadius:'50%',border:'1px solid rgba(227,90,27,0.22)',background:i<cur?gold:'transparent'}}/>)}</div>
                       </div>
                       <div style={{textAlign:'right'}}>
                         <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.4)',marginBottom:'0.2rem'}}>#{card.card_number}</div>
@@ -1921,9 +1921,9 @@ export default function Admin({session}){
                       </div>
                     </div>
                     <div style={{padding:'0.75rem 1.25rem',display:'flex',gap:'0.4rem'}}>
-                      <button onClick={()=>{setPunchId(card.id);setPanel('punch')}} style={{flex:1,padding:'0.45rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Sello</button>
+                      <button onClick={()=>{setPunchId(card.id);setPanel('punch')}} style={{flex:1,padding:'0.45rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Stamp</button>
                       <button onClick={()=>setRewardCard(card)} style={{flex:1,padding:'0.45rem',background:'rgba(45,138,96,0.1)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Reward</button>
-                      <button onClick={()=>{setQrCard(card);setModal('qr')}} style={{flex:1,padding:'0.45rem',background:'rgba(#E35A1B,0.1)',color:gold,border:'1px solid rgba(#E35A1B,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>QR</button>
+                      <button onClick={()=>{setQrCard(card);setModal('qr')}} style={{flex:1,padding:'0.45rem',background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>QR</button>
                       <button onClick={()=>deleteCard(card.id)} style={{flex:1,padding:'0.45rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Delete</button>
                     </div>
                     {/* Next Reward editable */}
@@ -1937,7 +1937,7 @@ export default function Admin({session}){
                           await fetch('/api/admin/cards',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:card.id,notes:e.target.value})})
                           showToast('Next reward updated')
                         }}
-                        style={{flex:1,padding:'0.3rem 0.6rem',border:'1px solid rgba(#E35A1B,0.2)',borderRadius:3,fontFamily:ff,fontSize:'0.62rem',outline:'none',background:'rgba(#E35A1B,0.04)',color:black}}
+                        style={{flex:1,padding:'0.3rem 0.6rem',border:'1px solid rgba(227,90,27,0.2)',borderRadius:3,fontFamily:ff,fontSize:'0.62rem',outline:'none',background:'rgba(227,90,27,0.04)',color:black}}
                       />
                     </div>
                   </div>)
@@ -1947,13 +1947,13 @@ export default function Admin({session}){
             </>}
             {panel==='punch'&&<>
               <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400,marginBottom:'1.25rem'}}>Punch Card</h2>
-              <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(14,14,12,0.07)'}}>
+              <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)'}}>
                 <div className="punch-row" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1rem'}}>
-                  <div><label style={lbl}>Client</label><select value={punchId} onChange={e=>setPunchId(e.target.value)} style={{...inp,marginBottom:0}}><option value="">Select</option>{cards.map(c=><option key={c.id} value={c.id}>{c.profiles?.business_name||c.profiles?.full_name} · {c.sellos%5===0&&c.sellos>0?5:c.sellos%5}/5</option>)}</select></div>
+                  <div><label style={lbl}>Client</label><select value={punchId} onChange={e=>setPunchId(e.target.value)} style={{...inp,marginBottom:0}}><option value="">Select</option>{cards.map(c=><option key={c.id} value={c.id}>{c.profiles?.business_name||c.profiles?.full_name} · {c.stamps%5===0&&c.stamps>0?5:c.stamps%5}/5</option>)}</select></div>
                   <div><label style={lbl}>Amount <span style={{color:'#c0392b'}}>*</span></label><input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={punchAmt} onChange={e=>setPunchAmt(e.target.value)}/></div>
                 </div>
-                {punchId&&(()=>{const card=cards.find(c=>c.id===punchId);const cur=card?(card.sellos%5===0&&card.sellos>0?5:card.sellos%5):0;return<div style={{background:'linear-gradient(135deg,#1a1917,#252320)',borderRadius:10,padding:'1.1rem',marginBottom:'1rem',border:'1px solid rgba(#E35A1B,0.22)',color:white}}><div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.45rem'}}>Monarca <em style={{color:gold,fontStyle:'italic'}}>de</em> Azúcar · {card?.profiles?.business_name||card?.profiles?.full_name}</div><div style={{display:'flex',gap:5}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:15,height:15,borderRadius:'50%',border:'1.5px solid rgba(#E35A1B,0.22)',background:i<cur?gold:i===cur?'rgba(#E35A1B,0.35)':'transparent'}}/>)}</div></div>})()}
-                <button onClick={doPunch} style={{width:'100%',background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Give Sello</button>
+                {punchId&&(()=>{const card=cards.find(c=>c.id===punchId);const cur=card?(card.stamps%5===0&&card.stamps>0?5:card.stamps%5):0;return<div style={{background:'linear-gradient(135deg,#1a1917,#252320)',borderRadius:10,padding:'1.1rem',marginBottom:'1rem',border:'1px solid rgba(227,90,27,0.22)',color:white}}><div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.45rem'}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM · {card?.profiles?.business_name||card?.profiles?.full_name}</div><div style={{display:'flex',gap:5}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:15,height:15,borderRadius:'50%',border:'1.5px solid rgba(227,90,27,0.22)',background:i<cur?gold:i===cur?'rgba(227,90,27,0.35)':'transparent'}}/>)}</div></div>})()}
+                <button onClick={doPunch} style={{width:'100%',background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Give Stamp</button>
               </div>
             </>}
           </div>
@@ -1973,7 +1973,7 @@ export default function Admin({session}){
           ))}
           <button onClick={()=>setHamburgerOpen(o=>!o)}
             className={hamburgerOpen||['clients','campaigns','catalog','supplies','system','bookings'].includes(panel)?'active':''}
-            style={{border:'1px solid rgba(#E35A1B,0.35)',borderRadius:4,margin:'0.35rem 0.15rem',padding:'0.2rem 0.6rem',background:hamburgerOpen?'rgba(#E35A1B,0.12)':'transparent'}}>
+            style={{border:'1px solid rgba(227,90,27,0.35)',borderRadius:4,margin:'0.35rem 0.15rem',padding:'0.2rem 0.6rem',background:hamburgerOpen?'rgba(227,90,27,0.12)':'transparent'}}>
             <span style={{fontSize:'1.15rem',lineHeight:1,display:'block'}}>☰</span>
           </button>
         </div>
@@ -1996,7 +1996,7 @@ export default function Admin({session}){
               ].map(([id,label])=>(
                 <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
                   style={{display:'flex',alignItems:'center',width:'100%',padding:'0.9rem 1.5rem',
-                    background:panel===id?'rgba(#E35A1B,0.08)':'none',border:'none',
+                    background:panel===id?'rgba(227,90,27,0.08)':'none',border:'none',
                     borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',
                     color:panel===id?gold:'rgba(255,255,255,0.65)',
                     fontFamily:ff,fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',
@@ -2012,7 +2012,7 @@ export default function Admin({session}){
         {modal==='card'&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
           <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
             <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400,marginBottom:'1.5rem'}}>New Card</h3>
-            <div style={{background:'rgba(#E35A1B,0.05)',border:'1px solid rgba(#E35A1B,0.2)',borderRadius:8,padding:'1.25rem',marginBottom:'1.25rem'}}>
+            <div style={{background:'rgba(227,90,27,0.05)',border:'1px solid rgba(227,90,27,0.2)',borderRadius:8,padding:'1.25rem',marginBottom:'1.25rem'}}>
               <div style={{fontSize:'0.58rem',letterSpacing:'0.14em',textTransform:'uppercase',color:gold,marginBottom:'1rem'}}>Create New Client</div>
               <label style={lbl}>Full Name</label><input style={inp} type="text" placeholder="Client name" value={form.new_name||''} onChange={e=>upd('new_name',e.target.value)}/>
               <label style={lbl}>Business Name</label><input style={inp} type="text" placeholder="Business name" value={form.new_business||''} onChange={e=>upd('new_business',e.target.value)}/>
@@ -2027,7 +2027,7 @@ export default function Admin({session}){
             <label style={lbl}>Notes (optional)</label><input style={inp} type="text" placeholder="Additional info..." value={form.notes||''} onChange={e=>upd('notes',e.target.value)}/>
             <div style={{display:'flex',gap:'0.75rem'}}>
               <button onClick={createCard} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Assign Card</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(14,14,12,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancel</button>
+              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancel</button>
             </div>
           </div>
         </div>)}
@@ -2042,8 +2042,8 @@ export default function Admin({session}){
             <p style={{fontSize:'0.58rem',color:gray,marginBottom:'1.25rem',wordBreak:'break-all',lineHeight:1.6}}>{cardUrl(qrCard)}</p>
             <div style={{display:'flex',gap:'0.75rem'}}>
               <button onClick={()=>window.open(cardUrl(qrCard),'_blank')} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Open</button>
-              <button onClick={()=>{navigator.clipboard.writeText(cardUrl(qrCard));showToast('Link copied!')}} style={{flex:1,background:'rgba(#E35A1B,0.1)',color:gold,border:'1px solid rgba(#E35A1B,0.25)',padding:'0.85rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Copy</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(14,14,12,0.06)',color:black,border:'none',padding:'0.85rem 0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>X</button>
+              <button onClick={()=>{navigator.clipboard.writeText(cardUrl(qrCard));showToast('Link copied!')}} style={{flex:1,background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.25)',padding:'0.85rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Copy</button>
+              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>X</button>
             </div>
           </div>
         </div>)}
@@ -2062,7 +2062,7 @@ export default function Admin({session}){
             <label style={lbl}>New Password (optional)</label><input style={inp} type="text" placeholder="Leave empty to keep current" value={editForm.password||''} onChange={e=>setEditForm(f=>({...f,password:e.target.value}))}/>
             <div style={{display:'flex',gap:'0.75rem'}}>
               <button onClick={async()=>{await fetch('/api/admin/users',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:editingClient.id,full_name:editForm.name,business_name:editForm.business,phone:editForm.phone,email:editForm.email||null,password:editForm.password||null})});await fetch('/api/admin/activity-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'Edited client',target:editForm.business||editForm.name||'',type:'edit'})});showToast('Client updated');setModal(null);setEditingClient(null);loadAll()}} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Save</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(14,14,12,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancel</button>
+              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancel</button>
             </div>
           </div>
         </div>)}
@@ -2074,7 +2074,7 @@ export default function Admin({session}){
               <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Files — {filesClient.business_name||filesClient.full_name}</h3>
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
             </div>
-            <div style={{border:'2px dashed rgba(#E35A1B,0.3)',borderRadius:8,padding:'2rem',textAlign:'center',marginBottom:'1.25rem',background:'rgba(#E35A1B,0.03)'}}>
+            <div style={{border:'2px dashed rgba(227,90,27,0.3)',borderRadius:8,padding:'2rem',textAlign:'center',marginBottom:'1.25rem',background:'rgba(227,90,27,0.03)'}}>
               <div style={{fontSize:'1.5rem',marginBottom:'0.5rem'}}>+</div>
               <div style={{fontSize:'0.78rem',color:gray,marginBottom:'0.75rem'}}>Drag files here or click to select</div>
               <input type="file" multiple accept=".pdf,.doc,.docx,.jpg,.png,.csv,.xlsx" onChange={async(e)=>{const files=Array.from(e.target.files);for(const file of files){const fd=new FormData();fd.append('file',file);fd.append('user_id',filesClient.id);const res=await fetch('/api/admin/files',{method:'POST',body:fd});const data=await res.json();if(res.ok)showToast(file.name+' uploaded');else showToast('Error: '+data.error)};e.target.value='';setModal(null);setTimeout(()=>setModal('files'),100)}} style={{display:'none'}} id="file-input"/>
@@ -2115,7 +2115,7 @@ export default function Admin({session}){
                 if(res.ok){showToast('Expense saved');setExpenseForm({amount:'',description:'',date:new Date().toISOString().split('T')[0],recurring:false,recurring_interval:'month'})}
                 else showToast('Error saving expense')
               }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Save Expense</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(14,14,12,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Close</button>
+              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Close</button>
             </div>
             <ExpenseHistory clientId={expenseClient.id} showToast={showToast} supplies={supplies}/>
           </div>
@@ -2132,7 +2132,7 @@ export default function Admin({session}){
 
             {/* Supplies calculator */}
             {supplies.length>0&&(
-              <div style={{background:'rgba(#E35A1B,0.04)',border:'1px solid rgba(#E35A1B,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1.25rem'}}>
+              <div style={{background:'rgba(227,90,27,0.04)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1.25rem'}}>
                 <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.75rem'}}>Calculate from Supplies</div>
                 {supplies.map(s=>{
                   const unitLabel = s.unit==='month'?'/mo':s.unit==='year'?'/yr':' once'
@@ -2166,7 +2166,7 @@ export default function Admin({session}){
                     </div>
                   )
                 })}
-                <div style={{display:'flex',justifyContent:'space-between',paddingTop:'0.6rem',marginTop:'0.25rem',borderTop:'1px solid rgba(14,14,12,0.07)'}}>
+                <div style={{display:'flex',justifyContent:'space-between',paddingTop:'0.6rem',marginTop:'0.25rem',borderTop:'1px solid rgba(31,20,14,0.07)'}}>
                   <span style={{fontSize:'0.58rem',color:gray,letterSpacing:'0.08em',textTransform:'uppercase'}}>Total Cost</span>
                   <span style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,color:'#c0392b'}}>${parseFloat(costForm.cost||0).toFixed(2)}</span>
                 </div>
@@ -2191,7 +2191,7 @@ export default function Admin({session}){
               }} style={{padding:'0.78rem 1.25rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',flexShrink:0}}>Save</button>
             </div>
             <CostHistory productId={editCost.id}/>
-            <button onClick={()=>setModal(null)} style={{width:'100%',background:'rgba(14,14,12,0.06)',color:black,border:'none',padding:'0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer',marginTop:'0.5rem'}}>Close</button>
+            <button onClick={()=>setModal(null)} style={{width:'100%',background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer',marginTop:'0.5rem'}}>Close</button>
           </div>
         </div>)}
 
@@ -2203,7 +2203,7 @@ export default function Admin({session}){
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
             </div>
             <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.25rem'}}>{suppliersItem.name}</p>
-            <div style={{background:'rgba(#E35A1B,0.04)',border:'1px solid rgba(#E35A1B,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1rem'}}>
+            <div style={{background:'rgba(227,90,27,0.04)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1rem'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
                 <input value={suppliersTitle} onChange={e=>setSuppliersTitle(e.target.value)} placeholder="Note title..." style={{background:'none',border:'none',outline:'none',fontFamily:ffS,fontSize:'1rem',fontWeight:400,color:black,flex:1}} id="suppliers-title"/>
                 <span style={{fontSize:'0.58rem',color:gray,flexShrink:0,marginLeft:'0.5rem'}}>{new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
@@ -2217,7 +2217,7 @@ export default function Admin({session}){
                 if(r.ok){showToast('Saved ✓');fetch('/api/admin/catalog').then(r=>r.json()).then(d=>setCatalog(d.items||[]))}
                 else showToast('Error: '+(d.error||'Unknown'))
               }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Save</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(14,14,12,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Close</button>
+              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Close</button>
             </div>
           </div>
         </div>)}
@@ -2250,10 +2250,10 @@ export default function Admin({session}){
 
               {/* Existing rewards list */}
               {rewardCard.rewards?.length>0&&(
-                <div style={{marginBottom:'1.5rem',border:'1px solid rgba(14,14,12,0.07)',borderRadius:8,overflow:'hidden'}}>
-                  <div style={{padding:'0.6rem 1rem',background:'rgba(14,14,12,0.02)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>Reward History</div>
+                <div style={{marginBottom:'1.5rem',border:'1px solid rgba(31,20,14,0.07)',borderRadius:8,overflow:'hidden'}}>
+                  <div style={{padding:'0.6rem 1rem',background:'rgba(31,20,14,0.02)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>Reward History</div>
                   {rewardCard.rewards.map((r,i)=>(
-                    <div key={r.id||i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.75rem 1rem',borderTop:'1px solid rgba(14,14,12,0.05)'}}>
+                    <div key={r.id||i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.75rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
                       <div>
                         <div style={{fontSize:'0.75rem',color:black,fontWeight:500}}>{r.reward_type}</div>
                         <div style={{fontSize:'0.6rem',color:gray,marginTop:'0.1rem'}}>
@@ -2350,7 +2350,7 @@ export default function Admin({session}){
                   }
                   setSupplyModal(null);loadAll()
                 }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Save</button>
-                <button onClick={()=>setSupplyModal(null)} style={{background:'rgba(14,14,12,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancel</button>
+                <button onClick={()=>setSupplyModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancel</button>
               </div>
             </div>
           </div>
@@ -2382,12 +2382,12 @@ function ClientHistory({ client }) {
         {loading&&<div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'2rem'}}>Loading...</div>}
         {!loading&&sales.length===0&&<div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'2rem'}}>No transactions found.</div>}
         {!loading&&sales.length>0&&(
-          <div style={{border:'1px solid rgba(14,14,12,0.07)',borderRadius:8,overflow:'hidden'}}>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.5rem 1rem',background:'rgba(14,14,12,0.03)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#7A6452',gap:'0.5rem'}}>
+          <div style={{border:'1px solid rgba(31,20,14,0.07)',borderRadius:8,overflow:'hidden'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.5rem 1rem',background:'rgba(31,20,14,0.03)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#7A6452',gap:'0.5rem'}}>
               <span>Transaction ID</span><span>Date</span><span style={{textAlign:'right'}}>Amount</span>
             </div>
             {sales.map((s,i)=>(
-              <div key={s.id} style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.75rem 1rem',borderTop:'1px solid rgba(14,14,12,0.05)',alignItems:'center',gap:'0.5rem'}}>
+              <div key={s.id} style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.75rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)',alignItems:'center',gap:'0.5rem'}}>
                 <div style={{fontSize:'0.62rem',color:'#7A6452',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace'}}>{s.id}</div>
                 <div style={{fontSize:'0.68rem',color:'#1F140E'}}>{new Date(s.sale_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
                 <div style={{fontSize:'0.75rem',fontWeight:600,color:s.status==='paid'?'#2d8a60':'#c0392b',textAlign:'right'}}>{s.status==='refunded'?'-':''}${Math.abs(parseFloat(s.amount||0)).toFixed(2)}</div>
@@ -2397,11 +2397,11 @@ function ClientHistory({ client }) {
         )}
       </div>
       {/* Total — always visible at bottom */}
-      <div style={{padding:'1rem 1.5rem 1.5rem',borderTop:'1px solid rgba(14,14,12,0.07)',flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',background:'#FBF7EE'}}>
-        <span style={{fontSize:'0.62rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase'}}>{sales.filter(s=>s.status==='paid').length} visita{sales.filter(s=>s.status==='paid').length!==1?'s':''}</span>
+      <div style={{padding:'1rem 1.5rem 1.5rem',borderTop:'1px solid rgba(31,20,14,0.07)',flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',background:'#FBF7EE'}}>
+        <span style={{fontSize:'0.62rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase'}}>{sales.filter(s=>s.status==='paid').length} payment{sales.filter(s=>s.status==='paid').length!==1?'s':''}</span>
         <div style={{textAlign:'right'}}>
           <div style={{fontSize:'0.56rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.15rem'}}>Total Spent</div>
-          <div style={{fontSize:'1.1rem',fontFamily:'"Instrument Serif",serif',fontWeight:400,color:'#1F140E'}}>${total.toFixed(2)}</div>
+          <div style={{fontSize:'1.1rem',fontFamily:'Instrument Serif,serif',fontWeight:400,color:'#1F140E'}}>${total.toFixed(2)}</div>
         </div>
       </div>
     </div>
@@ -2438,7 +2438,7 @@ function FilesListForClient({ userId, showToast }) {
   return(
     <div>
       <div style={{fontSize:'0.56rem',letterSpacing:'0.13em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.75rem'}}>Saved files</div>
-      {files.map(f=>(<div key={f.name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 0',borderBottom:'1px solid rgba(14,14,12,0.06)'}}><div style={{fontSize:'0.78rem',color:'#1F140E',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,marginRight:'1rem'}}>{f.name.replace(/^\d+_/,'')}</div><div style={{display:'flex',gap:'0.4rem',flexShrink:0}}><button onClick={()=>viewFile(f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(#E35A1B,0.1)',color:'#E35A1B',border:'1px solid rgba(#E35A1B,0.25)',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>View</button><button onClick={()=>deleteFile('clients/'+userId+'/'+f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>x</button></div></div>))}
+      {files.map(f=>(<div key={f.name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 0',borderBottom:'1px solid rgba(31,20,14,0.06)'}}><div style={{fontSize:'0.78rem',color:'#1F140E',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,marginRight:'1rem'}}>{f.name.replace(/^\d+_/,'')}</div><div style={{display:'flex',gap:'0.4rem',flexShrink:0}}><button onClick={()=>viewFile(f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(227,90,27,0.1)',color:'#E35A1B',border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>View</button><button onClick={()=>deleteFile('clients/'+userId+'/'+f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>x</button></div></div>))}
     </div>
   )
 }
