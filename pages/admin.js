@@ -1691,24 +1691,30 @@ export default function Admin({session}){
   const [expenseForm,setExpenseForm]=useState({amount:'',description:'',date:new Date().toISOString().split('T')[0]})
 
   useEffect(()=>{
+    if(session===undefined) return
     if(!session){window.location.href='/login';return}
-    // Check role via API using service key — bypasses RLS completely
-    loadAll()
+    fetch('/api/admin/check-role', {
+      headers:{ Authorization: 'Bearer ' + session.access_token }
+    })
+    .then(r=>r.json())
+    .then(d=>{ if(d.role==='admin') loadAll(); else window.location.href='/card' })
+    .catch(()=>window.location.href='/card')
   },[session])
 
   async function loadAll(){
     setLoading(true)
+    try {
     const [c,u,r,cat]=await Promise.all([
-      fetch('/api/admin/cards').then(r=>r.json()),
-      fetch('/api/admin/users').then(r=>r.json()),
-      fetch('/api/admin/rewards').then(r=>r.json()),
-      fetch('/api/admin/catalog').then(r=>r.json())
+      fetch('/api/admin/cards').then(r=>r.json()).catch(()=>({cards:[]})),
+      fetch('/api/admin/users').then(r=>r.json()).catch(()=>({users:[]})),
+      fetch('/api/admin/rewards').then(r=>r.json()).catch(()=>({rewards:[]})),
+      fetch('/api/admin/catalog').then(r=>r.json()).catch(()=>({items:[]}))
     ])
     setCards(c.cards||[]);setUsers(u.users||[]);setRewards(r.rewards||[]);setCatalog(cat.items||[])
     fetch('/api/admin/supplies').then(r=>r.json()).then(d=>setSupplies(d.supplies||[])).catch(()=>{})
     fetch('/api/admin/users?all=1').then(r=>r.json()).then(d=>setAllUsers(d.users||[])).catch(()=>{})
-    // Load sales for financial card
-    fetch('/api/admin/sales').then(r=>r.json()).then(d=>setSales(d.sales||[])).catch(e=>console.error('Sales fetch error:',e))
+    fetch('/api/admin/sales').then(r=>r.json()).then(d=>setSales(d.sales||[])).catch(()=>{})
+    } catch(e){ console.error('loadAll error:',e) }
     setLoading(false)
   }
 
