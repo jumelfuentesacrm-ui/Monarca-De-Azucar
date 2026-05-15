@@ -1575,6 +1575,36 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
       <input type="text" placeholder="Search users, actions, targets..." value={search} onChange={e=>setSearch(e.target.value)}
         style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box',background:white}}/>
 
+      {/* Alertas — debajo de Admin/Panadera/Dueña */}
+      <div style={{background:'rgba(227,90,27,0.06)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:10,padding:'1rem 1.25rem',marginBottom:'1.25rem'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:getNotifications(cards).length>0?'0.75rem':'0'}}>
+          <div style={{fontSize:'0.6rem',letterSpacing:'0.14em',textTransform:'uppercase',color:gold,fontWeight:600}}>Alertas</div>
+          <span style={{fontSize:'0.6rem',color:gray}}>{getNotifications(cards).length} activa{getNotifications(cards).length!==1?'s':''}</span>
+        </div>
+        {getNotifications(cards).length===0
+          ?<div style={{fontSize:'0.72rem',color:gray}}>Sin alertas — todos los clientes al día.</div>
+          :getNotifications(cards).slice(0,3).map((alert,i)=>(
+            <div key={i} style={{fontSize:'0.72rem',color:black,padding:'0.4rem 0',borderBottom:i<Math.min(getNotifications(cards).length,3)-1?'1px solid rgba(31,20,14,0.06)':'none'}}>{alert.msg}</div>
+          ))
+        }
+        {getNotifications(cards).length>3&&<button onClick={()=>setPanel('notifications')} style={{marginTop:'0.5rem',background:'none',border:'none',cursor:'pointer',fontSize:'0.62rem',color:gold,fontFamily:ff,padding:0}}>Ver todas →</button>}
+      </div>
+
+      {/* Alertas — debajo de Admin/Panadera/Dueña */}
+      <div style={{background:'rgba(227,90,27,0.06)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:10,padding:'1rem 1.25rem',marginBottom:'1.25rem'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:getNotifications(cards).length>0?'0.75rem':'0'}}>
+          <div style={{fontSize:'0.6rem',letterSpacing:'0.14em',textTransform:'uppercase',color:gold,fontWeight:600}}>Alertas</div>
+          <span style={{fontSize:'0.6rem',color:gray}}>{getNotifications(cards).length} activa{getNotifications(cards).length!==1?'s':''}</span>
+        </div>
+        {getNotifications(cards).length===0
+          ?<div style={{fontSize:'0.72rem',color:gray}}>Sin alertas — todos los clientes al día.</div>
+          :getNotifications(cards).slice(0,3).map((alert,i)=>(
+            <div key={i} style={{fontSize:'0.72rem',color:black,padding:'0.4rem 0',borderBottom:i<Math.min(getNotifications(cards).length,3)-1?'1px solid rgba(31,20,14,0.06)':'none'}}>{alert.msg}</div>
+          ))
+        }
+        {getNotifications(cards).length>3&&<button onClick={()=>setPanel('notifications')} style={{marginTop:'0.5rem',background:'none',border:'none',cursor:'pointer',fontSize:'0.62rem',color:gold,fontFamily:ff,padding:0}}>Ver todas →</button>}
+      </div>
+
       <div style={{display:'flex',gap:'0.5rem',marginBottom:'1.5rem'}}>
         <button style={tabStyle('users')} onClick={()=>setTab('users')}>Usuarios y Roles</button>
         <button style={tabStyle('log')} onClick={()=>setTab('log')}>Registro de Actividad</button>
@@ -2027,7 +2057,7 @@ export default function Admin({session}){
             <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.25rem'}}/>
             <div style={{padding:'0.25rem 0'}}>
               <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',padding:'0 1.25rem',marginBottom:'0.4rem',fontFamily:ff}}>Operación</div>
-              {[['system','⛭','Configuración'],['catalog','◔','Catálogo'],['supplies','◈','Inventario'],['notifications','◑','Alertas']].map(([id,icon,label])=>(
+              {[['system','⛭','Configuración'],['catalog','◔','Catálogo'],['supplies','◈','Inventario']].map(([id,icon,label])=>(
                 <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.7rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
                   <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.3)',flexShrink:0,width:16,textAlign:'center'}}>{icon}</span>
                   <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.75)'}}>{label}</span>
