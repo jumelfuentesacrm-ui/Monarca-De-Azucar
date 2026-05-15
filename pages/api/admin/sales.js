@@ -6,6 +6,7 @@ const supabase = createClient(
 )
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store')
   if (req.method === 'GET') {
     const { email } = req.query
     let query = supabase.from('sales').select('*').order('sale_date', { ascending: false })
