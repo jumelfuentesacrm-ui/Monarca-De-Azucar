@@ -1,3 +1,4 @@
+// v2.1
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -471,7 +472,7 @@ export default function Card({ session }) {
             </div>
           )}
 
-          {TAB: ESCRIBENOS (chat interno) ── */}
+          {/* ── TAB: ESCRIBENOS (chat interno) ── */}
           {tab === 'escribenos' && (
             <div className="fade-up" style={{display:'flex',flexDirection:'column',height:'calc(100vh - calc(52px + env(safe-area-inset-top,0px)) - calc(64px + env(safe-area-inset-bottom,0px)))',overflow:'hidden'}}>
               <div style={{padding:'24px 0 12px',flexShrink:0}}>
