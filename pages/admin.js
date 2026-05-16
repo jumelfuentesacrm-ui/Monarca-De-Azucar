@@ -1607,7 +1607,7 @@ function BookingsPanel() {
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem',flexWrap:'wrap',gap:'0.75rem'}}>
-        <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Bookings</h2>
+        <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Órdenes</h2>
         <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexWrap:'wrap'}}>
           <button onClick={navPrev} style={{background:'none',border:'1px solid rgba(31,20,14,0.1)',borderRadius:20,padding:'0.3rem 0.75rem',cursor:'pointer',fontFamily:ff,fontSize:'0.72rem',color:gray}}>‹</button>
           <span style={{fontSize:'0.72rem',color:black,fontWeight:500,minWidth:140,textAlign:'center'}}>{navLabel}</span>
@@ -2038,6 +2038,7 @@ export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
   const [showDevTools,setShowDevTools]=useState(false)
+  const [profileOpen,setProfileOpen]=useState(false)
   const [devPassword,setDevPassword]=useState('')
   const [devUnlocked,setDevUnlocked]=useState(false)
   const [devColors,setDevColors]=useState({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E',adminSidebar:'#1F140E',adminAccent:'#E35A1B',clientAccent:'#E35A1B',clientCard:'#F4EDDD',clientMuted:'#7A6452'})
@@ -2245,7 +2246,7 @@ export default function Admin({session}){
               <span>Alerts</span>
               {getNotifications(cards).length>0&&<span style={{background:'#c0392b',color:'white',borderRadius:'50%',width:18,height:18,fontSize:'0.6rem',fontWeight:700,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{getNotifications(cards).length}</span>}
             </button>
-            <button onClick={()=>setPanel('bookings')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='bookings'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='bookings'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Bookings</button>
+            <button onClick={()=>setPanel('bookings')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='bookings'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='bookings'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Órdenes</button>
             <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.5rem'}}/>
             {[['dashboard','Resumen'],['clients','Clientes'],['campaigns','Campañas']].map(([id,label])=>(<button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel===id?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>{label}</button>))}
             <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.5rem'}}/>
@@ -2756,6 +2757,38 @@ export default function Admin({session}){
         )}
 
         
+        {/* PROFILE OVERLAY */}
+        {profileOpen&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:8000,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setProfileOpen(false)}>
+            <div style={{background:white,borderRadius:'16px 16px 0 0',width:'100%',maxWidth:480,padding:'1.5rem',maxHeight:'85vh',overflowY:'auto'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.3rem',fontWeight:400}}>Mi perfil</div>
+                <button onClick={()=>setProfileOpen(false)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(227,90,27,0.06)',borderRadius:12,border:'1px solid rgba(227,90,27,0.12)'}}>
+                <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(227,90,27,0.15)',border:'2px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <LogoButterfly size={32}/>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:ffS,fontSize:'1.1rem',color:black}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
+                  <div style={{fontSize:'0.63rem',color:gray,marginTop:2}}>{session?.user?.email}</div>
+                  <div style={{fontSize:'0.58rem',color:gold,marginTop:2,textTransform:'uppercase',letterSpacing:'0.1em'}}></div>
+                </div>
+              </div>
+              {[['Nombre completo','full_name','text'],['Cargo / Título','cargo','text'],['Nuevo email','email','email'],['Nueva contraseña','password','password']].map(([label,key,type])=>(
+                <div key={key} style={{marginBottom:'0.85rem'}}>
+                  <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:'0.3rem'}}>{label}</div>
+                  <input type={type} placeholder={label} style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                </div>
+              ))}
+              <div style={{display:'flex',gap:'0.75rem',marginTop:'0.5rem'}}>
+                <button onClick={()=>setProfileOpen(false)} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Guardar</button>
+                <button onClick={()=>{setProfileOpen(false);setPanel('system')}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Panel admin →</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showDevTools&&(
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&setShowDevTools(false)}>
             <div style={{background:white,borderRadius:16,width:'100%',maxWidth:500,maxHeight:'90vh',overflowY:'auto'}}>
@@ -2813,6 +2846,44 @@ export default function Admin({session}){
           </div>
         )}
 
+
+        {/* PROFILE OVERLAY */}
+        {profileOpen&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:8000,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setProfileOpen(false)}>
+            <div style={{background:white,borderRadius:'16px 16px 0 0',width:'100%',maxWidth:480,padding:'1.5rem',maxHeight:'85vh',overflowY:'auto'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.3rem',fontWeight:400}}>Mi perfil</div>
+                <button onClick={()=>setProfileOpen(false)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+
+              {/* Avatar */}
+              <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(227,90,27,0.06)',borderRadius:12,border:'1px solid rgba(227,90,27,0.12)'}}>
+                <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(227,90,27,0.15)',border:'2px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',overflow:'hidden'}}>
+                  <LogoButterfly size={32}/>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:ffS,fontSize:'1.1rem',color:black}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
+                  <div style={{fontSize:'0.63rem',color:gray,marginTop:2}}>{session?.user?.email}</div>
+                  <div style={{fontSize:'0.58rem',color:gold,marginTop:2,textTransform:'uppercase',letterSpacing:'0.1em'}}></div>
+                </div>
+              </div>
+
+              {/* Edit fields */}
+              {[['Nombre completo','full_name','text'],['Teléfono','phone','tel'],['Nuevo email','email','email'],['Nueva contraseña','password','password']].map(([label,key,type])=>(
+                <div key={key} style={{marginBottom:'0.85rem'}}>
+                  <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:'0.3rem'}}>{label}</div>
+                  <input type={type} placeholder={label}
+                    style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                </div>
+              ))}
+
+              <div style={{display:'flex',gap:'0.75rem',marginTop:'0.5rem'}}>
+                <button onClick={()=>setProfileOpen(false)} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Guardar cambios</button>
+                <button onClick={()=>{setProfileOpen(false);setPanel('system')}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Panel admin →</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* DEV TOOLS MODAL */}
         {showDevTools&&(
