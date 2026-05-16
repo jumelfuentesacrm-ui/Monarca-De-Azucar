@@ -621,7 +621,7 @@ export default function Card({ session }) {
             <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='cuenta'?600:400}}>Cuenta</span>
           </button>
         </nav>
-
+      </div>
 
       {toast && <div style={{position:'fixed',bottom:'5.5rem',left:'50%',transform:'translateX(-50%)',background:ink,color:cr,padding:'10px 20px',borderRadius:999,fontSize:'0.72rem',fontWeight:500,zIndex:9999,whiteSpace:'nowrap',boxShadow:'0 4px 20px rgba(0,0,0,0.2)'}}>{toast}</div>}
     </>
