@@ -10,20 +10,10 @@ const ffS='"Instrument Serif",serif'
 const ink='#1F140E', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE', mu='#7A6452'
 
 function useTheme() {
-  const [dark, setDark] = React.useState(false)
-  React.useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    setDark(mq.matches)
-    const handler = e => setDark(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-  return dark ? {
-    ink: '#FBF7EE', cr: '#1A1208', cr2: '#251A0F', cr3: '#2E2014', mu: '#A8906E',
-    bg: '#1A1208', navBg: 'rgba(26,18,8,0.95)', border: 'rgba(251,247,238,0.08)'
-  } : {
+  // Fixed light mode always
+  return {
     ink: '#1F140E', cr: '#FBF7EE', cr2: '#F4EDDD', cr3: '#EDE3CE', mu: '#7A6452',
-    bg: '#FBF7EE', navBg: 'rgba(251,247,238,0.95)', border: 'rgba(31,20,14,0.08)'
+    bg: '#FBF7EE', navBg: 'rgba(251,247,238,0.97)', border: 'rgba(31,20,14,0.08)'
   }
 }
 
