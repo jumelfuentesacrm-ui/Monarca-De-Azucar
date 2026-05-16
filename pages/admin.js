@@ -136,7 +136,7 @@ function DashboardPanel({ cards, sales, onSelectClient, userName }) {
     {label:'VIP',value:cards.filter(c=>getStatus(c).label==='VIP').length,color:'#E35A1B'},
     {label:'Regular',value:cards.filter(c=>getStatus(c).label==='Regular').length,color:'#2d8a60'},
     {label:'Activo',value:cards.filter(c=>getStatus(c).label==='Active').length,color:'#3498db'},
-    {label:'Nuevo',value:cards.filter(c=>getStatus(c).label==='New').length,color:'#8e44ad'},
+    {label:'Nuevo',value:cards.filter(c=>getStatus(c).label==='New').length,color:'#E35A1B'},
   ].filter(d=>d.value>0)
   function makeSegs(data){const total=data.reduce((a,d)=>a+d.value,0)||1;let cum=0;return data.map(d=>{const s=cum;cum+=d.value/total;return{...d,start:s,pct:d.value/total}})}
   function polar(pct){const a=pct*2*Math.PI-Math.PI/2;return{x:50+35*Math.cos(a),y:50+35*Math.sin(a)}}
@@ -2235,8 +2235,7 @@ export default function Admin({session}){
               <div style={{fontFamily:ffS,fontSize:'1.05rem',color:white}}>Monarca <em style={{color:gold,fontStyle:'italic'}}>de</em> Azúcar</div>
             </div>
           <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-            <button onClick={subscribeToPush} title="Enable notifications" style={{background:'none',border:'1px solid rgba(227,90,27,0.3)',color:'rgba(255,255,255,0.5)',padding:'0.25rem 0.65rem',fontSize:'0.52rem',cursor:'pointer',borderRadius:2,fontFamily:ff,letterSpacing:'0.1em',textTransform:'uppercase'}}>Notis</button>
-            <button onClick={signOut} style={{background:'none',border:'1px solid rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.38)',padding:'0.25rem 0.75rem',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer',borderRadius:2,fontFamily:ff}}>Sign Out</button>
+            <button onClick={signOut} style={{background:'none',border:'none',color:'rgba(255,255,255,0.35)',padding:'0.25rem 0.5rem',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer',fontFamily:ff}}>Salir</button>
           </div>
         </div>
         <div style={{display:'flex',paddingTop:52,minHeight:'100vh'}}>
