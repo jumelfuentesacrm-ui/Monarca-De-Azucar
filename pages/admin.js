@@ -160,7 +160,7 @@ function DashboardPanel({ cards, sales, supplies, onSelectClient, userName, onOp
         </div>
         <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexShrink:0,marginTop:'0.25rem'}}>
           <InventoryDropdown supplies={supplies||[]} catalog={[]}/>
-          <button onClick={()=>onOpenQR&&onOpenQR()}
+          <button onClick={()=>onOpenQR&&onOpenQR()} className="hide-mobile"
             style={{width:40,height:40,borderRadius:'50%',background:'#1F140E',color:'white',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
           </button>
@@ -2413,11 +2413,15 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
   const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit']
   const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
 
+  const [search, setSearch] = React.useState('')
+
   return (
     <div style={{marginBottom:'1.25rem'}}>
-      <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.75rem'}}>Calcular desde ingredientes</div>
+      <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.5rem'}}>Calcular desde ingredientes</div>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar ingrediente..."
+        style={{width:'100%',padding:'0.55rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box'}}/>
       {CATS.map(cat=>{
-        const items = (supplies||[]).filter(s=>(s.category||'Otros')===cat).sort((a,b)=>a.name.localeCompare(b.name,'es'))
+        const items = (supplies||[]).filter(s=>(s.category||'Otros')===cat&&(!search||s.name.toLowerCase().includes(search.toLowerCase()))).sort((a,b)=>a.name.localeCompare(b.name,'es'))
         if(items.length===0) return null
         const isOpen = openCats[cat]
         return (
@@ -2705,12 +2709,12 @@ export default function Admin({session}){
                   <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>Panel de administración</div>
                 </div>
               </div>
-              {getNotifications(cards).length>0&&(
-                <div onClick={()=>setPanel('notifications')} style={{marginTop:'0.6rem',background:'rgba(192,57,43,0.15)',border:'1px solid rgba(192,57,43,0.25)',borderRadius:6,padding:'0.4rem 0.65rem',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <span style={{fontSize:'0.6rem',color:'#e74c3c'}}>⚠ {getNotifications(cards).length} alerta{getNotifications(cards).length!==1?'s':''}</span>
-                  <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>ver →</span>
-                </div>
-              )}
+              <div onClick={()=>setPanel('notifications')} style={{marginTop:'0.6rem',background:getNotifications(cards).length>0?'rgba(192,57,43,0.15)':'rgba(255,255,255,0.04)',border:'1px solid '+(getNotifications(cards).length>0?'rgba(192,57,43,0.25)':'rgba(255,255,255,0.06)'),borderRadius:6,padding:'0.4rem 0.65rem',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:'0.6rem',color:getNotifications(cards).length>0?'#e74c3c':'rgba(255,255,255,0.3)'}}>
+                  {getNotifications(cards).length>0?`⚠ ${getNotifications(cards).length} alerta${getNotifications(cards).length!==1?'s':''}` : '✓ Sin alertas'}
+                </span>
+                <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>ver →</span>
+              </div>
             </div>
 
             {/* NEGOCIO */}
@@ -2839,10 +2843,22 @@ export default function Admin({session}){
           {[
             ['dashboard','Resumen'],
             ['bookings','Órdenes'],
+          ].map(([id,label])=>(
+            <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
+              className={panel===id?'active':''}>
+              {label}
+            </button>
+          ))}
+          <button onClick={()=>setShowQRScanner(true)}
+            style={{flex:'0 0 auto',padding:'0.5rem 0.75rem',background:'rgba(227,90,27,0.15)',border:'1px solid rgba(227,90,27,0.3)',borderRadius:999,color:gold,fontFamily:ff,fontSize:'0.58rem',display:'flex',alignItems:'center',gap:'0.3rem',cursor:'pointer',letterSpacing:'0.06em',textTransform:'uppercase'}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
+            QR
+          </button>
+          {[
             ['clients','Clientes'],
           ].map(([id,label])=>(
             <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
-              className={panel===id||(['cards','punch','rewards'].includes(panel)&&id==='loyalty')?'active':''}>
+              className={panel===id?'active':''}>
               {label}
             </button>
           ))}
@@ -3142,7 +3158,7 @@ export default function Admin({session}){
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setSupplyModal(null)}>
             <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-                <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{supplyModal==='add'?'Add Supply':'Editar Supply'}</h3>
+                <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{supplyModal==='add'?'Añadir ingrediente':'Editar ingrediente'}</h3>
                 <button onClick={()=>setSupplyModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
               </div>
               <label style={lbl}>Nombre</label>
@@ -3150,7 +3166,10 @@ export default function Admin({session}){
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
                 <div>
                   <label style={lbl}>Categoría</label>
-                  <input style={{...inp,marginBottom:0}} type="text" placeholder="Hosting, Software..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
+                  <input style={{...inp,marginBottom:0}} list="supply-categories" type="text" placeholder="Secos, Lácteos, Empaque..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
+                  <datalist id="supply-categories">
+                    {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros'].map(c=><option key={c} value={c}/>)}
+                  </datalist>
                 </div>
                 <div>
                   <label style={lbl}>Proveedor</label>
@@ -3159,7 +3178,7 @@ export default function Admin({session}){
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginTop:'1rem'}}>
                 <div>
-                  <label style={lbl}>Cost ($)</label>
+                  <label style={lbl}>Precio total ($)</label>
                   <input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={supplyForm.cost} onChange={e=>setSupplyForm(f=>({...f,cost:e.target.value}))}/>
                 </div>
                 <div>
