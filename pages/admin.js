@@ -2219,12 +2219,12 @@ export default function Admin({session}){
         @media(max-width:700px){
           .admin-sidebar{display:none!important;}
           .website-grid{grid-template-columns:1fr!important;}
-          .admin-main{margin-left:0!important;padding:1rem!important;}
+          .admin-main{margin-left:0!important;padding-left:0.75rem!important;padding-right:0.75rem!important;padding-top:calc(52px + env(safe-area-inset-top,0px) + 1rem)!important;padding-bottom:calc(72px + env(safe-area-inset-bottom,20px))!important;}
           .donut-grid{grid-template-columns:1fr!important;}
           .punch-row{grid-template-columns:1fr!important;}
           .mobile-nav{display:flex!important;}
         }
-        .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:${ink};z-index:200;border-top:1px solid rgba(227,90,27,0.15);}
+        .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:${ink};z-index:200;border-top:1px solid rgba(227,90,27,0.15);padding-bottom:env(safe-area-inset-bottom,20px);}
         .mobile-nav button{flex:1;padding:0.85rem 0.1rem;background:none;border:none;color:rgba(255,255,255,0.4);font-family:${ff};font-size:0.65rem;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.2rem;}
         .mobile-nav button.active{color:${gold};}
       `}</style>
@@ -2292,7 +2292,7 @@ export default function Admin({session}){
           </div>
 
           {/* MAIN */}
-          <div className="admin-main" style={{marginLeft:220,flex:1,padding:'1.75rem',maxWidth:980}}>
+          <div className="admin-main" style={{marginLeft:220,flex:1,padding:'1.75rem',paddingTop:'calc(52px + 1.75rem)',maxWidth:980}}>
             {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} userName={users.find(u=>u.id===session?.user?.id)?.full_name?.split(' ')[0]} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}}/>}
             {panel==='client'&&selectedClient&&<ClientProfile card={selectedClient} onBack={()=>{setSelectedClient(null);setPanel('dashboard')}}/>}
             {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
