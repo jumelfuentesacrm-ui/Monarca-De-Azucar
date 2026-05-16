@@ -5,11 +5,30 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
 
   if (req.method === 'GET') {
-    const { data: messages } = await supabase
+    const { data: messages, error } = await supabase
       .from('messages')
-      .select('*, profiles(full_name, business_name)')
+      .select('*')
       .order('created_at', { ascending: true })
-    return res.status(200).json({ messages: messages || [] })
+
+    if (error) return res.status(500).json({ error: error.message })
+
+    // Enrich with profile data
+    const userIds = [...new Set((messages||[]).map(m => m.user_id))]
+    let profileMap = {}
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, business_name')
+        .in('id', userIds)
+      ;(profiles||[]).forEach(p => { profileMap[p.id] = p })
+    }
+
+    const enriched = (messages||[]).map(m => ({
+      ...m,
+      profiles: profileMap[m.user_id] || null
+    }))
+
+    return res.status(200).json({ messages: enriched })
   }
 
   if (req.method === 'POST') {
