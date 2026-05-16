@@ -2219,7 +2219,7 @@ export default function Admin({session}){
         @media(max-width:700px){
           .admin-sidebar{display:none!important;}
           .website-grid{grid-template-columns:1fr!important;}
-          .admin-main{margin-left:0!important;padding-left:0.75rem!important;padding-right:0.75rem!important;padding-top:calc(52px + env(safe-area-inset-top,0px) + 1rem)!important;padding-bottom:calc(72px + env(safe-area-inset-bottom,20px))!important;}
+          .admin-main{margin-left:0!important;padding-left:0.75rem!important;padding-right:0.75rem!important;padding-top:calc(52px + env(safe-area-inset-top,0px) + 0.5rem)!important;padding-bottom:calc(72px + env(safe-area-inset-bottom,20px))!important;}
           .donut-grid{grid-template-columns:1fr!important;}
           .punch-row{grid-template-columns:1fr!important;}
           .mobile-nav{display:flex!important;}
@@ -2292,7 +2292,7 @@ export default function Admin({session}){
           </div>
 
           {/* MAIN */}
-          <div className="admin-main" style={{marginLeft:220,flex:1,padding:'1.75rem',paddingTop:'calc(52px + 1.75rem)',maxWidth:980}}>
+          <div className="admin-main" style={{marginLeft:220,flex:1,padding:'1.75rem',paddingTop:'calc(52px + 1rem)',maxWidth:980}}>
             {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} userName={users.find(u=>u.id===session?.user?.id)?.full_name?.split(' ')[0]} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}}/>}
             {panel==='client'&&selectedClient&&<ClientProfile card={selectedClient} onBack={()=>{setSelectedClient(null);setPanel('dashboard')}}/>}
             {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
@@ -2405,15 +2405,16 @@ export default function Admin({session}){
             <div onClick={()=>setHamburgerOpen(false)}
               style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:195}}/>
             <div style={{position:'fixed',bottom:0,left:0,right:0,background:ink,zIndex:196,
-              paddingBottom:52}}>
+              paddingBottom:'calc(52px + env(safe-area-inset-bottom,16px))'}}>
               <div style={{width:36,height:3,background:'rgba(255,255,255,0.15)',borderRadius:2,margin:'0.75rem auto 0.5rem'}}/>
               {[
-                ['bookings','Reservas'],
-                ['clients','Clientes'],
+                ['cards','Tarjetas'],
+                ['punch','Sellar visita'],
                 ['campaigns','Campañas'],
+                ['website','Website'],
                 ['catalog','Catálogo'],
                 ['supplies','Inventario'],
-                ['system','Sistema'],
+                ['system','Configuración'],
               ].map(([id,label])=>(
                 <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
                   style={{display:'flex',alignItems:'center',width:'100%',padding:'0.9rem 1.5rem',
