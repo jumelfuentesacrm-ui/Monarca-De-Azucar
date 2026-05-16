@@ -9,8 +9,8 @@ function getStatus(card) {
   const stamps = card.stamps || 0
   let days = null
   if (card.stamp_history && card.stamp_history.length > 0) {
-    const last = new Fecha(card.stamp_history[card.stamp_history.length-1].created_at)
-    days = (Fecha.now()-last)/(1000*60*60*24)
+    const last = new Date(card.stamp_history[card.stamp_history.length-1].created_at)
+    days = (Date.now()-last)/(1000*60*60*24)
   }
   if (days !== null) {
     if (days >= 66) return { label:'Cancelarled', color:'#c0392b', bg:'rgba(192,57,43,0.1)' }
@@ -25,8 +25,8 @@ function getStatus(card) {
 
 function getDaysSinceLastPurchase(card) {
   if (!card||!card.stamp_history||card.stamp_history.length===0) return null
-  const last = new Fecha(card.stamp_history[card.stamp_history.length-1].created_at)
-  return Math.floor((Fecha.now()-last)/(1000*60*60*24))
+  const last = new Date(card.stamp_history[card.stamp_history.length-1].created_at)
+  return Math.floor((Date.now()-last)/(1000*60*60*24))
 }
 
 function getNotifications(cards) {
@@ -327,7 +327,7 @@ function ClientProfile({card,onBack}){
       </div>
       <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1rem'}}>
         <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:300}}>Payment Historial</div>
-        {card.stamp_history?.length>0?[...card.stamp_history].reverse().map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>Payment registered{h.payment_amount?' · '+h.payment_amount:''}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>{new Fecha(h.created_at).toLocaleFechaString('en-US',{day:'numeric',month:'long',year:'numeric'})}</div></div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.2)'}}>+1 stamp</span></div>)):<div style={{padding:'1.5rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No history yet.</div>}
+        {card.stamp_history?.length>0?[...card.stamp_history].reverse().map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>Payment registered{h.payment_amount?' · '+h.payment_amount:''}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>{new Date(h.created_at).toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'})}</div></div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.2)'}}>+1 stamp</span></div>)):<div style={{padding:'1.5rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No history yet.</div>}
       </div>
       {card.rewards?.length>0&&(<div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}><div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:300}}>Premios</div>{card.rewards.map((r,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>{r.reward_type}</div>{r.reward_cost&&<div style={{fontSize:'0.65rem',color:gold,marginTop:'0.1rem'}}>{r.reward_cost}</div>}</div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(45,138,96,0.1)',color:'#2d8a60'}}>{r.status}</span></div>))}</div>)}
     </div>
@@ -362,7 +362,7 @@ function ClientsPanel({users,cards,search,setSearch,onEditar,onAddPayment,onCrea
           const card=getCard(user.id)
           const status=getClientStatus(user.id)
           const cur=card?(card.stamps%5===0&&card.stamps>0?5:card.stamps%5):0
-          const lastPay=card?.stamp_history?.length>0?new Fecha(card.stamp_history[card.stamp_history.length-1].created_at).toLocaleFechaString('en-US',{month:'short',day:'numeric'}):null
+          const lastPay=card?.stamp_history?.length>0?new Date(card.stamp_history[card.stamp_history.length-1].created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}):null
           return(
             <div key={user.id} style={{display:'grid',gridTemplateColumns:'2fr 120px 100px 1fr',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',alignItems:'center',gap:'0.5rem'}}>
               <div style={{minWidth:0}}>
@@ -677,7 +677,7 @@ function CostHistorial({ productId }) {
                 <span style={{fontSize:'0.78rem',fontWeight:600,color:'#1F140E'}}>${parseFloat(h.cost).toFixed(2)}</span>
                 {h.notes&&<span style={{fontSize:'0.6rem',color:'#7A6452',marginLeft:'0.5rem'}}>{h.notes.substring(0,40)}</span>}
               </div>
-              <span style={{fontSize:'0.58rem',color:'#7A6452'}}>{new Fecha(h.created_at).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+              <span style={{fontSize:'0.58rem',color:'#7A6452'}}>{new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
             </div>
           ))}
         </div>
@@ -727,7 +727,7 @@ function GastoHistorial({ clientId, showToast, supplies }) {
     if (lineItems.length===0) { showToast('Add at least one supply'); return }
     const res = await fetch('/api/admin/expenses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       client_id: clientId, amount: suppliesTotal, description: lineItems.map(l=>l.name).join(', '),
-      recurring: false, recurring_interval: 'month', expense_date: new Fecha().toISOString().split('T')[0],
+      recurring: false, recurring_interval: 'month', expense_date: new Date().toISOString().split('T')[0],
       line_items: lineItems
     })})
     if (res.ok) { showToast('Gasto saved'); setQuantities({}); load() }
@@ -837,17 +837,17 @@ function FinancialCard({ sales }) {
   const netSales = grossSales - refunded
   const avgOrder = paid.length>0?grossSales/paid.length:0
 
-  const now = new Fecha()
-  const ytdSales = paid.filter(s=>new Fecha(s.sale_date).getFullYear()===now.getFullYear()).reduce((a,s)=>a+parseFloat(s.amount||0),0)
-  const thisMonthSales = paid.filter(s=>{const d=new Fecha(s.sale_date);return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()}).reduce((a,s)=>a+parseFloat(s.amount||0),0)
+  const now = new Date()
+  const ytdSales = paid.filter(s=>new Date(s.sale_date).getFullYear()===now.getFullYear()).reduce((a,s)=>a+parseFloat(s.amount||0),0)
+  const thisMonthSales = paid.filter(s=>{const d=new Date(s.sale_date);return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()}).reduce((a,s)=>a+parseFloat(s.amount||0),0)
 
 
   // ── Period builders ──────────────────────────────────────────────
   function buildData(items, valueKey, period) {
     const map = {}
     const filtered = items.filter(s => {
-      const d = new Fecha(s.sale_date)
-      if (period === 'weekly') { const wk = new Fecha(now); wk.setFecha(now.getFecha()-27); return d >= wk }
+      const d = new Date(s.sale_date)
+      if (period === 'weekly') { const wk = new Date(now); wk.setDate(now.getDate()-27); return d >= wk }
       if (period === 'monthly') return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth()
       if (period === 'ytd') return d.getFullYear()===now.getFullYear()
       if (period === 'yearly') return true
@@ -855,20 +855,20 @@ function FinancialCard({ sales }) {
     })
 
     filtered.forEach(s => {
-      const d = new Fecha(s.sale_date)
+      const d = new Date(s.sale_date)
       let key
-      if (period === 'weekly')  key = d.toLocaleFechaString('en-US',{month:'short',day:'numeric'})
-      else if (period === 'monthly') key = d.toLocaleFechaString('en-US',{month:'short',day:'numeric'})
-      else if (period === 'ytd') key = d.toLocaleFechaString('en-US',{month:'short'})
-      else key = d.toLocaleFechaString('en-US',{month:'short',year:'2-digit'})
+      if (period === 'weekly')  key = d.toLocaleDateString('en-US',{month:'short',day:'numeric'})
+      else if (period === 'monthly') key = d.toLocaleDateString('en-US',{month:'short',day:'numeric'})
+      else if (period === 'ytd') key = d.toLocaleDateString('en-US',{month:'short'})
+      else key = d.toLocaleDateString('en-US',{month:'short',year:'2-digit'})
       map[key] = (map[key]||0) + Math.abs(parseFloat(s[valueKey]||0))
     })
 
     if (period === 'weekly') {
       const result = []
       for (let i=27; i>=0; i--) {
-        const d = new Fecha(now); d.setFecha(now.getFecha()-i)
-        const key = d.toLocaleFechaString('en-US',{month:'short',day:'numeric'})
+        const d = new Date(now); d.setDate(now.getDate()-i)
+        const key = d.toLocaleDateString('en-US',{month:'short',day:'numeric'})
         if (!result.find(r=>r[0]===key)) result.push([key, map[key]||0])
       }
       // Group by week
@@ -882,10 +882,10 @@ function FinancialCard({ sales }) {
     }
     if (period === 'monthly') {
       const result = []
-      const daysInMonth = new Fecha(now.getFullYear(), now.getMonth()+1, 0).getFecha()
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()
       for (let i=1; i<=daysInMonth; i++) {
-        const d = new Fecha(now.getFullYear(), now.getMonth(), i)
-        const key = d.toLocaleFechaString('en-US',{month:'short',day:'numeric'})
+        const d = new Date(now.getFullYear(), now.getMonth(), i)
+        const key = d.toLocaleDateString('en-US',{month:'short',day:'numeric'})
         result.push([key, map[key]||0])
       }
       return result
@@ -893,8 +893,8 @@ function FinancialCard({ sales }) {
     if (period === 'ytd') {
       const result = []
       for (let i=0; i<=now.getMonth(); i++) {
-        const d = new Fecha(now.getFullYear(), i, 1)
-        const key = d.toLocaleFechaString('en-US',{month:'short'})
+        const d = new Date(now.getFullYear(), i, 1)
+        const key = d.toLocaleDateString('en-US',{month:'short'})
         result.push([key, map[key]||0])
       }
       return result
@@ -902,8 +902,8 @@ function FinancialCard({ sales }) {
     // yearly — last 12 months
     const result = []
     for (let i=11; i>=0; i--) {
-      const d = new Fecha(now.getFullYear(), now.getMonth()-i, 1)
-      const key = d.toLocaleFechaString('en-US',{month:'short',year:'2-digit'})
+      const d = new Date(now.getFullYear(), now.getMonth()-i, 1)
+      const key = d.toLocaleDateString('en-US',{month:'short',year:'2-digit'})
       result.push([key, map[key]||0])
     }
     return result
@@ -911,19 +911,19 @@ function FinancialCard({ sales }) {
 
   function buildAOV(items, period) {
     const filtered = items.filter(s => {
-      const d = new Fecha(s.sale_date)
-      if (period === 'weekly') { const wk = new Fecha(now); wk.setFecha(now.getFecha()-27); return d >= wk }
+      const d = new Date(s.sale_date)
+      if (period === 'weekly') { const wk = new Date(now); wk.setDate(now.getDate()-27); return d >= wk }
       if (period === 'monthly') return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth()
       if (period === 'ytd') return d.getFullYear()===now.getFullYear()
       return true
     })
     const map = {}
     filtered.forEach(s => {
-      const d = new Fecha(s.sale_date)
+      const d = new Date(s.sale_date)
       let key
-      if (period === 'monthly') key = d.toLocaleFechaString('en-US',{month:'short',day:'numeric'})
-      else if (period === 'ytd') key = d.toLocaleFechaString('en-US',{month:'short'})
-      else key = d.toLocaleFechaString('en-US',{month:'short',year:'2-digit'})
+      if (period === 'monthly') key = d.toLocaleDateString('en-US',{month:'short',day:'numeric'})
+      else if (period === 'ytd') key = d.toLocaleDateString('en-US',{month:'short'})
+      else key = d.toLocaleDateString('en-US',{month:'short',year:'2-digit'})
       if (!map[key]) map[key] = {sum:0,count:0}
       map[key].sum += parseFloat(s.amount||0)
       map[key].count += 1
@@ -934,8 +934,8 @@ function FinancialCard({ sales }) {
 
   function buildServices(items, period) {
     const filtered = items.filter(s => {
-      const d = new Fecha(s.sale_date)
-      if (period === 'weekly') { const wk = new Fecha(now); wk.setFecha(now.getFecha()-27); return d >= wk }
+      const d = new Date(s.sale_date)
+      if (period === 'weekly') { const wk = new Date(now); wk.setDate(now.getDate()-27); return d >= wk }
       if (period === 'monthly') return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth()
       if (period === 'ytd') return d.getFullYear()===now.getFullYear()
       return true
@@ -1136,7 +1136,7 @@ function FinancialCard({ sales }) {
             </div>
             <div style={{flex:1,overflowY:'auto',padding:'0 1.5rem'}}>
               {(sales||[]).length===0&&<div style={{textAlign:'center',color:gray,fontSize:'0.78rem',padding:'2rem'}}>Sin transacciones aún.</div>}
-              {[...(sales||[])].sort((a,b)=>new Fecha(b.sale_date)-new Fecha(a.sale_date)).map((s,i)=>{
+              {[...(sales||[])].sort((a,b)=>new Date(b.sale_date)-new Date(a.sale_date)).map((s,i)=>{
                 const isVoided = s.status==='voided'
                 const isRefunded = s.status==='refunded'
                 return(
@@ -1144,7 +1144,7 @@ function FinancialCard({ sales }) {
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:'0.75rem',color:black,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.customer_name||s.customer_email||'—'}</div>
                       <div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.product_name||'—'}</div>
-                      <div style={{fontSize:'0.58rem',color:'rgba(31,20,14,0.35)',marginTop:'0.1rem'}}>{s.sale_date?new Fecha(s.sale_date).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'}):''} · {s.type||'stripe'}</div>
+                      <div style={{fontSize:'0.58rem',color:'rgba(31,20,14,0.35)',marginTop:'0.1rem'}}>{s.sale_date?new Date(s.sale_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):''} · {s.type||'stripe'}</div>
                     </div>
                     <div style={{textAlign:'right',flexShrink:0}}>
                       <div style={{fontSize:'0.85rem',fontWeight:600,fontFamily:ffS,color:isVoided?gray:isRefunded?'#c0392b':'#2d8a60'}}>{isRefunded?'-':''}${Math.abs(parseFloat(s.amount||0)).toFixed(2)}</div>
@@ -1325,7 +1325,7 @@ function SupplyCostHistorial({ supplyId }) {
           {!loading&&history.map((h,i)=>(
             <div key={h.id||i} style={{display:'flex',justifyContent:'space-between',padding:'0.5rem 0.85rem',borderBottom:i<history.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
               <span style={{fontSize:'0.7rem',fontWeight:600,color:black}}>${parseFloat(h.cost).toFixed(2)}</span>
-              <span style={{fontSize:'0.6rem',color:gray}}>{new Fecha(h.created_at).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+              <span style={{fontSize:'0.6rem',color:gray}}>{new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
             </div>
           ))}
         </div>
@@ -1388,7 +1388,7 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast }) {
               <span style={{fontFamily:ffS,fontSize:'1.15rem',fontWeight:300,color:'#c0392b'}}>${parseFloat(s.cost).toFixed(2)}</span>
               <span style={{fontSize:'0.58rem',color:gray}}>{unitLabel(s.unit)}</span>
             </div>
-            {s.renewal_date&&<div style={{fontSize:'0.58rem',color:gold}}>Renews {new Fecha(s.renewal_date).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>}
+            {s.renewal_date&&<div style={{fontSize:'0.58rem',color:gold}}>Renews {new Date(s.renewal_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>}
             <SupplyCostHistorial supplyId={s.id}/>
           </div>
         ))}
@@ -1399,7 +1399,7 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast }) {
 
 function formatCalendarTime(ev) {
   if (!ev.start?.dateTime) return 'All day'
-  return new Fecha(ev.start.dateTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})
+  return new Date(ev.start.dateTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})
 }
 
 function AgendaEvent({ ev, todayFlag }) {
@@ -1408,7 +1408,7 @@ function AgendaEvent({ ev, todayFlag }) {
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
-  const d = new Fecha(ev.start?.dateTime||ev.start?.date)
+  const d = new Date(ev.start?.dateTime||ev.start?.date)
   const name = ev.summary || 'Booking'
 
   async function loadNotes() {
@@ -1438,9 +1438,9 @@ function AgendaEvent({ ev, todayFlag }) {
     <div style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
       <div onClick={handleOpen} style={{display:'flex',alignItems:'center',gap:'1rem',padding:'0.85rem 1.25rem',cursor:'pointer',background:open?'rgba(31,20,14,0.02)':'transparent'}}>
         <div style={{flexShrink:0,textAlign:'center',minWidth:44}}>
-          <div style={{fontSize:'0.55rem',color:'#7A6452',textTransform:'uppercase'}}>{d.toLocaleFechaString('en-US',{month:'short'})}</div>
-          <div style={{fontSize:'1.3rem',fontFamily:ffS,fontWeight:300,color:todayFlag?gold:black,lineHeight:1}}>{d.getFecha()}</div>
-          <div style={{fontSize:'0.52rem',color:'#7A6452'}}>{d.toLocaleFechaString('en-US',{weekday:'short'})}</div>
+          <div style={{fontSize:'0.55rem',color:'#7A6452',textTransform:'uppercase'}}>{d.toLocaleDateString('en-US',{month:'short'})}</div>
+          <div style={{fontSize:'1.3rem',fontFamily:ffS,fontWeight:300,color:todayFlag?gold:black,lineHeight:1}}>{d.getDate()}</div>
+          <div style={{fontSize:'0.52rem',color:'#7A6452'}}>{d.toLocaleDateString('en-US',{weekday:'short'})}</div>
         </div>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:'0.78rem',color:black,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{name}</div>
@@ -1490,7 +1490,7 @@ function AgendaEvent({ ev, todayFlag }) {
             )
           })()}
           {ev.location&&<div style={{fontSize:'0.62rem',color:'#7A6452',marginBottom:'0.75rem'}}>{ev.location}</div>}
-          {ev.end?.dateTime&&<div style={{fontSize:'0.62rem',color:gold,marginBottom:'0.75rem'}}>{formatCalendarTime(ev)} – {new Fecha(ev.end.dateTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>}
+          {ev.end?.dateTime&&<div style={{fontSize:'0.62rem',color:gold,marginBottom:'0.75rem'}}>{formatCalendarTime(ev)} – {new Date(ev.end.dateTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>}
           <div style={{fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.4rem'}}>Notes</div>
           <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Add notes about this booking..." rows={3}
             style={{width:'100%',padding:'0.65rem',border:'1px solid #e8e5de',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none',resize:'vertical',boxSizing:'border-box',color:black,lineHeight:1.6}}/>
@@ -1511,17 +1511,17 @@ function BookingsPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [view, setVer] = useState('agenda')
-  const [currentFecha, setCurrentFecha] = useState(new Fecha())
+  const [currentDate, setCurrentDate] = useState(new Date())
 
-  useEffect(() => { fetchEvents() }, [currentFecha, view])
+  useEffect(() => { fetchEvents() }, [currentDate, view])
 
   async function fetchEvents() {
     setLoading(true); setError(null)
     try {
-      const start = new Fecha(currentFecha), end = new Fecha(currentFecha)
-      if (view==='week') { const day=start.getDay(); start.setFecha(start.getFecha()-day); end.setFecha(start.getFecha()+7) }
-      else if (view==='month') { start.setFecha(1); end.setMonth(end.getMonth()+1); end.setFecha(0) }
-      else { end.setFecha(end.getFecha()+30) }
+      const start = new Date(currentDate), end = new Date(currentDate)
+      if (view==='week') { const day=start.getDay(); start.setDate(start.getDate()-day); end.setDate(start.getDate()+7) }
+      else if (view==='month') { start.setDate(1); end.setMonth(end.getMonth()+1); end.setDate(0) }
+      else { end.setDate(end.getDate()+30) }
       const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?key=${API_KEY}&timeMin=${start.toISOString()}&timeMax=${end.toISOString()}&singleEvents=true&orderBy=startTime&maxResults=50`
       const res = await fetch(url)
       if (!res.ok) throw new Error('failed')
@@ -1537,44 +1537,44 @@ function BookingsPanel() {
 
   function formatTime(ev) {
     if (!ev.start?.dateTime) return 'All day'
-    return new Fecha(ev.start.dateTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})
+    return new Date(ev.start.dateTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})
   }
   function isHoy(ev) {
-    return new Fecha(ev.start?.dateTime||ev.start?.date).toFechaString()===new Fecha().toFechaString()
+    return new Date(ev.start?.dateTime||ev.start?.date).toDateString()===new Date().toDateString()
   }
   function getEventsForDay(date) {
     if (!date) return []
-    return events.filter(ev=>new Fecha(ev.start?.dateTime||ev.start?.date).toFechaString()===date.toFechaString())
+    return events.filter(ev=>new Date(ev.start?.dateTime||ev.start?.date).toDateString()===date.toDateString())
   }
   function navPrev() {
-    const d=new Fecha(currentFecha)
+    const d=new Date(currentDate)
     if(view==='month') d.setMonth(d.getMonth()-1)
-    else if(view==='week') d.setFecha(d.getFecha()-7)
-    else d.setFecha(d.getFecha()-30)
-    setCurrentFecha(d)
+    else if(view==='week') d.setDate(d.getDate()-7)
+    else d.setDate(d.getDate()-30)
+    setCurrentDate(d)
   }
   function navNext() {
-    const d=new Fecha(currentFecha)
+    const d=new Date(currentDate)
     if(view==='month') d.setMonth(d.getMonth()+1)
-    else if(view==='week') d.setFecha(d.getFecha()+7)
-    else d.setFecha(d.getFecha()+30)
-    setCurrentFecha(d)
+    else if(view==='week') d.setDate(d.getDate()+7)
+    else d.setDate(d.getDate()+30)
+    setCurrentDate(d)
   }
 
   const navLabel = view==='month'
-    ? currentFecha.toLocaleFechaString('en-US',{month:'long',year:'numeric'})
-    : view==='week' ? 'Week of '+currentFecha.toLocaleFechaString('en-US',{month:'short',day:'numeric'})
+    ? currentDate.toLocaleDateString('en-US',{month:'long',year:'numeric'})
+    : view==='week' ? 'Week of '+currentDate.toLocaleDateString('en-US',{month:'short',day:'numeric'})
     : 'Next 30 days'
 
   const weekDayNombres = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
   function getMonthDays() {
-    const y=currentFecha.getFullYear(), m=currentFecha.getMonth()
-    const firstDay=new Fecha(y,m,1).getDay()
-    const daysInMonth=new Fecha(y,m+1,0).getFecha()
+    const y=currentDate.getFullYear(), m=currentDate.getMonth()
+    const firstDay=new Date(y,m,1).getDay()
+    const daysInMonth=new Date(y,m+1,0).getDate()
     const days=[]
     for(let i=0;i<firstDay;i++) days.push(null)
-    for(let i=1;i<=daysInMonth;i++) days.push(new Fecha(y,m,i))
+    for(let i=1;i<=daysInMonth;i++) days.push(new Date(y,m,i))
     return days
   }
 
@@ -1608,10 +1608,10 @@ function BookingsPanel() {
             <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
               {getMonthDays().map((date,i)=>{
                 const dayEvs=getEventsForDay(date)
-                const today=date&&date.toFechaString()===new Fecha().toFechaString()
+                const today=date&&date.toDateString()===new Date().toDateString()
                 return(
                   <div key={i} style={{minHeight:80,padding:'0.4rem',borderRight:'1px solid rgba(31,20,14,0.04)',borderBottom:'1px solid rgba(31,20,14,0.04)',background:today?'rgba(227,90,27,0.04)':'transparent'}}>
-                    {date&&<div style={{fontSize:'0.65rem',fontWeight:today?700:400,color:today?gold:black,width:22,height:22,borderRadius:'50%',background:today?'rgba(227,90,27,0.15)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'0.25rem'}}>{date.getFecha()}</div>}
+                    {date&&<div style={{fontSize:'0.65rem',fontWeight:today?700:400,color:today?gold:black,width:22,height:22,borderRadius:'50%',background:today?'rgba(227,90,27,0.15)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'0.25rem'}}>{date.getDate()}</div>}
                     {dayEvs.slice(0,2).map((ev,j)=><div key={j} title={ev.summary} style={{fontSize:'0.52rem',background:'rgba(227,90,27,0.12)',color:gold,borderRadius:3,padding:'0.15rem 0.35rem',marginBottom:'0.15rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div>)}
                     {dayEvs.length>2&&<div style={{fontSize:'0.5rem',color:gray}}>+{dayEvs.length-2}</div>}
                   </div>
@@ -1623,17 +1623,17 @@ function BookingsPanel() {
 
         {/* WEEK */}
         {!loading&&!error&&view==='week'&&(()=>{
-          const ws=new Fecha(currentFecha); ws.setFecha(ws.getFecha()-ws.getDay())
-          const wFechas=Array.from({length:7},(_,i)=>{ const d=new Fecha(ws); d.setFecha(d.getFecha()+i); return d })
+          const ws=new Date(currentDate); ws.setDate(ws.getDate()-ws.getDay())
+          const wFechas=Array.from({length:7},(_,i)=>{ const d=new Date(ws); d.setDate(d.getDate()+i); return d })
           return(
             <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)'}}>
               {wFechas.map((d,i)=>{
-                const today=d.toFechaString()===new Fecha().toFechaString()
+                const today=d.toDateString()===new Date().toDateString()
                 const dayEvs=getEventsForDay(d)
                 return(
                   <div key={i} style={{padding:'0.75rem 0.5rem',borderRight:'1px solid rgba(31,20,14,0.04)',background:today?'rgba(227,90,27,0.04)':'transparent',minHeight:150}}>
                     <div style={{fontSize:'0.52rem',color:gray,textTransform:'uppercase',letterSpacing:'0.08em'}}>{weekDayNombres[i]}</div>
-                    <div style={{fontSize:'0.88rem',fontWeight:today?700:400,color:today?gold:black,marginBottom:'0.4rem'}}>{d.getFecha()}</div>
+                    <div style={{fontSize:'0.88rem',fontWeight:today?700:400,color:today?gold:black,marginBottom:'0.4rem'}}>{d.getDate()}</div>
                     {dayEvs.map((ev,j)=><div key={j} style={{fontSize:'0.54rem',background:'rgba(227,90,27,0.1)',color:gold,borderRadius:3,padding:'0.2rem 0.4rem',marginBottom:'0.2rem',lineHeight:1.3}}><div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div><div style={{opacity:0.7}}>{formatTime(ev)}</div></div>)}
                   </div>
                 )
@@ -1646,7 +1646,7 @@ function BookingsPanel() {
         {!loading&&!error&&view==='agenda'&&(
           <div>
             {events.length===0&&<div style={{padding:'2rem',textAlign:'center',color:gray,fontSize:'0.78rem'}}>No hay eventos próximos.</div>}
-            {events.map((ev,i)=><AgendaEvent key={ev.id||i} ev={ev} todayFlag={new Fecha(ev.start?.dateTime||ev.start?.date).toFechaString()===new Fecha().toFechaString()}/>)}
+            {events.map((ev,i)=><AgendaEvent key={ev.id||i} ev={ev} todayFlag={new Date(ev.start?.dateTime||ev.start?.date).toDateString()===new Date().toDateString()}/>)}
           </div>
         )}
       </div>
@@ -1734,7 +1734,7 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
 
   function timeAgo(ts) {
     if (!ts) return '—'
-    const diff = (Fecha.now() - new Fecha(ts)) / 1000
+    const diff = (Date.now() - new Date(ts)) / 1000
     if (diff < 60) return 'Just now'
     if (diff < 3600) return Math.floor(diff/60) + ' min ago'
     if (diff < 86400) return Math.floor(diff/3600) + ' hr ago'
@@ -1829,7 +1829,7 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
                 <div style={{fontSize:'0.62rem',color:gray,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:'0.1rem'}}>{l.target||'—'}</div>
               </div>
               <div style={{textAlign:'right',flexShrink:0}}>
-                <div style={{fontSize:'0.6rem',color:gray}}>{l.created_at?new Fecha(l.created_at).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+new Fecha(l.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'—'}</div>
+                <div style={{fontSize:'0.6rem',color:gray}}>{l.created_at?new Date(l.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+new Date(l.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'—'}</div>
                 <div style={{fontSize:'0.56rem',color:'rgba(31,20,14,0.3)',marginTop:'0.1rem'}}>{l.user_name||'Admin'}</div>
               </div>
             </div>
@@ -1855,7 +1855,7 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
                 color:u.role==='admin'?gold:'#2980b9',width:'fit-content'}}>
                 {u.role==='admin'?'Admin':'Client'}
               </span>
-              <span style={{fontSize:'0.62rem',color:gray}}>{u.last_sign_in_at?new Fecha(u.last_sign_in_at).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+new Fecha(u.last_sign_in_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'Never'}</span>
+              <span style={{fontSize:'0.62rem',color:gray}}>{u.last_sign_in_at?new Date(u.last_sign_in_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+new Date(u.last_sign_in_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'Never'}</span>
             </div>
           ))}
           {!sessionsLoading&&filteredSessions.length===0&&<div style={{padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No sessions found.</div>}
@@ -2041,7 +2041,7 @@ export default function Admin({session}){
   const [supplyModal,setSupplyModal]=useState(null) // null | 'add' | supply object
   const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''})
   const [rewardCard,setPremioCard]=useState(null) // card for inline reward modal
-  const [expenseForm,setGastoForm]=useState({amount:'',description:'',date:new Fecha().toISOString().split('T')[0]})
+  const [expenseForm,setGastoForm]=useState({amount:'',description:'',date:new Date().toISOString().split('T')[0]})
 
   useEffect(()=>{
     if(session===undefined) return
@@ -2088,7 +2088,7 @@ export default function Admin({session}){
         currency:'usd',
         type:'manual',
         status:'paid',
-        sale_date:new Fecha().toISOString().split('T')[0],
+        sale_date:new Date().toISOString().split('T')[0],
         notes:'Registered via punch'
       })})
       sendPush('New Sale', `$${parseFloat(punchAmt).toFixed(2)} — ${card?.profiles?.business_name||card?.profiles?.full_name||'Client'}`, '/admin')
@@ -2251,7 +2251,7 @@ export default function Admin({session}){
               onCreateNew={()=>{setForm({});setModal('card')}}
               onEliminar={async(uid)=>{if(!confirm('Eliminar this client?'))return;const u=users.find(u=>u.id===uid);await fetch('/api/admin/users',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:uid})});await fetch('/api/admin/activity-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'Eliminard client',target:u?.business_name||u?.full_name||'',type:'delete'})});showToast('Client deleted');loadAll()}}
               onArchivos={(u)=>{setArchivosClient(u);setModal('files')}}
-              onGasto={(u)=>{setGastoClient(u);setGastoForm({amount:'',description:'',date:new Fecha().toISOString().split('T')[0]});setModal('expense')}}
+              onGasto={(u)=>{setGastoClient(u);setGastoForm({amount:'',description:'',date:new Date().toISOString().split('T')[0]});setModal('expense')}}
               onHistorial={(u)=>{setHistorialClient(u);setModal('history')}}
             />}
             {panel==='cards'&&<>
@@ -2469,7 +2469,7 @@ export default function Admin({session}){
             <div style={{display:'flex',gap:'0.75rem',marginBottom:'1.5rem'}}>
               <button onClick={async()=>{
                 const res=await fetch('/api/admin/expenses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:expenseClient.id,amount:expenseForm.amount,description:expenseForm.description,recurring:expenseForm.recurring||false,recurring_interval:expenseForm.recurring_interval||'month',expense_date:expenseForm.date})})
-                if(res.ok){showToast('Gasto saved');setGastoForm({amount:'',description:'',date:new Fecha().toISOString().split('T')[0],recurring:false,recurring_interval:'month'})}
+                if(res.ok){showToast('Gasto saved');setGastoForm({amount:'',description:'',date:new Date().toISOString().split('T')[0],recurring:false,recurring_interval:'month'})}
                 else showToast('Error saving expense')
               }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar Gasto</button>
               <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cerrar</button>
@@ -2563,7 +2563,7 @@ export default function Admin({session}){
             <div style={{background:'rgba(227,90,27,0.04)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1rem'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
                 <input value={suppliersTitle} onChange={e=>setSuppliersTitle(e.target.value)} placeholder="Note title..." style={{background:'none',border:'none',outline:'none',fontFamily:ffS,fontSize:'1rem',fontWeight:300,color:black,flex:1}} id="suppliers-title"/>
-                <span style={{fontSize:'0.58rem',color:gray,flexShrink:0,marginLeft:'0.5rem'}}>{new Fecha().toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+                <span style={{fontSize:'0.58rem',color:gray,flexShrink:0,marginLeft:'0.5rem'}}>{new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
               </div>
               <textarea id="suppliers-text" value={suppliersText} onChange={e=>setSuppliersText(e.target.value)} rows={6} placeholder="e.g. Vercel hosting, GoDaddy domain, Supabase..." style={{width:'100%',background:'none',border:'none',outline:'none',fontFamily:ff,fontSize:'0.82rem',color:black,resize:'vertical',boxSizing:'border-box',lineHeight:1.7}}/>
             </div>
@@ -2614,7 +2614,7 @@ export default function Admin({session}){
                       <div>
                         <div style={{fontSize:'0.75rem',color:black,fontWeight:500}}>{r.reward_type}</div>
                         <div style={{fontSize:'0.6rem',color:gray,marginTop:'0.1rem'}}>
-                          {r.redeemed_at?new Fecha(r.redeemed_at).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'}):r.created_at?new Fecha(r.created_at).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}
+                          {r.redeemed_at?new Date(r.redeemed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):r.created_at?new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}
                           {r.reward_cost&&' · '+r.reward_cost}
                         </div>
                       </div>
@@ -2636,7 +2636,7 @@ export default function Admin({session}){
               </select>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'1rem'}}>
                 <div><label style={lbl}>Cost (optional)</label><input style={{...inp,marginBottom:0}} type="text" placeholder="$0.00" value={form.reward_cost||''} onChange={e=>upd('reward_cost',e.target.value)}/></div>
-                <div><label style={lbl}>Fecha</label><input style={{...inp,marginBottom:0}} type="date" value={form.reward_date||new Fecha().toISOString().split('T')[0]} onChange={e=>upd('reward_date',e.target.value)}/></div>
+                <div><label style={lbl}>Fecha</label><input style={{...inp,marginBottom:0}} type="date" value={form.reward_date||new Date().toISOString().split('T')[0]} onChange={e=>upd('reward_date',e.target.value)}/></div>
               </div>
               <button onClick={async()=>{
                 const res=await fetch('/api/admin/rewards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({card_id:rewardCard.id,user_id:rewardCard.user_id,reward_type:form.reward_type||'1 Free Month',reward_cost:form.reward_cost,notes:form.reward_notes})})
@@ -2804,7 +2804,7 @@ function ClientHistorial({ client }) {
             {sales.map((s,i)=>(
               <div key={s.id} style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.75rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)',alignItems:'center',gap:'0.5rem'}}>
                 <div style={{fontSize:'0.62rem',color:'#7A6452',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace'}}>{s.id}</div>
-                <div style={{fontSize:'0.68rem',color:'#1F140E'}}>{new Fecha(s.sale_date).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+                <div style={{fontSize:'0.68rem',color:'#1F140E'}}>{new Date(s.sale_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
                 <div style={{fontSize:'0.75rem',fontWeight:600,color:s.status==='paid'?'#2d8a60':'#c0392b',textAlign:'right'}}>{s.status==='refunded'?'-':''}${Math.abs(parseFloat(s.amount||0)).toFixed(2)}</div>
               </div>
             ))}
