@@ -1468,7 +1468,7 @@ function SupplyCostHistorial({ supplyId }) {
   )
 }
 
-function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadAll }) {
+function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, showToast, loadAll }) {
   const [stockEdits, setStockEdits] = React.useState({})
   const [savingStock, setSavingStock] = React.useState(null)
   const [openCats, setOpenCats] = React.useState({})
@@ -1502,14 +1502,15 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
       body: JSON.stringify({ id: supplyId, stock_qty: qty })
     })
     const data = await res.json().catch(()=>({}))
+    setSavingStock(null)
     if (res.ok) {
-      showToast('Stock actualizado ✓')
+      // Update local state immediately so UI reflects change without waiting
+      setSupplies && setSupplies(prev => prev.map(s => s.id===supplyId ? {...s, stock_qty: qty} : s))
       setStockEdits(e => {const next={...e}; delete next[supplyId]; return next})
-      loadAll && loadAll()
+      showToast('Stock actualizado ✓')
     } else {
       showToast('Error: ' + (data.error||'no se pudo guardar'))
     }
-    setSavingStock(null)
   }
 
   // Calculate donut data
@@ -2647,14 +2648,14 @@ export default function Admin({session}){
 
   async function loadAll(){
     setLoading(true)
-    const [c,u,r,cat]=await Promise.all([
+    const [c,u,r,cat,sup]=await Promise.all([
       fetch('/api/admin/cards').then(r=>r.json()),
       fetch('/api/admin/users').then(r=>r.json()),
       fetch('/api/admin/rewards').then(r=>r.json()),
-      fetch('/api/admin/catalog').then(r=>r.json())
+      fetch('/api/admin/catalog').then(r=>r.json()),
+      fetch('/api/admin/supplies').then(r=>r.json()).catch(()=>({}))
     ])
-    setCards(c.cards||[]);setUsers(u.users||[]);setPremios(r.rewards||[]);setCatalog(cat.items||[])
-    fetch('/api/admin/supplies').then(r=>r.json()).then(d=>setSupplies(d.supplies||[])).catch(()=>{})
+    setCards(c.cards||[]);setUsers(u.users||[]);setPremios(r.rewards||[]);setCatalog(cat.items||[]);setSupplies(sup.supplies||[])
     fetch('/api/admin/users?all=1').then(r=>r.json()).then(d=>setAllUsers(d.users||[])).catch(()=>{})
     // Load sales for financial card
     fetch('/api/admin/sales').then(r=>r.json()).then(d=>setSales(d.sales||[])).catch(e=>console.error('Sales fetch error:',e))
@@ -2861,7 +2862,7 @@ export default function Admin({session}){
             {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/> }
             {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
-            {panel==='supplies'&&<SuppliesPanel supplies={supplies}
+            {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies}
               onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
               onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,unit:s.unit||'month',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
               onEliminar={async(id)=>{if(!confirm('Eliminar this supply?'))return;await fetch('/api/admin/supplies',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});showToast('Supply deleted');loadAll()}}
