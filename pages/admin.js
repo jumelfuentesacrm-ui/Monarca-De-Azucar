@@ -43,54 +43,194 @@ function getNotifications(cards) {
   return alerts.sort((a,b) => b.days - a.days)
 }
 
-function DashboardPanel({ cards, sales, onSelectClient }) {
-  const totalClients=cards.length
-  const sorted=[...cards].sort((a,b)=>(b.stamps||0)-(a.stamps||0))
-  const top5=sorted.slice(0,5)
-  const maxStamps=top5[0]?.stamps||1
+function DashboardPanel({ cards, sales, onSelectClient, userName }) {
+  const totalClients = cards.length
+  const [showMetrics, setShowMetrics] = React.useState(false)
+  const [messages, setMessages] = React.useState([])
+  const [msgOpen, setMsgOpen] = React.useState(false)
+  const [msgSearch, setMsgSearch] = React.useState('')
+
+  React.useEffect(() => {
+    fetch('/api/admin/messages').then(r=>r.json()).then(d=>setMessages(d.messages||[])).catch(()=>{})
+  }, [])
+
+  function getGreeting() {
+    const h = parseInt(new Date().toLocaleString('en-US', { timeZone: 'America/Puerto_Rico', hour: 'numeric', hour12: false }))
+    if (h >= 5 && h < 12) return 'Buenos días'
+    if (h >= 12 && h < 18) return 'Buenas tardes'
+    return 'Buenas noches'
+  }
+
+  const now = new Date()
+  const todaySales = (sales||[]).filter(s=>s.status==='paid'&&new Date(s.sale_date).toDateString()===now.toDateString())
+  const todayRevenue = todaySales.reduce((a,s)=>a+parseFloat(s.amount||0),0)
+  const totalStamps = (sales||[]).filter(s=>s.status==='paid').length
+
+  const week7 = Array.from({length:7},(_,i)=>{
+    const d = new Date(now); d.setDate(now.getDate()-6+i)
+    const dayName = ['D','L','M','X','J','V','S'][d.getDay()]
+    const total = (sales||[]).filter(s=>s.status==='paid'&&new Date(s.sale_date).toDateString()===d.toDateString()).reduce((a,s)=>a+parseFloat(s.amount||0),0)
+    return { label:dayName, value:total, isToday:d.toDateString()===now.toDateString() }
+  })
+  const maxDay = Math.max(...week7.map(d=>d.value),1)
+  const weekTotal = week7.reduce((a,d)=>a+d.value,0)
+
+  const conversations = Object.values((messages||[]).reduce((acc,m)=>{
+    if(!acc[m.user_id]||new Date(m.created_at)>new Date(acc[m.user_id].created_at)) acc[m.user_id]=m
+    return acc
+  },{})).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
+  const unreadCount = (messages||[]).filter(m=>m.sender==='client'&&!m.read).length
+
+  const filteredMsgs = conversations.filter(m=>{
+    const name = (m.profiles?.full_name||m.profiles?.business_name||'').toLowerCase()
+    const txt = (m.content||'').toLowerCase()
+    const q = msgSearch.toLowerCase()
+    return !q || name.includes(q) || txt.includes(q)
+  })
+  const displayMsgs = msgOpen ? filteredMsgs : filteredMsgs.slice(0,3)
+
   const clientDonut=[
     {label:'VIP',value:cards.filter(c=>getStatus(c).label==='VIP').length,color:'#E35A1B'},
     {label:'Regular',value:cards.filter(c=>getStatus(c).label==='Regular').length,color:'#2d8a60'},
-    {label:'Active',value:cards.filter(c=>getStatus(c).label==='Active').length,color:'#3498db'},
-    {label:'New',value:cards.filter(c=>getStatus(c).label==='New').length,color:'#8e44ad'},
-    {label:'Grace',value:cards.filter(c=>getStatus(c).label==='Grace').length,color:'#e67e22'},
-    {label:'Late Fee',value:cards.filter(c=>getStatus(c).label==='Late Fee').length,color:'#e74c3c'},
-    {label:'Cancelarled',value:cards.filter(c=>getStatus(c).label==='Cancelarled').length,color:'#c0392b'},
+    {label:'Activo',value:cards.filter(c=>getStatus(c).label==='Active').length,color:'#3498db'},
+    {label:'Nuevo',value:cards.filter(c=>getStatus(c).label==='New').length,color:'#8e44ad'},
   ].filter(d=>d.value>0)
+
   function makeSegs(data){const total=data.reduce((a,d)=>a+d.value,0)||1;let cum=0;return data.map(d=>{const s=cum;cum+=d.value/total;return{...d,start:s,pct:d.value/total}})}
   function polar(pct){const a=pct*2*Math.PI-Math.PI/2;return{x:50+35*Math.cos(a),y:50+35*Math.sin(a)}}
   function arc(start,pct){if(pct>=1)return'M 50 15 A 35 35 0 1 1 49.99 15 Z';const s=polar(start),e=polar(start+pct),lg=pct>0.5?1:0;return`M 50 50 L ${s.x} ${s.y} A 35 35 0 ${lg} 1 ${e.x} ${e.y} Z`}
-  function Donut({segs,center}){return(<svg viewBox="0 0 100 100" style={{width:100,height:100,flexShrink:0}}>{segs.map((d,i)=><path key={i} d={arc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)}<circle cx="50" cy="50" r="22" fill={white}/>{center}</svg>)}
-  const clientSegs=makeSegs(clientDonut)
+  const clientSegs = makeSegs(clientDonut)
+  const sorted = [...cards].sort((a,b)=>(b.stamps||0)-(a.stamps||0))
+
   return(
     <div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1.5rem'}} classNombre="donut-grid">
-        <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)'}}>
-          <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:300,marginBottom:'1.25rem'}}>Clientes</div>
-          <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
-            <Donut segs={clientSegs} center={<text x="50" y="54" textAnchor="middle" style={{fontSize:14,fontFamily:ffS,fill:black}}>{totalClients}</text>}/>
-            <div style={{flex:1}}>{clientDonut.map(d=>(<div key={d.label} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.4rem'}}><div style={{width:7,height:7,borderRadius:'50%',background:d.color,flexShrink:0}}/><span style={{fontSize:'0.62rem',color:gray,flex:1}}>{d.label}</span><span style={{fontSize:'0.62rem',fontWeight:500,color:black}}>{d.value}</span></div>))}</div>
-          </div>
+      <div style={{marginBottom:'1.5rem'}}>
+        <div style={{fontSize:'0.58rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.25rem'}}>
+          {new Date().toLocaleDateString('es-PR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}
         </div>
-        <FinancialCard sales={sales}/>
-        <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)',position:'relative',display:'none'}}>
-          <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:300,marginBottom:'1.25rem'}}>Financial Legacy</div>
-          <div style={{display:'flex',alignItems:'center',gap:'1rem'}}>
-            <svg viewBox="0 0 100 100" style={{width:100,height:100,flexShrink:0}}><path d="M 50 15 A 35 35 0 1 1 49.99 15 Z" fill="rgba(31,20,14,0.06)" opacity="0.85"/><circle cx="50" cy="50" r="22" fill={white}/><text x="50" y="54" textAnchor="middle" style={{fontSize:8,fontFamily:ff,fill:gray}}>Clover</text></svg>
-            <div style={{flex:1}}>{[['Gross Sales','#2d8a60'],['Gross Exp.','#c0392b'],['Net Profit',gold]].map(([label,color])=>(<div key={label} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.4rem'}}><div style={{width:7,height:7,borderRadius:'50%',background:color,flexShrink:0}}/><span style={{fontSize:'0.62rem',color:gray,flex:1}}>{label}</span><span style={{fontSize:'0.62rem',color:'rgba(31,20,14,0.25)'}}>—</span></div>))}</div>
-          </div>
-          <div style={{position:'absolute',bottom:'1rem',left:0,right:0,textAlign:'center',fontSize:'0.54rem',color:'rgba(31,20,14,0.3)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Pending Clover data</div>
+        <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'clamp(1.8rem,3vw,2.4rem)',fontWeight:400,color:'#1F140E',lineHeight:1.1}}>
+          {getGreeting()}, <em style={{color:'#E35A1B',fontStyle:'italic'}}>{userName||'Admin'}</em>.
         </div>
       </div>
-      <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)',marginBottom:'1.5rem'}}>
-        <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:300,marginBottom:'1.25rem'}}>Top Clients</div>
-        {top5.map((card,i)=>(<div key={card.id} onClick={()=>onSelectClient(card)} style={{display:'flex',alignItems:'center',gap:'0.6rem',marginBottom:'0.75rem',cursor:'pointer'}}><div style={{width:18,height:18,borderRadius:'50%',background:i===0?gold:'rgba(31,20,14,0.06)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.58rem',fontWeight:600,color:i===0?black:gray,flexShrink:0}}>{i+1}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:'0.72rem',color:black,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card.profiles?.business_name||card.profiles?.full_name}</div><div style={{height:3,background:'rgba(31,20,14,0.06)',borderRadius:2,marginTop:'0.25rem'}}><div style={{height:'100%',width:((card.stamps||0)/maxStamps*100)+'%',background:i===0?gold:'rgba(31,20,14,0.15)',borderRadius:2}}/></div></div><div style={{fontSize:'0.65rem',color:gray,flexShrink:0}}>{card.stamps} stamps</div></div>))}
-        {top5.length===0&&<div style={{fontSize:'0.82rem',color:gray,textAlign:'center',padding:'1rem 0'}}>No hay clientes aún.</div>}
+
+      <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
+          <div>
+            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.1rem',fontWeight:400}}>Ventas · 7 días</div>
+            <div style={{fontSize:'0.65rem',color:'#7A6452',marginTop:'0.15rem'}}>${weekTotal.toLocaleString('en-US',{minimumFractionDigits:2})} esta semana</div>
+          </div>
+          <button onClick={()=>setShowMetrics(m=>!m)} style={{width:32,height:32,borderRadius:'50%',border:'1.5px solid rgba(31,20,14,0.15)',background:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.2rem',color:'#1F140E',lineHeight:1}}>+</button>
+        </div>
+        <div style={{display:'flex',gap:'0.4rem',alignItems:'flex-end',height:60}}>
+          {week7.map((d,i)=>(
+            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+              <div style={{width:'100%',background:d.isToday?'#E35A1B':d.value>0?'#1F140E':'rgba(31,20,14,0.08)',borderRadius:'3px 3px 0 0',height:d.value>0?Math.max((d.value/maxDay)*48,6):4,transition:'height 0.4s'}}/>
+              <span style={{fontSize:'0.55rem',color:d.isToday?'#E35A1B':'#7A6452',fontWeight:d.isToday?700:400}}>{d.label}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:'1rem',marginTop:'0.75rem',fontSize:'0.6rem',color:'#7A6452'}}>
+          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'#E35A1B',marginRight:4}}/>Hoy</span>
+          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'#1F140E',marginRight:4}}/>Pasados</span>
+          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'rgba(31,20,14,0.08)',marginRight:4}}/>Cerrado</span>
+        </div>
       </div>
-      <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
-        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:300}}>All Clients</div>
-        {sorted.map(card=>{const status=getStatus(card);const cur=card.stamps%5===0&&card.stamps>0?5:card.stamps%5;return(<div key={card.id} onClick={()=>onSelectClient(card)} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer'}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:'0.78rem',color:black,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card.profiles?.business_name||card.profiles?.full_name}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>#{card.card_number}</div></div><div style={{display:'flex',gap:2,flexShrink:0}}>{Array.from({length:5},(_,j)=><div key={j} style={{width:7,height:7,borderRadius:'50%',background:j<cur?gold:'rgba(31,20,14,0.08)'}}/>)}</div><span style={{fontSize:'0.56rem',padding:'0.18rem 0.6rem',borderRadius:20,background:status.bg,color:status.color,whiteSpace:'nowrap',flexShrink:0}}>{status.label}</span><div style={{color:gray,fontSize:'0.75rem'}}>›</div></div>);})}
-        {sorted.length===0&&<div style={{padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No hay clientes aún.</div>}
+
+      {showMetrics&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(31,20,14,0.5)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setShowMetrics(false)}>
+          <div style={{background:'#FBF7EE',borderRadius:'14px 14px 0 0',width:'100%',maxWidth:600,padding:'1.5rem',maxHeight:'80vh',overflowY:'auto'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+              <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.3rem',fontWeight:400}}>Métricas</div>
+              <button onClick={()=>setShowMetrics(false)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:'#7A6452'}}>✕</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
+              {[['Ventas hoy','$'+todayRevenue.toFixed(2),'#2d8a60'],['Sellos totales',totalStamps,'#E35A1B'],['Total clientes',totalClients,'#5b8dee'],['Mensajes nuevos',unreadCount,'#8e44ad']].map(([label,val,color])=>(
+                <div key={label} style={{background:'white',borderRadius:10,padding:'1rem',border:'1px solid rgba(31,20,14,0.07)'}}>
+                  <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.4rem'}}>{label}</div>
+                  <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.5rem',color,lineHeight:1}}>{val}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1.25rem'}}>
+        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.05rem',fontWeight:400}}>Mensajes</div>
+            {unreadCount>0&&<span style={{background:'#E35A1B',color:'white',borderRadius:'50%',width:18,height:18,fontSize:'0.6rem',fontWeight:700,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>{unreadCount}</span>}
+          </div>
+          <button onClick={()=>setMsgOpen(o=>!o)} style={{fontSize:'0.62rem',color:'#E35A1B',background:'none',border:'none',cursor:'pointer',fontFamily:'sans-serif',display:'flex',alignItems:'center',gap:'0.3rem'}}>
+            {msgOpen?'Colapsar':'Ver todas'} <span style={{display:'inline-block',transform:msgOpen?'rotate(180deg)':'none',transition:'transform 0.2s'}}>▾</span>
+          </button>
+        </div>
+        {msgOpen&&(
+          <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+            <input value={msgSearch} onChange={e=>setMsgSearch(e.target.value)} placeholder="Buscar por nombre o mensaje..."
+              style={{width:'100%',padding:'0.6rem 0.9rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:'sans-serif',fontSize:'0.78rem',outline:'none',boxSizing:'border-box',background:'white'}}/>
+          </div>
+        )}
+        {filteredMsgs.length===0
+          ?<div style={{padding:'1.5rem',textAlign:'center',color:'#7A6452',fontSize:'0.78rem'}}>No hay mensajes aún.</div>
+          :displayMsgs.map((msg,i)=>(
+            <div key={msg.id||i} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer'}}>
+              <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',fontWeight:700,color:'#E35A1B',flexShrink:0}}>
+                {(msg.profiles?.full_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2)}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'0.75rem',color:'#1F140E',fontWeight:500}}>{msg.profiles?.full_name||msg.profiles?.business_name||'Cliente'}</div>
+                <div style={{fontSize:'0.62rem',color:'#7A6452',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:2}}>{msg.content}</div>
+              </div>
+              <div style={{fontSize:'0.58rem',color:'#7A6452',flexShrink:0}}>{new Date(msg.created_at).toLocaleDateString('es-PR',{month:'short',day:'numeric'})}</div>
+            </div>
+          ))
+        }
+        {!msgOpen&&conversations.length>3&&(
+          <div style={{padding:'0.6rem',textAlign:'center'}}>
+            <button onClick={()=>setMsgOpen(true)} style={{fontSize:'0.62rem',color:'#E35A1B',background:'none',border:'none',cursor:'pointer'}}>+{conversations.length-3} más</button>
+          </div>
+        )}
+      </div>
+
+      <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1.25rem'}}>
+        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.05rem',fontWeight:400}}>Clientes</div>
+          <div style={{fontSize:'0.62rem',color:'#7A6452'}}>{totalClients} registrados</div>
+        </div>
+        {clientDonut.length>0&&(
+          <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',alignItems:'center',gap:'1rem'}}>
+            <svg viewBox="0 0 100 100" style={{width:80,height:80,flexShrink:0}}>
+              {clientSegs.map((d,i)=><path key={i} d={arc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)}
+              <circle cx="50" cy="50" r="22" fill="#FBF7EE"/>
+              <text x="50" y="54" textAnchor="middle" style={{fontSize:14,fill:'#1F140E'}}>{totalClients}</text>
+            </svg>
+            <div style={{flex:1}}>
+              {clientDonut.map(d=>(
+                <div key={d.label} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.35rem'}}>
+                  <div style={{width:7,height:7,borderRadius:'50%',background:d.color,flexShrink:0}}/>
+                  <span style={{fontSize:'0.62rem',color:'#7A6452',flex:1}}>{d.label}</span>
+                  <span style={{fontSize:'0.62rem',fontWeight:500,color:'#1F140E'}}>{d.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {sorted.slice(0,5).map(card=>{
+          const status=getStatus(card)
+          const cur=card.stamps%5===0&&card.stamps>0?5:card.stamps%5
+          return(
+            <div key={card.id} onClick={()=>onSelectClient(card)} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer'}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'0.75rem',color:'#1F140E',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card.profiles?.business_name||card.profiles?.full_name}</div>
+                <div style={{fontSize:'0.6rem',color:'#7A6452',marginTop:'0.1rem'}}>#{card.card_number}</div>
+              </div>
+              <div style={{display:'flex',gap:2,flexShrink:0}}>{Array.from({length:5},(_,j)=><div key={j} style={{width:7,height:7,borderRadius:'50%',background:j<cur?'#E35A1B':'rgba(31,20,14,0.08)'}}/>)}</div>
+              <span style={{fontSize:'0.56rem',padding:'0.18rem 0.6rem',borderRadius:20,background:status.bg,color:status.color,whiteSpace:'nowrap',flexShrink:0}}>{status.label}</span>
+            </div>
+          )
+        })}
+        {sorted.length===0&&<div style={{padding:'2rem',textAlign:'center',color:'#7A6452',fontSize:'0.82rem'}}>No hay clientes aún.</div>}
       </div>
     </div>
   )
@@ -142,7 +282,13 @@ function ClientsPanel({users,cards,search,setSearch,onEditar,onAddPayment,onCrea
           <button onClick={onCreateNew} style={{background:black,color:white,border:'none',padding:'0.6rem 1.1rem',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>+ Nuevo</button>
         </div>
       </div>
-      <input type="text" placeholder="Buscar por nombre o negocio..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box',background:white}}/>
+      <div style={{display:'flex',gap:'0.5rem',marginBottom:'1.25rem'}}>
+        <input type="text" placeholder="Buscar por nombre o negocio..." value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1,padding:'0.7rem 1rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box',background:white}}/>
+        <button onClick={()=>showToast('Próximamente: escanear QR 📷')} style={{padding:'0.7rem 1rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',flexShrink:0,display:'flex',alignItems:'center',gap:'0.4rem',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.08em',textTransform:'uppercase'}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
+          Escanear
+        </button>
+      </div>
       <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
         <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr auto',padding:'0.6rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontSize:'0.54rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>
           <span>Client</span><span>Status</span><span>Stamps</span><span>Actions</span>
@@ -1519,7 +1665,7 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
     (u.email||'').toLowerCase().includes(search.toLowerCase())
   )
 
-  function getCard(uid) { return cards.find(c=>c.user_id===uid) }
+  function getCard2(uid) { return cards.find(c=>c.user_id===uid) }
 
   function timeAgo(ts) {
     if (!ts) return '—'
@@ -1650,6 +1796,148 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
           {!sessionsLoading&&filteredSessions.length===0&&<div style={{padding:'2rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No sessions found.</div>}
         </div>
       )}
+    </div>
+  )
+}
+
+
+function WebsitePanel({ catalog, showToast, loadAll }) {
+  const [items, setItems] = React.useState([])
+  const [filter, setFilter] = React.useState('Todos')
+  const [saving, setSaving] = React.useState(false)
+  const [showAddForm, setShowAddForm] = React.useState(false)
+  const [newItem, setNewItem] = React.useState({name:'',description:'',category:'Galleta',price:'',active:true})
+
+  React.useEffect(()=>{
+    setItems((catalog||[]).map(item=>({...item,visible:item.active,badge_hoy:item.badge_hoy||false,badge_nuevo:item.badge_nuevo||false,badge_temporada:item.badge_temporada||false,badge_agotado:item.badge_agotado||false,price:item.price||0})))
+  },[catalog])
+
+  const categories=['Todos','Galleta','Pan dulce','Pastel']
+  const filtered=filter==='Todos'?items:items.filter(i=>i.category===filter)
+  const visibleItems=items.filter(i=>i.visible)
+  const hoyItems=items.filter(i=>i.badge_hoy)
+  const nuevoItems=items.filter(i=>i.badge_nuevo)
+
+  function toggleBadge(id,badge){setItems(prev=>prev.map(i=>i.id===id?{...i,[badge]:!i[badge]}:i))}
+  function toggleVisible(id){setItems(prev=>prev.map(i=>i.id===id?{...i,visible:!i.visible}:i))}
+
+  async function publish(){
+    setSaving(true)
+    for(const item of items){
+      await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:item.id,active:item.visible,badge_hoy:item.badge_hoy,badge_nuevo:item.badge_nuevo,badge_temporada:item.badge_temporada,badge_agotado:item.badge_agotado})})
+    }
+    showToast('¡Cambios publicados!')
+    setSaving(false)
+  }
+
+  async function addProduct(){
+    if(!newItem.name){showToast('Nombre requerido');return}
+    const res=await fetch('/api/admin/catalog',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newItem)})
+    if(res.ok){showToast('Producto añadido');setShowAddForm(false);setNewItem({name:'',description:'',category:'Galleta',price:'',active:true});loadAll()}
+    else showToast('Error al añadir')
+  }
+
+  const BadgeBtn=({active,label,color,onClick})=>(
+    <button onClick={onClick} style={{padding:'0.18rem 0.55rem',borderRadius:20,border:'1px solid '+(active?color:'rgba(31,20,14,0.12)'),background:active?color+'18':'transparent',color:active?color:'rgba(31,20,14,0.3)',fontSize:'0.52rem',cursor:'pointer',letterSpacing:'0.06em',textTransform:'uppercase',transition:'all 0.15s'}}>{label}</button>
+  )
+
+  const previewSorted=[...items.filter(i=>i.visible)].sort((a,b)=>(b.badge_hoy?1:0)-(a.badge_hoy?1:0))
+
+  return(
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1.25rem',flexWrap:'wrap',gap:'0.75rem'}}>
+        <div>
+          <h2 style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.5rem',fontWeight:400}}>Website · <em style={{color:'#E35A1B',fontStyle:'italic'}}>el menú visible</em></h2>
+          <p style={{fontSize:'0.72rem',color:'#7A6452',marginTop:'0.3rem',lineHeight:1.5,maxWidth:480}}>Escoge qué productos aparecen en "Lo que se hornea hoy". Prende/apaga y asigna badges.</p>
+          <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginTop:'0.5rem'}}>
+            <div style={{width:7,height:7,borderRadius:'50%',background:'#2d8a60'}}/>
+            <span style={{fontSize:'0.62rem',color:'#7A6452'}}>En vivo en monarcadeazucar.com</span>
+          </div>
+        </div>
+        <button onClick={publish} disabled={saving} style={{background:'#1F140E',color:'#FBF7EE',border:'none',padding:'0.75rem 1.5rem',borderRadius:999,fontSize:'0.68rem',fontWeight:600,cursor:'pointer',opacity:saving?0.7:1}}>
+          {saving?'Publicando…':'Publicar cambios →'}
+        </button>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.75rem',marginBottom:'1.25rem'}}>
+        {[['Visibles en web',visibleItems.length,`de ${items.length}`,'#1F140E'],['Marcadas "Hoy"',hoyItems.length,'aparecen primero','#E35A1B'],['Marcadas "Nuevo"',nuevoItems.length,'con badge','#8e44ad'],['Última pub.','Hoy',new Date().toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'}),'#2d8a60']].map(([label,val,sub,color])=>(
+          <div key={label} style={{background:'#FBF7EE',borderRadius:10,padding:'1rem',border:'1px solid rgba(31,20,14,0.07)'}}>
+            <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.4rem'}}>{label}</div>
+            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.6rem',color,lineHeight:1}}>{val}</div>
+            <div style={{fontSize:'0.6rem',color:'#7A6452',marginTop:'0.25rem'}}>{sub}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:'1.25rem',alignItems:'start'}}>
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.75rem'}}>
+            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.05rem',fontWeight:400}}>Prende lo que va al sitio</div>
+            <button onClick={()=>setShowAddForm(s=>!s)} style={{background:'#1F140E',color:'#FBF7EE',border:'none',padding:'0.5rem 1rem',borderRadius:999,fontSize:'0.6rem',fontWeight:600,cursor:'pointer'}}>+ Añadir producto</button>
+          </div>
+          {showAddForm&&(
+            <div style={{background:'#FBF7EE',borderRadius:10,border:'1px solid rgba(31,20,14,0.1)',padding:'1.25rem',marginBottom:'1rem'}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
+                <div><div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.3rem'}}>Nombre</div><input value={newItem.name} onChange={e=>setNewItem(f=>({...f,name:e.target.value}))} placeholder="Concha de vainilla" style={{width:'100%',padding:'0.6rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/></div>
+                <div><div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.3rem'}}>Precio</div><input value={newItem.price} onChange={e=>setNewItem(f=>({...f,price:e.target.value}))} placeholder="3.50" type="number" step="0.01" style={{width:'100%',padding:'0.6rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/></div>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
+                <div><div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.3rem'}}>Categoría</div><select value={newItem.category} onChange={e=>setNewItem(f=>({...f,category:e.target.value}))} style={{width:'100%',padding:'0.6rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}>{['Galleta','Pan dulce','Pastel'].map(c=><option key={c}>{c}</option>)}</select></div>
+                <div><div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.3rem'}}>Descripción</div><input value={newItem.description} onChange={e=>setNewItem(f=>({...f,description:e.target.value}))} placeholder="Opcional" style={{width:'100%',padding:'0.6rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/></div>
+              </div>
+              <div style={{display:'flex',gap:'0.5rem'}}>
+                <button onClick={addProduct} style={{flex:1,padding:'0.7rem',background:'#1F140E',color:'#FBF7EE',border:'none',borderRadius:6,fontSize:'0.65rem',fontWeight:600,cursor:'pointer'}}>Guardar producto</button>
+                <button onClick={()=>setShowAddForm(false)} style={{padding:'0.7rem 1rem',background:'rgba(31,20,14,0.06)',color:'#1F140E',border:'none',borderRadius:6,fontSize:'0.65rem',cursor:'pointer'}}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          <div style={{display:'flex',gap:'0.4rem',marginBottom:'0.85rem'}}>
+            {categories.map(c=><button key={c} onClick={()=>setFilter(c)} style={{padding:'0.35rem 0.85rem',borderRadius:999,border:'none',fontSize:'0.65rem',cursor:'pointer',background:filter===c?'#1F140E':'rgba(31,20,14,0.06)',color:filter===c?'#FBF7EE':'#1F140E'}}>{c}</button>)}
+          </div>
+          <div style={{background:'#FBF7EE',borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
+            {filtered.map((item,i)=>(
+              <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.85rem',padding:'0.85rem 1.1rem',borderBottom:i<filtered.length-1?'1px solid rgba(31,20,14,0.05)':'none',opacity:item.badge_agotado?0.5:1}}>
+                <button onClick={()=>toggleVisible(item.id)} style={{width:40,height:22,borderRadius:11,border:'none',cursor:'pointer',padding:2,background:item.visible?'#E35A1B':'rgba(31,20,14,0.15)',position:'relative',flexShrink:0}}>
+                  <div style={{width:18,height:18,borderRadius:'50%',background:'white',position:'absolute',top:2,left:item.visible?20:2,transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                </button>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:'0.78rem',color:'#1F140E',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
+                  <div style={{fontSize:'0.6rem',color:'#7A6452',marginTop:'0.15rem'}}>{item.category} · ${parseFloat(item.price||0).toFixed(2)}</div>
+                </div>
+                {item.visible&&<div style={{fontSize:'0.62rem',color:'#7A6452',flexShrink:0}}>#{filtered.filter(f=>f.visible).indexOf(item)+1}</div>}
+                <div style={{display:'flex',gap:'0.3rem',flexShrink:0,flexWrap:'wrap'}}>
+                  <BadgeBtn active={item.badge_hoy} label="Hoy" color="#E35A1B" onClick={()=>toggleBadge(item.id,'badge_hoy')}/>
+                  <BadgeBtn active={item.badge_nuevo} label="Nuevo" color="#8e44ad" onClick={()=>toggleBadge(item.id,'badge_nuevo')}/>
+                  <BadgeBtn active={item.badge_temporada} label="Temporada" color="#2d8a60" onClick={()=>toggleBadge(item.id,'badge_temporada')}/>
+                  <BadgeBtn active={item.badge_agotado} label="Agotado" color="#c0392b" onClick={()=>toggleBadge(item.id,'badge_agotado')}/>
+                </div>
+              </div>
+            ))}
+            {filtered.length===0&&<div style={{padding:'2rem',textAlign:'center',color:'#7A6452',fontSize:'0.82rem'}}>No hay productos.</div>}
+          </div>
+        </div>
+        <div style={{position:'sticky',top:72}}>
+          <div style={{background:'#1F140E',borderRadius:12,overflow:'hidden'}}>
+            <div style={{background:'rgba(255,255,255,0.04)',padding:'0.6rem 1rem',display:'flex',alignItems:'center',gap:'0.5rem',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+              <div style={{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'0.2rem 0.6rem',fontSize:'0.55rem',color:'rgba(255,255,255,0.4)',textAlign:'center'}}>monarcadeazucar.com/#menu</div>
+              <div style={{width:8,height:8,borderRadius:'50%',background:'#28c840'}}/>
+            </div>
+            <div style={{padding:'1.25rem 1rem',maxHeight:400,overflowY:'auto'}}>
+              <div style={{fontSize:'0.52rem',letterSpacing:'0.16em',textTransform:'uppercase',color:'rgba(251,247,238,0.35)',marginBottom:'0.25rem'}}>01 · El menú</div>
+              <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.3rem',color:'#FBF7EE',fontStyle:'italic',marginBottom:'1rem'}}>Lo que se <em style={{color:'#E35A1B'}}>hornea</em> hoy.</div>
+              {previewSorted.length===0&&<div style={{fontSize:'0.72rem',color:'rgba(251,247,238,0.3)',textAlign:'center',padding:'1rem 0'}}>Activa productos para verlos aquí</div>}
+              {previewSorted.map((item,i)=>(
+                <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.65rem 0',borderBottom:'1px solid rgba(255,255,255,0.06)',opacity:item.badge_agotado?0.4:1}}>
+                  <span style={{fontSize:'0.62rem',color:'rgba(251,247,238,0.3)',width:20,flexShrink:0,textAlign:'right'}}>{String(i+1).padStart(2,'0')}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:'0.75rem',color:'#FBF7EE',fontWeight:500}}>{item.name}</div>
+                    {item.badge_temporada&&<span style={{fontSize:'0.48rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(45,138,96,0.2)',color:'#4ecb71',letterSpacing:'0.06em',textTransform:'uppercase'}}>Temporada</span>}
+                  </div>
+                  <span style={{fontFamily:'"Instrument Serif",serif',fontSize:'0.88rem',color:'#E35A1B',flexShrink:0}}>${parseFloat(item.price||0).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1881,6 +2169,7 @@ export default function Admin({session}){
             {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
             {panel==='bookings'&&<BookingsPanel/>}
             {panel==='campaigns'&&<CampaignsPanel cards={cards} users={users}/>}
+            {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/> }
             {panel==='catalog'&&<CatalogPanel catalog={catalog} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies}
               onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
@@ -1965,9 +2254,9 @@ export default function Admin({session}){
         {/* MOBILE NAV */}
         <div classNombre="mobile-nav">
           {[
-            ['notifications','Alertas'],
             ['dashboard','Resumen'],
-            ['loyalty','Loyalty'],
+            ['bookings','Órdenes'],
+            ['clients','Clientes'],
           ].map(([id,label])=>(
             <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
               classNombre={panel===id||(['cards','punch','rewards'].includes(panel)&&id==='loyalty')?'active':''}>
@@ -2359,7 +2648,65 @@ export default function Admin({session}){
           </div>
         )}
 
-        {toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
+        
+        {showDevTools&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&setShowDevTools(false)}>
+            <div style={{background:white,borderRadius:16,width:'100%',maxWidth:500,maxHeight:'90vh',overflowY:'auto'}}>
+              <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.08)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400}}>Dev Tools</div>
+                <button onClick={()=>{setShowDevTools(false);setDevPassword('');setDevUnlocked(false)}} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+              <div style={{padding:'1.5rem'}}>
+                {!devUnlocked?(
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
+                    <div style={{fontFamily:ffS,fontSize:'1.1rem',marginBottom:'0.5rem'}}>Acceso restringido</div>
+                    <input type="password" placeholder="Password..." value={devPassword} onChange={e=>setDevPassword(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'){if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}}
+                      style={{width:'100%',padding:'0.75rem 1rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:8,fontFamily:ff,fontSize:'0.88rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box',textAlign:'center'}} autoFocus/>
+                    <button onClick={()=>{if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}
+                      style={{width:'100%',padding:'0.75rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.68rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Entrar</button>
+                  </div>
+                ):(
+                  <div>
+                    {[{section:'🎨 Landing — Colores',items:[['Color primario','primary'],['Fondo','background'],['Texto','text']],type:'color'},{section:'🖥️ Admin Panel — Colores',items:[['Sidebar','adminSidebar'],['Acento','adminAccent'],['Header','adminHeader']],type:'color'},{section:'📱 App Cliente — Colores',items:[['Acento','clientAccent'],['Fondo tarjeta','clientCard'],['Texto secundario','clientMuted']],type:'color'}].map(({section,items})=>(
+                      <div key={section} style={{marginBottom:'1.25rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.75rem',paddingBottom:'0.4rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
+                        {items.map(([label,key])=>(
+                          <div key={key} style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.65rem'}}>
+                            <span style={{fontSize:'0.72rem',color:black}}>{label}</span>
+                            <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                              <input type="color" value={devColors[key]||'#E35A1B'} onChange={e=>setDevColors(c=>({...c,[key]:e.target.value}))} style={{width:32,height:26,border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,cursor:'pointer',padding:2}}/>
+                              <span style={{fontSize:'0.6rem',color:gray,fontFamily:'monospace'}}>{devColors[key]||'—'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'0.5rem 0 1.25rem'}}/>
+                    {[{section:'✏️ Landing — Textos',items:[['Título hero','hero'],['Subtítulo','sub'],['Botón CTA','cta']]},{section:'✏️ App Cliente — Textos',items:[['Saludo tarjeta','cardGreeting'],['CTA recompensa','rewardCta']]}].map(({section,items})=>(
+                      <div key={section} style={{marginBottom:'1.25rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.75rem',paddingBottom:'0.4rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
+                        {items.map(([label,key])=>(
+                          <div key={key} style={{marginBottom:'0.65rem'}}>
+                            <div style={{fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,marginBottom:'0.25rem'}}>{label}</div>
+                            <input value={devTexts[key]||''} onChange={e=>setDevTexts(t=>({...t,[key]:e.target.value}))} placeholder="Texto..." style={{width:'100%',padding:'0.55rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}}/>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <div style={{display:'flex',gap:'0.75rem',marginTop:'0.5rem'}}>
+                      <button onClick={()=>{showToast('Cambios publicados ✓');setShowDevTools(false);setDevUnlocked(false)}} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Publicar todo</button>
+                      <button onClick={()=>{setDevColors({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E',adminSidebar:'#1F140E',adminAccent:'#E35A1B',adminHeader:'#1F140E',clientAccent:'#E35A1B',clientCard:'#F4EDDD',clientMuted:'#7A6452'});setDevTexts({hero:'Galletas que vuelan del mostrador.',sub:'Horneado fresco cada mañana',cta:'Ordenar → Order',cardGreeting:'Hola',rewardCta:'Canjear en mostrador →'})}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Reset</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+{toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
       </div>
     </>
   )
@@ -2445,618 +2792,3 @@ function ArchivosListForClient({ userId, showToast }) {
     </div>
   )
 }
-                                                                            className="admin-sidebar" style={{width:220,background:ink,flexShrink:0,position:'fixed',top:52,left:0,bottom:0,overflowY:'auto',display:'flex',flexDirection:'column'}}>
-            <div style={{padding:'1.25rem 1.25rem 0.75rem',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-                <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(227,90,27,0.2)',border:'1px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.72rem',fontWeight:700,color:gold,flexShrink:0,fontFamily:ff}}>
-                  {(users.find(u=>u.id===session?.user?.id)?.full_name||'AD').split(' ').map(w=>w[0]).join('').slice(0,2)}
-                </div>
-                <div style={{minWidth:0}}>
-                  <div style={{fontSize:'0.78rem',color:white,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
-                  <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.35)'}}>Panel de administración</div>
-                </div>
-              </div>
-            </div>
-            {getNotifications(cards).length>0&&(
-              <div onClick={()=>setPanel('notifications')} style={{margin:'0.6rem 0.85rem 0',background:'rgba(192,57,43,0.15)',border:'1px solid rgba(192,57,43,0.25)',borderRadius:6,padding:'0.5rem 0.75rem',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span style={{fontSize:'0.62rem',color:'#e74c3c'}}>⚠ {getNotifications(cards).length} alerta{getNotifications(cards).length!==1?'s':''}</span>
-                <span style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.35)'}}>ver →</span>
-              </div>
-            )}
-            <div style={{padding:'1rem 0 0.25rem'}}>
-              <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',padding:'0 1.25rem',marginBottom:'0.4rem',fontFamily:ff}}>Negocio</div>
-              {[['dashboard','◆','Resumen'],['clients','◌','Clientes'],['bookings','◇','Encargos'],['cards','☰','Tarjetas'],['punch','◯','Sellar visita'],['campaigns','◐','Campañas'],['website','◈','Website']].map(([id,icon,label])=>(
-                <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.7rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
-                  <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.3)',flexShrink:0,width:16,textAlign:'center'}}>{icon}</span>
-                  <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.75)'}}>{label}</span>
-                </button>
-              ))}
-            </div>
-            <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.25rem'}}/>
-            <div style={{padding:'0.25rem 0'}}>
-              <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.25)',padding:'0 1.25rem',marginBottom:'0.4rem',fontFamily:ff}}>Operación</div>
-              {[['system','⛭','Configuración'],['catalog','◔','Catálogo'],['supplies','◈','Inventario'],['notifications','◑','Alertas']].map(([id,icon,label])=>(
-                <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.7rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
-                  <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.3)',flexShrink:0,width:16,textAlign:'center'}}>{icon}</span>
-                  <span style={{fontSize:'0.75rem',color:panel===id?gold:'rgba(255,255,255,0.75)'}}>{label}</span>
-                </button>
-              ))}
-            </div>
-            <div style={{marginTop:'auto',padding:'1rem 1.25rem',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-              <button onClick={()=>setShowDevTools(true)} style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'left',width:'100%'}}>
-                <div style={{fontSize:'0.5rem',color:'rgba(255,255,255,0.15)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.2rem'}}>Powered by</div>
-                <div style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.25)',fontFamily:ffS}}>A<span style={{color:'rgba(227,90,27,0.4)'}}>+</span> CRM</div>
-              </button>
-            </div>
-          {/* MAIN */}
-          <div classNombre="admin-main" style={{marginLeft:220,flex:1,padding:'1.75rem',maxWidth:980}}>
-            {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}}/>}
-            {panel==='client'&&selectedClient&&<ClientProfile card={selectedClient} onBack={()=>{setSelectedClient(null);setPanel('dashboard')}}/>}
-            {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
-            {panel==='bookings'&&<BookingsPanel/>}
-            {panel==='campaigns'&&<CampaignsPanel cards={cards} users={users}/>}
-            {panel==='catalog'&&<CatalogPanel catalog={catalog} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
-            {panel==='supplies'&&<SuppliesPanel supplies={supplies}
-              onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
-              onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,unit:s.unit||'month',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
-              onEliminar={async(id)=>{if(!confirm('Eliminar this supply?'))return;await fetch('/api/admin/supplies',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});showToast('Supply deleted');loadAll()}}
-              showToast={showToast}
-            />}
-            {panel==='system'&&<AdminSystemPanel users={users} cards={cards} allUsers={allUsers} loadAll={loadAll} showToast={showToast}/>}
-            {panel==='loyalty'&&(<div><h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300,marginBottom:'1.5rem'}}>Loyalty Program</h2><div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>{[['cards','Tarjetas','Create and manage loyalty cards'],['punch','Sellar','Register payments and stamps']].map(([id,label,desc])=>(<div key={id} onClick={()=>setPanel(id)} style={{background:white,borderRadius:10,padding:'1.25rem 1.5rem',border:'1px solid rgba(31,20,14,0.07)',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:300,color:black,marginBottom:'0.2rem'}}>{label}</div><div style={{fontSize:'0.68rem',color:gray}}>{desc}</div></div><div style={{color:gold,fontSize:'1rem'}}>›</div></div>))}</div></div>)}
-            {panel==='clients'&&<ClientsPanel users={users} cards={cards} search={clientSearch} setSearch={setClientSearch}
-              onEditar={(u)=>{setEditaringClient(u);setEditarForm({name:u.full_name||'',business:u.business_name||'',phone:u.phone||'',email:'',password:''});setModal('editclient')}}
-              onAddPayment={(card)=>{setPunchId(card.id);setPanel('punch')}}
-              onCreateCard={(uid)=>{setForm({user_id:uid});setModal('card')}}
-              onCreateNew={()=>{setForm({});setModal('card')}}
-              onEliminar={async(uid)=>{if(!confirm('Eliminar this client?'))return;const u=users.find(u=>u.id===uid);await fetch('/api/admin/users',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:uid})});await fetch('/api/admin/activity-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'Eliminard client',target:u?.business_name||u?.full_name||'',type:'delete'})});showToast('Client deleted');loadAll()}}
-              onArchivos={(u)=>{setArchivosClient(u);setModal('files')}}
-              onGasto={(u)=>{setGastoClient(u);setGastoForm({amount:'',description:'',date:new Fecha().toISOString().split('T')[0]});setModal('expense')}}
-              onHistorial={(u)=>{setHistorialClient(u);setModal('history')}}
-            />}
-            {panel==='cards'&&<>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
-                <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Tarjetas</h2>
-                <button onClick={()=>setModal('card')} style={{background:black,color:white,border:'none',padding:'0.6rem 1.1rem',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>+ Nuevo</button>
-              </div>
-              <input type="text" placeholder="Buscar cliente..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box',background:white}}/>
-              <div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
-                {cards.filter(c=>(c.profiles?.full_name||'').toLowerCase().includes(search.toLowerCase())||(c.profiles?.business_name||'').toLowerCase().includes(search.toLowerCase())).map(card=>{
-                  const cur=card.stamps%5===0&&card.stamps>0?5:card.stamps%5
-                  const cycle=Math.ceil((card.stamps||1)/5)||1
-                  const hasR=card.stamps>0&&card.stamps%5===0
-                  return(<div key={card.id} style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
-                    <div style={{background:'linear-gradient(135deg,#1a1917,#252320)',padding:'1rem 1.25rem',color:white,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <div>
-                        <div style={{fontFamily:ffS,fontSize:'0.9rem',marginBottom:'0.15rem'}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM</div>
-                        <div style={{fontSize:'0.72rem',color:'rgba(255,255,255,0.8)',marginBottom:'0.5rem'}}>{card.profiles?.business_name||card.profiles?.full_name}</div>
-                        <div style={{display:'flex',gap:3}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:10,height:10,borderRadius:'50%',border:'1px solid rgba(227,90,27,0.22)',background:i<cur?gold:'transparent'}}/>)}</div>
-                      </div>
-                      <div style={{textAlign:'right'}}>
-                        <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.4)',marginBottom:'0.2rem'}}>#{card.card_number}</div>
-                        <div style={{fontSize:'0.68rem',color:hasR?gold:'rgba(255,255,255,0.5)'}}>{cur}/5 · Cycle {cycle}</div>
-                      </div>
-                    </div>
-                    <div style={{padding:'0.75rem 1.25rem',display:'flex',gap:'0.4rem'}}>
-                      <button onClick={()=>{setPunchId(card.id);setPanel('punch')}} style={{flex:1,padding:'0.45rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Sello</button>
-                      <button onClick={()=>setPremioCard(card)} style={{flex:1,padding:'0.45rem',background:'rgba(45,138,96,0.1)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Premio</button>
-                      <button onClick={()=>{setQrCard(card);setModal('qr')}} style={{flex:1,padding:'0.45rem',background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>QR</button>
-                      <button onClick={()=>deleteCard(card.id)} style={{flex:1,padding:'0.45rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Eliminar</button>
-                    </div>
-                    {/* Next Premio editable */}
-                    <div style={{padding:'0 1.25rem 0.85rem',display:'flex',gap:'0.5rem',alignItems:'center'}}>
-                      <span style={{fontSize:'0.52rem',color:gray,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap'}}>Próximo Premio:</span>
-                      <input
-                        type="text"
-                        defaultValue={card.notes||''}
-                        placeholder="ej. 1 galleta gratis"
-                        onBlur={async(e)=>{
-                          await fetch('/api/admin/cards',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:card.id,notes:e.target.value})})
-                          showToast('Next reward updated')
-                        }}
-                        style={{flex:1,padding:'0.3rem 0.6rem',border:'1px solid rgba(227,90,27,0.2)',borderRadius:3,fontFamily:ff,fontSize:'0.62rem',outline:'none',background:'rgba(227,90,27,0.04)',color:black}}
-                      />
-                    </div>
-                  </div>)
-                })}
-                {cards.length===0&&<p style={{color:gray,fontSize:'0.85rem'}}>No hay tarjetas aún.</p>}
-              </div>
-            </>}
-            {panel==='punch'&&<>
-              <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300,marginBottom:'1.25rem'}}>Punch Card</h2>
-              <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)'}}>
-                <div classNombre="punch-row" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1rem'}}>
-                  <div><label style={lbl}>Client</label><select value={punchId} onChange={e=>setPunchId(e.target.value)} style={{...inp,marginBottom:0}}><option value="">Select</option>{cards.map(c=><option key={c.id} value={c.id}>{c.profiles?.business_name||c.profiles?.full_name} · {c.stamps%5===0&&c.stamps>0?5:c.stamps%5}/5</option>)}</select></div>
-                  <div><label style={lbl}>Amount <span style={{color:'#c0392b'}}>*</span></label><input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={punchAmt} onChange={e=>setPunchAmt(e.target.value)}/></div>
-                </div>
-                {punchId&&(()=>{const card=cards.find(c=>c.id===punchId);const cur=card?(card.stamps%5===0&&card.stamps>0?5:card.stamps%5):0;return<div style={{background:'linear-gradient(135deg,#1a1917,#252320)',borderRadius:10,padding:'1.1rem',marginBottom:'1rem',border:'1px solid rgba(227,90,27,0.22)',color:white}}><div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.45rem'}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM · {card?.profiles?.business_name||card?.profiles?.full_name}</div><div style={{display:'flex',gap:5}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:15,height:15,borderRadius:'50%',border:'1.5px solid rgba(227,90,27,0.22)',background:i<cur?gold:i===cur?'rgba(227,90,27,0.35)':'transparent'}}/>)}</div></div>})()}
-                <button onClick={doPunch} style={{width:'100%',background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Dar Sello</button>
-              </div>
-            </>}
-          </div>
-        </div>
-
-        {/* MOBILE NAV */}
-        <div classNombre="mobile-nav">
-          {[
-            ['notifications','Alertas'],
-            ['dashboard','Resumen'],
-            ['loyalty','Loyalty'],
-          ].map(([id,label])=>(
-            <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
-              classNombre={panel===id||(['cards','punch','rewards'].includes(panel)&&id==='loyalty')?'active':''}>
-              {label}
-            </button>
-          ))}
-          <button onClick={()=>setHamburgerOpen(o=>!o)}
-            classNombre={hamburgerOpen||['clients','campaigns','catalog','supplies','system','bookings'].includes(panel)?'active':''}
-            style={{border:'1px solid rgba(227,90,27,0.35)',borderRadius:4,margin:'0.35rem 0.15rem',padding:'0.2rem 0.6rem',background:hamburgerOpen?'rgba(227,90,27,0.12)':'transparent'}}>
-            <span style={{fontSize:'1.15rem',lineHeight:1,display:'block'}}>☰</span>
-          </button>
-        </div>
-
-        {/* HAMBURGER DRAWER */}
-        {hamburgerOpen&&(
-          <>
-            <div onClick={()=>setHamburgerOpen(false)}
-              style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:195}}/>
-            <div style={{position:'fixed',bottom:0,left:0,right:0,background:ink,zIndex:196,
-              paddingBottom:52}}>
-              <div style={{width:36,height:3,background:'rgba(255,255,255,0.15)',borderRadius:2,margin:'0.75rem auto 0.5rem'}}/>
-              {[
-                ['bookings','Reservas'],
-                ['clients','Clientes'],
-                ['campaigns','Campañas'],
-                ['catalog','Catálogo'],
-                ['supplies','Inventario'],
-                ['system','Sistema'],
-              ].map(([id,label])=>(
-                <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
-                  style={{display:'flex',alignItems:'center',width:'100%',padding:'0.9rem 1.5rem',
-                    background:panel===id?'rgba(227,90,27,0.08)':'none',border:'none',
-                    borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',
-                    color:panel===id?gold:'rgba(255,255,255,0.65)',
-                    fontFamily:ff,fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',
-                    cursor:'pointer',textAlign:'left'}}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* MODAL: Nueva Tarjeta */}
-        {modal==='card'&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
-          <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
-            <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300,marginBottom:'1.5rem'}}>Nueva Tarjeta</h3>
-            <div style={{background:'rgba(227,90,27,0.05)',border:'1px solid rgba(227,90,27,0.2)',borderRadius:8,padding:'1.25rem',marginBottom:'1.25rem'}}>
-              <div style={{fontSize:'0.58rem',letterSpacing:'0.14em',textTransform:'uppercase',color:gold,marginBottom:'1rem'}}>Create New Client</div>
-              <label style={lbl}>Nombre Completo</label><input style={inp} type="text" placeholder="Client name" value={form.new_name||''} onChange={e=>upd('new_name',e.target.value)}/>
-              <label style={lbl}>Nombre del Negocio</label><input style={inp} type="text" placeholder="Business name" value={form.new_business||''} onChange={e=>upd('new_business',e.target.value)}/>
-              <label style={lbl}>Phone</label><input style={inp} type="tel" placeholder="787-000-0000" value={form.new_phone||''} onChange={e=>upd('new_phone',e.target.value)}/>
-              <label style={lbl}>Email</label><input style={inp} type="email" placeholder="email@business.com" value={form.new_email||''} onChange={e=>upd('new_email',e.target.value)}/>
-              <label style={lbl}>Contraseña Temporal</label><input style={{...inp,marginBottom:0}} type="text" placeholder="min. 6 characters" value={form.new_password||''} onChange={e=>upd('new_password',e.target.value)}/>
-              <button onClick={createClient} style={{width:'100%',background:gold,color:white,border:'none',padding:'0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer',marginTop:'0.85rem'}}>Crear Cliente</button>
-            </div>
-            <div style={{fontSize:'0.58rem',letterSpacing:'0.14em',textTransform:'uppercase',color:gray,marginBottom:'0.75rem',textAlign:'center'}}>— or select existing —</div>
-            <label style={lbl}>Existing Client</label>
-            <select value={form.user_id||''} onChange={e=>upd('user_id',e.target.value)} style={inp}><option value="">Select client</option>{users.map(u=><option key={u.id} value={u.id}>{u.business_name||u.full_name}</option>)}</select>
-            <label style={lbl}>Notas (opcional)</label><input style={inp} type="text" placeholder="Additional info..." value={form.notes||''} onChange={e=>upd('notes',e.target.value)}/>
-            <div style={{display:'flex',gap:'0.75rem'}}>
-              <button onClick={createCard} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Asignar Tarjeta</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancelar</button>
-            </div>
-          </div>
-        </div>)}
-
-        {/* MODAL: QR */}
-        {modal==='qr'&&qrCard&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'center',justifyContent:'center',padding:'1.25rem'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
-          <div style={{background:white,borderRadius:12,padding:'2rem',width:'100%',maxWidth:360,textAlign:'center'}}>
-            <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300,marginBottom:'0.25rem'}}>Código QR</h3>
-            <p style={{fontSize:'0.72rem',color:gray,marginBottom:'0.5rem'}}>{qrCard.profiles?.business_name||qrCard.profiles?.full_name}</p>
-            <p style={{fontSize:'0.6rem',color:gray,marginBottom:'1.25rem'}}>#{qrCard.card_number}</p>
-            <div style={{display:'flex',justifyContent:'center',marginBottom:'1.25rem'}}><img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(cardUrl(qrCard))}&color=1F140E&bgcolor=FBF7EE`} alt="QR" style={{borderRadius:8,border:'1px solid '+gl,padding:8,background:white}} width={200} height={200}/></div>
-            <p style={{fontSize:'0.58rem',color:gray,marginBottom:'1.25rem',wordBreak:'break-all',lineHeight:1.6}}>{cardUrl(qrCard)}</p>
-            <div style={{display:'flex',gap:'0.75rem'}}>
-              <button onClick={()=>window.open(cardUrl(qrCard),'_blank')} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Open</button>
-              <button onClick={()=>{navigator.clipboard.writeText(cardUrl(qrCard));showToast('Link copied!')}} style={{flex:1,background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.25)',padding:'0.85rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Copy</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>X</button>
-            </div>
-          </div>
-        </div>)}
-
-        {/* MODAL: Editar Client */}
-        {modal==='editclient'&&editingClient&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
-          <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-              <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Editar Client</h3>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-            </div>
-            <label style={lbl}>Nombre Completo</label><input style={inp} type="text" value={editForm.name||''} onChange={e=>setEditarForm(f=>({...f,name:e.target.value}))}/>
-            <label style={lbl}>Nombre del Negocio</label><input style={inp} type="text" value={editForm.business||''} onChange={e=>setEditarForm(f=>({...f,business:e.target.value}))}/>
-            <label style={lbl}>Phone</label><input style={inp} type="tel" value={editForm.phone||''} onChange={e=>setEditarForm(f=>({...f,phone:e.target.value}))}/>
-            <label style={lbl}>New Email (optional)</label><input style={inp} type="email" placeholder="Leave empty to keep current" value={editForm.email||''} onChange={e=>setEditarForm(f=>({...f,email:e.target.value}))}/>
-            <label style={lbl}>New Password (optional)</label><input style={inp} type="text" placeholder="Leave empty to keep current" value={editForm.password||''} onChange={e=>setEditarForm(f=>({...f,password:e.target.value}))}/>
-            <div style={{display:'flex',gap:'0.75rem'}}>
-              <button onClick={async()=>{await fetch('/api/admin/users',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:editingClient.id,full_name:editForm.name,business_name:editForm.business,phone:editForm.phone,email:editForm.email||null,password:editForm.password||null})});await fetch('/api/admin/activity-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'Editared client',target:editForm.business||editForm.name||'',type:'edit'})});showToast('Client updated');setModal(null);setEditaringClient(null);loadAll()}} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancelar</button>
-            </div>
-          </div>
-        </div>)}
-
-        {/* MODAL: Archivos */}
-        {modal==='files'&&filesClient&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
-          <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-              <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Archivos — {filesClient.business_name||filesClient.full_name}</h3>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-            </div>
-            <div style={{border:'2px dashed rgba(227,90,27,0.3)',borderRadius:8,padding:'2rem',textAlign:'center',marginBottom:'1.25rem',background:'rgba(227,90,27,0.03)'}}>
-              <div style={{fontSize:'1.5rem',marginBottom:'0.5rem'}}>+</div>
-              <div style={{fontSize:'0.78rem',color:gray,marginBottom:'0.75rem'}}>Drag files here or click to select</div>
-              <input type="file" multiple accept=".pdf,.doc,.docx,.jpg,.png,.csv,.xlsx" onChange={async(e)=>{const files=Array.from(e.target.files);for(const file of files){const fd=new FormData();fd.append('file',file);fd.append('user_id',filesClient.id);const res=await fetch('/api/admin/files',{method:'POST',body:fd});const data=await res.json();if(res.ok)showToast(file.name+' uploaded');else showToast('Error: '+data.error)};e.target.value='';setModal(null);setTimeout(()=>setModal('files'),100)}} style={{display:'none'}} id="file-input"/>
-              <label htmlFor="file-input" style={{background:black,color:white,padding:'0.6rem 1.25rem',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase'}}>Select Archivos</label>
-            </div>
-            <ArchivosListForClient userId={filesClient.id} showToast={showToast}/>
-          </div>
-        </div>)}
-
-        {/* MODAL: Gasto */}
-        {modal==='expense'&&expenseClient&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
-          <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.25rem'}}>
-              <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Gastos</h3>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-            </div>
-            <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.5rem'}}>{expenseClient.business_name||expenseClient.full_name}</p>
-            <label style={lbl}>Monto ($)</label><input style={inp} type="number" step="0.01" placeholder="0.00" value={expenseForm.amount} onChange={e=>setGastoForm(f=>({...f,amount:e.target.value}))}/>
-            <label style={lbl}>Descripción</label><input style={inp} type="text" placeholder="e.g. Domain renewal, hosting..." value={expenseForm.description} onChange={e=>setGastoForm(f=>({...f,description:e.target.value}))}/>
-            <label style={lbl}>Fecha</label><input style={{...inp}} type="date" value={expenseForm.date} onChange={e=>setGastoForm(f=>({...f,date:e.target.value}))}/>
-            <div style={{display:'flex',alignItems:'center',gap:'0.75rem',marginBottom:'1rem'}}>
-              <input type="checkbox" id="recurring-cb" checked={expenseForm.recurring||false} onChange={e=>setGastoForm(f=>({...f,recurring:e.target.checked}))} style={{width:16,height:16,cursor:'pointer'}}/>
-              <label htmlFor="recurring-cb" style={{fontSize:'0.72rem',color:black,cursor:'pointer'}}>Recurring expense</label>
-            </div>
-            {expenseForm.recurring&&(
-              <div style={{marginBottom:'1rem'}}>
-                <label style={lbl}>Interval</label>
-                <select value={expenseForm.recurring_interval||'month'} onChange={e=>setGastoForm(f=>({...f,recurring_interval:e.target.value}))} style={{...inp,marginBottom:0}}>
-                  <option value="week">Weekly</option>
-                  <option value="month">Monthly</option>
-                  <option value="year">Yearly</option>
-                </select>
-              </div>
-            )}
-            <div style={{display:'flex',gap:'0.75rem',marginBottom:'1.5rem'}}>
-              <button onClick={async()=>{
-                const res=await fetch('/api/admin/expenses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:expenseClient.id,amount:expenseForm.amount,description:expenseForm.description,recurring:expenseForm.recurring||false,recurring_interval:expenseForm.recurring_interval||'month',expense_date:expenseForm.date})})
-                if(res.ok){showToast('Gasto saved');setGastoForm({amount:'',description:'',date:new Fecha().toISOString().split('T')[0],recurring:false,recurring_interval:'month'})}
-                else showToast('Error saving expense')
-              }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar Gasto</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cerrar</button>
-            </div>
-            <GastoHistorial clientId={expenseClient.id} showToast={showToast} supplies={supplies}/>
-          </div>
-        </div>)}
-
-        {/* MODAL: Set Cost */}
-        {modal==='cost'&&editCost&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
-          <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.25rem'}}>
-              <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Set Cost</h3>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-            </div>
-            <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.25rem'}}>{editCost.name}</p>
-
-            {/* Supplies calculator */}
-            {supplies.length>0&&(
-              <div style={{background:'rgba(227,90,27,0.04)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1.25rem'}}>
-                <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.75rem'}}>Calculate from Supplies</div>
-                {supplies.map(s=>{
-                  const unitLabel = s.unit==='month'?'/mo':s.unit==='year'?'/yr':' once'
-                  const qtyKey = 'cost_qty_'+s.id
-                  const qty = parseFloat(costForm[qtyKey]||0)
-                  const lineTotal = qty>0?parseFloat(s.cost)*qty:0
-                  return(
-                    <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',marginBottom:'0.5rem'}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:'0.68rem',color:black,fontWeight:500}}>{s.name}</div>
-                        <div style={{fontSize:'0.58rem',color:gray}}>${parseFloat(s.cost).toFixed(2)}{unitLabel}</div>
-                      </div>
-                      <input type="number" min="0" step="0.1" placeholder="0"
-                        value={costForm[qtyKey]||''}
-                        onChange={e=>{
-                          const newQty = parseFloat(e.target.value||0)
-                          setCostForm(f=>{
-                            const updated = {...f,[qtyKey]:e.target.value}
-                            // Recalculate total from all supply lines
-                            const total = supplies.reduce((acc,sup)=>{
-                              const q = parseFloat(updated['cost_qty_'+sup.id]||0)
-                              return acc + (q>0?parseFloat(sup.cost)*q:0)
-                            },0)
-                            return {...updated, cost: total>0?total.toFixed(2):f.cost}
-                          })
-                        }}
-                        style={{width:55,padding:'0.3rem 0.4rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.72rem',outline:'none',textAlign:'center'}}/>
-                      <div style={{fontSize:'0.62rem',color:lineTotal>0?'#c0392b':gray,width:55,textAlign:'right',fontWeight:lineTotal>0?600:400}}>
-                        {lineTotal>0?'$'+lineTotal.toFixed(2):'—'}
-                      </div>
-                    </div>
-                  )
-                })}
-                <div style={{display:'flex',justifyContent:'space-between',paddingTop:'0.6rem',marginTop:'0.25rem',borderTop:'1px solid rgba(31,20,14,0.07)'}}>
-                  <span style={{fontSize:'0.58rem',color:gray,letterSpacing:'0.08em',textTransform:'uppercase'}}>Total Cost</span>
-                  <span style={{fontFamily:ffS,fontSize:'1rem',fontWeight:300,color:'#c0392b'}}>${parseFloat(costForm.cost||0).toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-
-            <div style={{display:'flex',gap:'0.75rem',marginBottom:'1rem',alignItems:'flex-end'}}>
-              <div style={{flex:1}}>
-                <label style={lbl}>Cost ($) <span style={{color:gray,fontWeight:400,textTransform:'none',letterSpacing:0}}>— edit manually or calculate above</span></label>
-                <input id="cost-input" style={{...inp,marginBottom:0,fontSize:'1.1rem',fontWeight:600}} type="number" step="0.01" placeholder="0.00" value={costForm.cost} onChange={e=>setCostForm(f=>({...f,cost:e.target.value}))}/>
-              </div>
-              <button onClick={async()=>{
-                if(!costForm.cost){showToast('Enter a cost first');return}
-                const r=await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:editCost.id,cost:costForm.cost})})
-                const d=await r.json()
-                if(r.ok){
-                  showToast('Cost saved ✓')
-                  fetch('/api/admin/catalog').then(r=>r.json()).then(d=>setCatalog(d.items||[]))
-                  setEditarCost(d.item||editCost)
-                  setCostForm(f=>({...f,cost:d.item?.catalog_costs?.[0]?.cost||f.cost}))
-                } else showToast('Error: '+(d.error||'Unknown'))
-              }} style={{padding:'0.78rem 1.25rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',flexShrink:0}}>Guardar</button>
-            </div>
-            <CostHistorial productId={editCost.id}/>
-            <button onClick={()=>setModal(null)} style={{width:'100%',background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer',marginTop:'0.5rem'}}>Cerrar</button>
-          </div>
-        </div>)}
-
-        {/* MODAL: Suppliers */}
-        {modal==='suppliers'&&suppliersItem&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
-          <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.25rem'}}>
-              <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Suppliers</h3>
-              <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-            </div>
-            <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.25rem'}}>{suppliersItem.name}</p>
-            <div style={{background:'rgba(227,90,27,0.04)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1rem'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
-                <input value={suppliersTitle} onChange={e=>setSuppliersTitle(e.target.value)} placeholder="Note title..." style={{background:'none',border:'none',outline:'none',fontFamily:ffS,fontSize:'1rem',fontWeight:300,color:black,flex:1}} id="suppliers-title"/>
-                <span style={{fontSize:'0.58rem',color:gray,flexShrink:0,marginLeft:'0.5rem'}}>{new Fecha().toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
-              </div>
-              <textarea id="suppliers-text" value={suppliersText} onChange={e=>setSuppliersText(e.target.value)} rows={6} placeholder="e.g. Vercel hosting, GoDaddy domain, Supabase..." style={{width:'100%',background:'none',border:'none',outline:'none',fontFamily:ff,fontSize:'0.82rem',color:black,resize:'vertical',boxSizing:'border-box',lineHeight:1.7}}/>
-            </div>
-            <div style={{display:'flex',gap:'0.75rem'}}>
-              <button onClick={async()=>{
-                const r=await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:suppliersItem.id,suppliers:suppliersText})})
-                const d=await r.json()
-                if(r.ok){showToast('Guardard ✓');fetch('/api/admin/catalog').then(r=>r.json()).then(d=>setCatalog(d.items||[]))}
-                else showToast('Error: '+(d.error||'Unknown'))
-              }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar</button>
-              <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cerrar</button>
-            </div>
-          </div>
-        </div>)}
-
-        {/* MODAL: Historial */}
-        {modal==='history'&&historyClient&&(
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
-            <div style={{background:white,borderRadius:'12px 12px 0 0',width:'100%',maxWidth:560,maxHeight:'85vh',display:'flex',flexDirection:'column'}}>
-              <div style={{padding:'1.5rem 1.5rem 1rem',flexShrink:0}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Transaction Historial</h3>
-                  <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-                </div>
-                <p style={{fontSize:'0.72rem',color:gray,marginTop:'0.25rem'}}>{historyClient.business_name||historyClient.full_name}</p>
-              </div>
-              <ClientHistorial client={historyClient}/>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL: Premio — inline per card */}
-        {rewardCard&&(
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setPremioCard(null)}>
-            <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.25rem'}}>
-                <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Premios</h3>
-                <button onClick={()=>setPremioCard(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-              </div>
-              <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.5rem'}}>{rewardCard.profiles?.business_name||rewardCard.profiles?.full_name} · #{rewardCard.card_number}</p>
-
-              {/* Existing rewards list */}
-              {rewardCard.rewards?.length>0&&(
-                <div style={{marginBottom:'1.5rem',border:'1px solid rgba(31,20,14,0.07)',borderRadius:8,overflow:'hidden'}}>
-                  <div style={{padding:'0.6rem 1rem',background:'rgba(31,20,14,0.02)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray}}>Premio Historial</div>
-                  {rewardCard.rewards.map((r,i)=>(
-                    <div key={r.id||i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.75rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
-                      <div>
-                        <div style={{fontSize:'0.75rem',color:black,fontWeight:500}}>{r.reward_type}</div>
-                        <div style={{fontSize:'0.6rem',color:gray,marginTop:'0.1rem'}}>
-                          {r.redeemed_at?new Fecha(r.redeemed_at).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'}):r.created_at?new Fecha(r.created_at).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'}
-                          {r.reward_cost&&' · '+r.reward_cost}
-                        </div>
-                      </div>
-                      <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                        <span style={{fontSize:'0.56rem',padding:'0.18rem 0.55rem',borderRadius:20,background:'rgba(45,138,96,0.1)',color:'#2d8a60'}}>{r.status}</span>
-                        <button onClick={async()=>{await fetch('/api/admin/rewards',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:r.id})});showToast('Premio deleted');loadAll();setPremioCard(c=>({...c,rewards:c.rewards.filter(x=>x.id!==r.id)}))}} style={{background:'none',border:'none',cursor:'pointer',color:'rgba(192,57,43,0.4)',fontSize:'0.75rem',padding:0}}>x</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {(!rewardCard.rewards||rewardCard.rewards.length===0)&&<p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.5rem'}}>No rewards yet.</p>}
-
-              {/* Register new reward */}
-              <div style={{fontSize:'0.52rem',letterSpacing:'0.14em',textTransform:'uppercase',color:gold,marginBottom:'1rem'}}>Register New Premio</div>
-              <label style={lbl}>Premio Type</label>
-              <select value={form.reward_type||'1 Free Month'} onChange={e=>upd('reward_type',e.target.value)} style={inp}>
-                {['1 Free Month','50% Discount','Extra Service','Other'].map(t=><option key={t}>{t}</option>)}
-              </select>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'1rem'}}>
-                <div><label style={lbl}>Cost (optional)</label><input style={{...inp,marginBottom:0}} type="text" placeholder="$0.00" value={form.reward_cost||''} onChange={e=>upd('reward_cost',e.target.value)}/></div>
-                <div><label style={lbl}>Fecha</label><input style={{...inp,marginBottom:0}} type="date" value={form.reward_date||new Fecha().toISOString().split('T')[0]} onChange={e=>upd('reward_date',e.target.value)}/></div>
-              </div>
-              <button onClick={async()=>{
-                const res=await fetch('/api/admin/rewards',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({card_id:rewardCard.id,user_id:rewardCard.user_id,reward_type:form.reward_type||'1 Free Month',reward_cost:form.reward_cost,notes:form.reward_notes})})
-                if(res.ok){
-                  showToast('Premio registered')
-                  await fetch('/api/admin/activity-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'Registered reward',target:(form.reward_type||'1 Free Month')+' → '+(rewardCard.profiles?.business_name||rewardCard.profiles?.full_name||''),type:'reward'})})
-                  setForm({})
-                  // Refresh cards and update rewardCard in place
-                  const updated=await fetch('/api/admin/cards').then(r=>r.json())
-                  const updatedCard=(updated.cards||[]).find(c=>c.id===rewardCard.id)
-                  if(updatedCard) setPremioCard(updatedCard)
-                  setCards(updated.cards||[])
-                }
-              }} style={{width:'100%',background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Register Premio</button>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL: Supply Add/Editar */}
-        {supplyModal&&(
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setSupplyModal(null)}>
-            <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-                <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{supplyModal==='add'?'Add Supply':'Editar Supply'}</h3>
-                <button onClick={()=>setSupplyModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-              </div>
-              <label style={lbl}>Nombre</label>
-              <input style={inp} type="text" placeholder="e.g. Vercel Pro" value={supplyForm.name} onChange={e=>setSupplyForm(f=>({...f,name:e.target.value}))}/>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
-                <div>
-                  <label style={lbl}>Categoría</label>
-                  <input style={{...inp,marginBottom:0}} type="text" placeholder="Hosting, Software..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
-                </div>
-                <div>
-                  <label style={lbl}>Proveedor</label>
-                  <input style={{...inp,marginBottom:0}} type="text" placeholder="Vercel, GoDaddy..." value={supplyForm.provider} onChange={e=>setSupplyForm(f=>({...f,provider:e.target.value}))}/>
-                </div>
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginTop:'1rem'}}>
-                <div>
-                  <label style={lbl}>Cost ($)</label>
-                  <input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={supplyForm.cost} onChange={e=>setSupplyForm(f=>({...f,cost:e.target.value}))}/>
-                </div>
-                <div>
-                  <label style={lbl}>Billing</label>
-                  <select style={{...inp,marginBottom:0}} value={supplyForm.unit} onChange={e=>setSupplyForm(f=>({...f,unit:e.target.value}))}>
-                    <option value="month">Monthly</option>
-                    <option value="year">Yearly</option>
-                    <option value="one-time">One-time</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{marginTop:'1rem'}}>
-                <label style={lbl}>Renewal Fecha (optional)</label>
-                <input style={inp} type="date" value={supplyForm.renewal_date} onChange={e=>setSupplyForm(f=>({...f,renewal_date:e.target.value}))}/>
-              </div>
-              <label style={lbl}>Notas (opcional)</label>
-              <input style={inp} type="text" placeholder="Any additional info..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
-              <div style={{display:'flex',gap:'0.75rem'}}>
-                <button onClick={async()=>{
-                  if(!supplyForm.name||!supplyForm.cost){showToast('Nombre and cost required');return}
-                  if(supplyModal==='add'){
-                    await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(supplyForm)})
-                    showToast('Supply added')
-                  } else {
-                    await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:supplyModal.id,...supplyForm})})
-                    showToast('Supply updated')
-                  }
-                  setSupplyModal(null);loadAll()
-                }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar</button>
-                <button onClick={()=>setSupplyModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancelar</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
-      </div>
-    </>
-  )
-}
-
-function ClientHistorial({ client }) {
-  const [sales, setSales] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(()=>{
-    fetch('/api/admin/sales?email='+encodeURIComponent(client.email||client.user_email||''))
-      .then(r=>r.json())
-      .then(d=>{ setSales(d.sales||[]); setLoading(false) })
-      .catch(()=>setLoading(false))
-  },[client.id])
-
-  const total = sales.filter(s=>s.status==='paid').reduce((a,s)=>a+parseFloat(s.amount||0),0)
-
-  return(
-    <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
-      {/* Scrollable list */}
-      <div style={{flex:1,overflowY:'auto',padding:'0 1.5rem'}}>
-        {loading&&<div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'2rem'}}>Cargando...</div>}
-        {!loading&&sales.length===0&&<div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'2rem'}}>No transactions found.</div>}
-        {!loading&&sales.length>0&&(
-          <div style={{border:'1px solid rgba(31,20,14,0.07)',borderRadius:8,overflow:'hidden'}}>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.5rem 1rem',background:'rgba(31,20,14,0.03)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#7A6452',gap:'0.5rem'}}>
-              <span>Transaction ID</span><span>Fecha</span><span style={{textAlign:'right'}}>Amount</span>
-            </div>
-            {sales.map((s,i)=>(
-              <div key={s.id} style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.75rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)',alignItems:'center',gap:'0.5rem'}}>
-                <div style={{fontSize:'0.62rem',color:'#7A6452',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace'}}>{s.id}</div>
-                <div style={{fontSize:'0.68rem',color:'#1F140E'}}>{new Fecha(s.sale_date).toLocaleFechaString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
-                <div style={{fontSize:'0.75rem',fontWeight:600,color:s.status==='paid'?'#2d8a60':'#c0392b',textAlign:'right'}}>{s.status==='refunded'?'-':''}${Math.abs(parseFloat(s.amount||0)).toFixed(2)}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {/* Total — always visible at bottom */}
-      <div style={{padding:'1rem 1.5rem 1.5rem',borderTop:'1px solid rgba(31,20,14,0.07)',flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',background:'#FBF7EE'}}>
-        <span style={{fontSize:'0.62rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase'}}>{sales.filter(s=>s.status==='paid').length} payment{sales.filter(s=>s.status==='paid').length!==1?'s':''}</span>
-        <div style={{textAlign:'right'}}>
-          <div style={{fontSize:'0.56rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.15rem'}}>Total Spent</div>
-          <div style={{fontSize:'1.1rem',fontFamily:'Instrument Serif,serif',fontWeight:300,color:'#1F140E'}}>${total.toFixed(2)}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function ArchivosListForClient({ userId, showToast }) {
-  const [files, setArchivos] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(()=>{ loadArchivos() },[userId])
-
-  async function loadArchivos() {
-    setLoading(true)
-    const res = await fetch('/api/admin/files?user_id='+userId)
-    const data = await res.json()
-    setArchivos(data.files||[])
-    setLoading(false)
-  }
-
-  async function deleteFile(path) {
-    await fetch('/api/admin/files', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ path }) })
-    showToast('File deleted')
-    loadArchivos()
-  }
-
-  async function viewFile(name) {
-    window.open('/api/admin/files?user_id='+userId+'&file='+encodeURIComponent(name),'_blank')
-  }
-
-  if(loading) return <div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'1rem 0'}}>Cargando...</div>
-  if(files.length===0) return <div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'1rem 0'}}>Sin archivos guardados.</div>
-
-  return(
-    <div>
-      <div style={{fontSize:'0.56rem',letterSpacing:'0.13em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.75rem'}}>Guardard files</div>
-      {files.map(f=>(<div key={f.name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 0',borderBottom:'1px solid rgba(31,20,14,0.06)'}}><div style={{fontSize:'0.78rem',color:'#1F140E',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,marginRight:'1rem'}}>{f.name.replace(/^\d+_/,'')}</div><div style={{display:'flex',gap:'0.4rem',flexShrink:0}}><button onClick={()=>viewFile(f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(227,90,27,0.1)',color:'#E35A1B',border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>Ver</button><button onClick={()=>deleteFile('clients/'+userId+'/'+f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>x</button></div></div>))}
-    </div>
-  )
-}
-                                                                            
