@@ -219,7 +219,7 @@ export default function Card({ session }) {
         .tap-scale:active{transform:scale(0.96);transition:transform 0.1s}
       `}</style>
 
-      <div style={{minHeight:'100vh',background:cr,paddingTop:'calc(52px + env(safe-area-inset-top, 0px))',paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))',fontFamily:ff}}>
+      <div style={{minHeight:'100vh',background:cr,paddingTop:'calc(44px + env(safe-area-inset-top, 0px))',paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))',fontFamily:ff}}>
 
         {/* TOP NAV */}
         <nav style={{position:'sticky',top:0,zIndex:100,background:theme.navBg,backdropFilter:'blur(12px)',borderBottom:'1px solid '+theme.border,padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
