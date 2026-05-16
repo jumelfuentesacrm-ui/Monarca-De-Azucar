@@ -2010,6 +2010,11 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
+  const [showDevTools,setShowDevTools]=useState(false)
+  const [devPassword,setDevPassword]=useState('')
+  const [devUnlocked,setDevUnlocked]=useState(false)
+  const [devColors,setDevColors]=useState({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E',adminSidebar:'#1F140E',adminAccent:'#E35A1B',clientAccent:'#E35A1B',clientCard:'#F4EDDD',clientMuted:'#7A6452'})
+  const [devTexts,setDevTexts]=useState({hero:'Galletas que vuelan del mostrador.',sub:'Horneado fresco cada mañana',cta:'Ordenar → Order',businessName:'Monarca de Azúcar',cardGreeting:'Hola',rewardCta:'Canjear en mostrador →'})
   const [cards,setCards]=useState([])
   const [users,setUsers]=useState([])
   const [rewards,setPremios]=useState([])
@@ -2225,6 +2230,12 @@ export default function Admin({session}){
             <button onClick={()=>setPanel('supplies')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='supplies'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='supplies'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Supplies</button>
             <div style={{height:'1px',background:'rgba(255,255,255,0.06)',margin:'0.25rem 1.5rem'}}/>
             <button onClick={()=>setPanel('system')} style={{display:'flex',alignItems:'center',padding:'0.82rem 1.5rem',fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',color:panel==='system'?gold:'rgba(255,255,255,0.95)',cursor:'pointer',background:'none',border:'none',borderLeft:panel==='system'?'2px solid '+gold:'2px solid transparent',width:'100%',textAlign:'left',fontFamily:ff}}>Admin Panel</button>
+            <div style={{marginTop:'auto',padding:'1rem 1.25rem',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+              <button onClick={()=>setShowDevTools(true)} style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'left',width:'100%'}}>
+                <div style={{fontSize:'0.48rem',color:'rgba(255,255,255,0.15)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.2rem'}}>Powered by</div>
+                <div style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.22)',fontFamily:ffS}}>A<span style={{color:'rgba(227,90,27,0.35)'}}>+</span> CRM</div>
+              </button>
+            </div>
           </div>
 
           {/* MAIN */}
@@ -2771,7 +2782,66 @@ export default function Admin({session}){
           </div>
         )}
 
-{toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
+
+        {/* DEV TOOLS MODAL */}
+        {showDevTools&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&setShowDevTools(false)}>
+            <div style={{background:white,borderRadius:16,width:'100%',maxWidth:500,maxHeight:'90vh',overflowY:'auto'}}>
+              <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.08)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400}}>Dev Tools</div>
+                <button onClick={()=>{setShowDevTools(false);setDevPassword('');setDevUnlocked(false)}} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+              <div style={{padding:'1.5rem'}}>
+                {!devUnlocked?(
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
+                    <div style={{fontFamily:ffS,fontSize:'1.1rem',marginBottom:'0.5rem'}}>Acceso restringido</div>
+                    <input type="password" placeholder="Password..." value={devPassword} onChange={e=>setDevPassword(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'){if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}}
+                      style={{width:'100%',padding:'0.75rem 1rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:8,fontFamily:ff,fontSize:'0.88rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box',textAlign:'center'}} autoFocus/>
+                    <button onClick={()=>{if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}
+                      style={{width:'100%',padding:'0.75rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.68rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Entrar</button>
+                  </div>
+                ):(
+                  <div>
+                    {[{section:'🎨 Landing — Colores',items:[['Color primario','primary'],['Fondo','background'],['Texto','text']]},{section:'🖥️ Admin — Colores',items:[['Sidebar','adminSidebar'],['Acento','adminAccent']]},{section:'📱 Cliente — Colores',items:[['Acento','clientAccent'],['Fondo tarjeta','clientCard']]}].map(({section,items})=>(
+                      <div key={section} style={{marginBottom:'1.25rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.6rem',paddingBottom:'0.3rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
+                        {items.map(([label,key])=>(
+                          <div key={key} style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.6rem'}}>
+                            <span style={{fontSize:'0.72rem',color:black}}>{label}</span>
+                            <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                              <input type="color" value={devColors[key]||'#E35A1B'} onChange={e=>setDevColors(c=>({...c,[key]:e.target.value}))} style={{width:32,height:26,border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,cursor:'pointer',padding:2}}/>
+                              <span style={{fontSize:'0.6rem',color:gray,fontFamily:'monospace'}}>{devColors[key]}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'0.5rem 0 1.25rem'}}/>
+                    {[{section:'✏️ Landing — Textos',items:[['Hero','hero'],['Subtítulo','sub'],['CTA','cta']]},{section:'✏️ Cliente — Textos',items:[['Saludo','cardGreeting'],['CTA recompensa','rewardCta']]}].map(({section,items})=>(
+                      <div key={section} style={{marginBottom:'1.25rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.6rem',paddingBottom:'0.3rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
+                        {items.map(([label,key])=>(
+                          <div key={key} style={{marginBottom:'0.65rem'}}>
+                            <div style={{fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,marginBottom:'0.25rem'}}>{label}</div>
+                            <input value={devTexts[key]||''} onChange={e=>setDevTexts(t=>({...t,[key]:e.target.value}))} style={{width:'100%',padding:'0.55rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}}/>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <div style={{display:'flex',gap:'0.75rem',marginTop:'0.5rem'}}>
+                      <button onClick={()=>{showToast('Cambios publicados ✓');setShowDevTools(false);setDevUnlocked(false)}} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Publicar todo</button>
+                      <button onClick={()=>{setDevColors({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E',adminSidebar:'#1F140E',adminAccent:'#E35A1B',clientAccent:'#E35A1B',clientCard:'#F4EDDD'});setDevTexts({hero:'Galletas que vuelan del mostrador.',sub:'Horneado fresco cada mañana',cta:'Ordenar → Order',cardGreeting:'Hola',rewardCta:'Canjear en mostrador →'})}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Reset</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
       </div>
     </>
   )
