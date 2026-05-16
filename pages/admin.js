@@ -1477,7 +1477,13 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
 
   const CATEGORY_ORDER = ['Aceites','Chocolates','Empaque','Frutas y Frescos','Huevos','Lácteos','Otros','Saborizantes','Secos']
 
-  const grouped = CATEGORY_ORDER.reduce((acc, cat) => {
+  // Include custom categories not in CATEGORY_ORDER
+  const allCategories = [...new Set([
+    ...CATEGORY_ORDER,
+    ...(supplies||[]).map(s=>s.category||'Otros')
+  ])].sort((a,b)=>a.localeCompare(b,'es'))
+
+  const grouped = allCategories.reduce((acc, cat) => {
     const items = (supplies||[])
       .filter(s => (s.category||'Otros') === cat)
       .sort((a,b) => a.name.localeCompare(b.name, 'es'))
@@ -1486,22 +1492,24 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
   }, {})
 
   async function saveStock(supplyId) {
-    const qty = parseFloat(stockEdits[supplyId])
-    if (isNaN(qty)) return
+    const rawVal = stockEdits[supplyId]
+    const qty = parseFloat(rawVal)
+    if (rawVal === undefined || isNaN(qty)) return
     setSavingStock(supplyId)
     const res = await fetch('/api/admin/supplies', {
       method: 'PATCH',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ id: supplyId, stock_qty: qty })
     })
+    const data = await res.json().catch(()=>({}))
     if (res.ok) {
       showToast('Stock actualizado ✓')
+      setStockEdits(e => {const next={...e}; delete next[supplyId]; return next})
+      loadAll && loadAll()
     } else {
-      showToast('Error al guardar stock')
+      showToast('Error: ' + (data.error||'no se pudo guardar'))
     }
     setSavingStock(null)
-    setStockEdits(e => {const next={...e}; delete next[supplyId]; return next})
-    loadAll && loadAll()
   }
 
   // Calculate donut data
@@ -1602,29 +1610,6 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
       </div>
 
 
-      {/* Inventory summary */}
-      <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
-        <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Resumen completo</div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'0.75rem'}}>
-          {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
-            const items=(supplies||[]).filter(s=>s.category===cat&&parseFloat(s.cost_total||0)>0)
-            if(items.length===0) return null
-            const low=items.filter(s=>parseFloat(s.stock_qty||0)<50)
-            const ok=items.filter(s=>parseFloat(s.stock_qty||0)>=50)
-            const catVal=items.reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
-            return(
-              <div key={cat} onClick={()=>{const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
-                <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
-                <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>${catVal.toFixed(2)}</div>
-                <div style={{marginTop:'0.3rem',display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
-                  {ok.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(46,204,113,0.1)',color:'#27ae60'}}>✓ {ok.length} bien</span>}
-                  {low.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(230,126,34,0.1)',color:'#e67e22'}}>↓ {low.length} bajo</span>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
 
       {Object.entries(grouped).map(([cat, items]) => (
         <div key={cat} id={'cat-'+cat.replace(/\s/g,'-')} style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1rem'}}>
