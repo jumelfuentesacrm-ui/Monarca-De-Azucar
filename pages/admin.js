@@ -159,7 +159,7 @@ function DashboardPanel({ cards, sales, supplies, onSelectClient, userName, onOp
           </div>
         </div>
         <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexShrink:0,marginTop:'0.25rem'}}>
-          <InventoryDropdown supplies={supplies||[]} catalog={[]}/>
+          <InventoryDropdown supplies={supplies||[]} recipeMap={[]}/>
           <button onClick={()=>onOpenQR&&onOpenQR()} className="hide-mobile"
             style={{width:40,height:40,borderRadius:'50%',background:'#1F140E',color:'white',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
@@ -1499,12 +1499,71 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
     showToast('Stock actualizado')
   }
 
+  // Calculate donut data
+  const totalValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+  const CATS_COLORS = {Secos:'#E35A1B',Lácteos:'#3498db',Huevos:'#f1c40f',Saborizantes:'#9b59b6',Chocolates:'#795548',Aceites:'#2ecc71',Frutas:'#e91e63',Empaque:'#607d8b',Otros:'#7A6452'}
+  const donutData = Object.entries(CATS_COLORS).map(([cat,color])=>{
+    const val = (supplies||[]).filter(s=>(s.category||'Otros')===cat).reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+    return {cat,color,val,pct:totalValue>0?val/totalValue:0}
+  }).filter(d=>d.val>0)
+
+  function polar(pct){const a=pct*2*Math.PI-Math.PI/2;return{x:50+38*Math.cos(a),y:50+38*Math.sin(a)}}
+  function makeArc(start,pct){
+    if(pct>=0.999)return'M 50 12 A 38 38 0 1 1 49.99 12 Z'
+    const s=polar(start),e=polar(start+pct),lg=pct>0.5?1:0
+    return`M 50 50 L ${s.x} ${s.y} A 38 38 0 ${lg} 1 ${e.x} ${e.y} Z`
+  }
+  let cumPct=0
+  const arcs=donutData.map(d=>{const s=cumPct;cumPct+=d.pct;return{...d,start:s}})
+
+  // Overall stock health (avg of all items that have recipes)
+  const stockPct = Math.min(100, (supplies||[]).filter(s=>parseFloat(s.stock_qty||0)>0).length / Math.max((supplies||[]).length,1) * 100)
+
   return (
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
         <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Inventario</div>
         <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
       </div>
+
+      {/* Donut + bar */}
+      {donutData.length>0&&(
+        <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+          <div style={{display:'flex',gap:'1.5rem',alignItems:'center',flexWrap:'wrap'}}>
+            {/* Donut */}
+            <svg viewBox="0 0 100 100" style={{width:110,height:110,flexShrink:0}}>
+              {arcs.map((d,i)=><path key={i} d={makeArc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)}
+              <circle cx="50" cy="50" r="26" fill={cr}/>
+              <text x="50" y="47" textAnchor="middle" style={{fontSize:7,fontFamily:ffS,fill:ink}}>Total</text>
+              <text x="50" y="57" textAnchor="middle" style={{fontSize:8,fontFamily:ffS,fill:or,fontWeight:600}}>${totalValue.toFixed(0)}</text>
+            </svg>
+            {/* Legend */}
+            <div style={{flex:1,minWidth:0}}>
+              {donutData.map(d=>(
+                <div key={d.cat} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.3rem'}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:d.color,flexShrink:0}}/>
+                  <span style={{fontSize:'0.6rem',color:mu,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.cat}</span>
+                  <span style={{fontSize:'0.6rem',color:ink,fontWeight:600,flexShrink:0}}>{(d.pct*100).toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Stock health bar */}
+          <div style={{marginTop:'1rem'}}>
+            <div style={{display:'flex',justifyContent:'space-between',marginBottom:'0.35rem'}}>
+              <span style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>Estado del stock</span>
+              <span style={{fontSize:'0.65rem',color:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b',fontWeight:600}}>{stockPct.toFixed(0)}%</span>
+            </div>
+            <div style={{height:8,background:'rgba(31,20,14,0.08)',borderRadius:4,overflow:'hidden'}}>
+              <div style={{height:'100%',width:stockPct+'%',background:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b',borderRadius:4,transition:'width 0.6s ease'}}/>
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.25rem'}}>
+              <span style={{fontSize:'0.52rem',color:mu}}>0</span>
+              <span style={{fontSize:'0.52rem',color:mu}}>100%</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {Object.entries(grouped).map(([cat, items]) => (
         <div key={cat} style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1rem'}}>
@@ -1537,13 +1596,7 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
                   />
                   <span style={{fontSize:'0.6rem',color:mu,flexShrink:0}}>{s.base_unit||'g'}</span>
                 </div>
-                {/* Available toggle */}
-                <button onClick={async()=>{
-                  await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:s.id,active:!s.active})})
-                  loadAll&&loadAll()
-                }} style={{width:34,height:20,borderRadius:10,background:s.active!==false?or:'rgba(31,20,14,0.12)',border:'none',cursor:'pointer',position:'relative',flexShrink:0,padding:0}}>
-                  <div style={{position:'absolute',top:2,left:s.active!==false?16:2,width:16,height:16,borderRadius:'50%',background:white,transition:'left 0.2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
-                </button>
+
                 {/* Edit/delete */}
                 <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
                   <button onClick={()=>onEditar(s)} style={{fontSize:'0.58rem',padding:'0.3rem 0.65rem',background:'rgba(31,20,14,0.06)',color:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>Editar</button>
@@ -2709,11 +2762,19 @@ export default function Admin({session}){
                   <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>Panel de administración</div>
                 </div>
               </div>
-              <div onClick={()=>setPanel('notifications')} style={{marginTop:'0.6rem',background:getNotifications(cards).length>0?'rgba(192,57,43,0.15)':'rgba(255,255,255,0.04)',border:'1px solid '+(getNotifications(cards).length>0?'rgba(192,57,43,0.25)':'rgba(255,255,255,0.06)'),borderRadius:6,padding:'0.4rem 0.65rem',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span style={{fontSize:'0.6rem',color:getNotifications(cards).length>0?'#e74c3c':'rgba(255,255,255,0.3)'}}>
-                  {getNotifications(cards).length>0?`⚠ ${getNotifications(cards).length} alerta${getNotifications(cards).length!==1?'s':''}` : '✓ Sin alertas'}
-                </span>
-                <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>ver →</span>
+              <div style={{marginTop:'0.6rem'}}>
+                <div onClick={()=>setPanel('notifications')} style={{background:getNotifications(cards).length>0?'rgba(192,57,43,0.15)':'rgba(255,255,255,0.04)',border:'1px solid '+(getNotifications(cards).length>0?'rgba(192,57,43,0.25)':'rgba(255,255,255,0.06)'),borderRadius:6,padding:'0.4rem 0.65rem',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:supplies.filter(s=>parseFloat(s.stock_qty||0)<50&&parseFloat(s.stock_qty||0)>=0).length>0?'0.3rem':'0'}}>
+                  <span style={{fontSize:'0.6rem',color:getNotifications(cards).length>0?'#e74c3c':'rgba(255,255,255,0.3)'}}>
+                    {getNotifications(cards).length>0?`⚠ ${getNotifications(cards).length} alerta${getNotifications(cards).length!==1?'s':''}` : '✓ Sin alertas'}
+                  </span>
+                  <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>ver →</span>
+                </div>
+                {supplies.filter(s=>parseFloat(s.stock_qty||0)<50).slice(0,3).map(s=>(
+                  <div key={s.id} style={{display:'flex',justifyContent:'space-between',padding:'0.2rem 0.65rem',fontSize:'0.58rem'}}>
+                    <span style={{color:'rgba(255,255,255,0.4)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'70%'}}>{s.name}</span>
+                    <span style={{color:'#e67e22',flexShrink:0}}>{parseFloat(s.stock_qty||0).toFixed(0)}{s.base_unit}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
