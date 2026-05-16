@@ -123,6 +123,9 @@ export default function Card({ session }) {
   const [tab, setTab] = useState('tarjeta')
   const [loading, setLoading] = useState(true)
   const [profileEdit, setProfileEdit] = useState(false)
+  const [chatMsg, setChatMsg] = useState('')
+  const [chatMessages, setChatMessages] = useState([])
+  const [chatLoading, setChatLoading] = useState(false)
   const [profileForm, setProfileForm] = useState({full_name:'',phone:'',email:'',password:''})
   const [toast, setToast] = useState('')
 
@@ -130,6 +133,12 @@ export default function Card({ session }) {
     if (session === undefined) return
     if (!session) { window.location.href = '/login'; return }
     // Load card data
+    // Load chat messages
+    fetch('/api/card/messages', { headers: { Authorization: 'Bearer ' + session.access_token } })
+      .then(r => r.json())
+      .then(data => setChatMessages(data.messages || []))
+      .catch(() => {})
+
     fetch('/api/card/me', { headers: { Authorization: 'Bearer ' + session.access_token } })
       .then(r => r.json())
       .then(data => { setCard(data.card); setLoading(false) })
@@ -196,7 +205,7 @@ export default function Card({ session }) {
         .tap-scale:active{transform:scale(0.96);transition:transform 0.1s}
       `}</style>
 
-      <div style={{minHeight:'100vh',background:cr,paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))',fontFamily:ff}}>
+      <div style={{minHeight:'100vh',background:cr,paddingTop:0,paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))',fontFamily:ff}}>
 
         {/* TOP NAV */}
         <nav style={{position:'sticky',top:0,zIndex:100,background:theme.navBg,backdropFilter:'blur(12px)',borderBottom:'1px solid '+theme.border,padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -315,19 +324,7 @@ export default function Card({ session }) {
                     </div>
                   )}
 
-                  {/* NEXT REWARD */}
-                  <div style={{background:ink,borderRadius:14,padding:'16px 20px',marginBottom:20,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <div>
-                      <div style={{fontSize:'0.5rem',letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(251,247,238,0.35)',marginBottom:4}}>Próximo premio</div>
-                      <div style={{fontFamily:ffS,fontSize:'1rem',color:cr,fontStyle:'italic'}}>
-                        {hasReward ? '¡Listo para canjear!' : `${rem} visita${rem!==1?'s':''} para tu galleta gratis`}
-                      </div>
-                    </div>
-                    <div style={{textAlign:'right'}}>
-                      <div style={{fontFamily:ffS,fontSize:'1.6rem',color:or}}>{cur}/5</div>
-                      <div style={{fontSize:'0.5rem',color:'rgba(251,247,238,0.35)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Ciclo {cycle}</div>
-                    </div>
-                  </div>
+
                 </>
               )}
             </div>
@@ -461,7 +458,111 @@ export default function Card({ session }) {
             </div>
           )}
 
-          {/* ── TAB: CUENTA ── */}
+          {/* ── TAB: ESCRIBENOS (chat interno) ── */}
+          {tab === 'escribenos' && (
+            <div className="fade-up" style={{display:'flex',flexDirection:'column',height:'calc(100vh - 140px)'}}>
+              <div style={{paddingTop:24,marginBottom:16,flexShrink:0}}>
+                <div style={{fontFamily:ffS,fontSize:'1.8rem',fontWeight:400,color:ink}}>Escribenos</div>
+                <div style={{fontSize:'0.65rem',color:mu,marginTop:4}}>Chat directo con el equipo de Monarca</div>
+              </div>
+
+              {/* Messages */}
+              <div style={{flex:1,overflowY:'auto',paddingBottom:16}}>
+                {chatMessages.length === 0 && (
+                  <div style={{textAlign:'center',padding:'3rem 0'}}>
+                    <MonarcaButterfly size={48} animate={false} color="rgba(31,20,14,0.1)" style={{margin:'0 auto 12px'}}/>
+                    <div style={{fontFamily:ffS,fontSize:'1.1rem',color:mu,fontStyle:'italic'}}>Nadie ha escrito aún</div>
+                    <p style={{fontSize:'0.7rem',color:mu,marginTop:6}}>Escríbenos y te respondemos pronto.</p>
+                  </div>
+                )}
+                {chatMessages.map((msg, i) => (
+                  <div key={msg.id||i} style={{display:'flex',justifyContent:msg.sender==='client'?'flex-end':'flex-start',marginBottom:10}}>
+                    <div style={{
+                      maxWidth:'78%',padding:'10px 14px',borderRadius:msg.sender==='client'?'16px 16px 4px 16px':'16px 16px 16px 4px',
+                      background:msg.sender==='client'?or:theme.cr2,
+                      color:msg.sender==='client'?'#FBF7EE':ink,
+                      fontSize:'0.82rem',lineHeight:1.5
+                    }}>
+                      {msg.content}
+                      <div style={{fontSize:'0.52rem',opacity:0.6,marginTop:4,textAlign:'right'}}>
+                        {new Date(msg.created_at).toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'})}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Input */}
+              <div style={{flexShrink:0,display:'flex',gap:8,paddingTop:12,borderTop:'1px solid '+theme.border}}>
+                <input
+                  value={chatMsg}
+                  onChange={e=>setChatMsg(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}}}
+                  placeholder="Escribe tu mensaje..."
+                  style={{flex:1,padding:'12px 16px',border:'1px solid rgba(31,20,14,0.15)',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',outline:'none',background:theme.cr2,color:ink}}
+                />
+                <button onClick={()=>{
+                  if(!chatMsg.trim()) return
+                  setChatLoading(true)
+                  fetch('/api/card/messages', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+                    body:JSON.stringify({content:chatMsg.trim()})
+                  }).then(r=>r.json()).then(data=>{
+                    setChatMessages(prev=>[...prev, data.message])
+                    setChatMsg('')
+                  }).catch(()=>showToast('Error al enviar')).finally(()=>setChatLoading(false))
+                }} disabled={chatLoading||!chatMsg.trim()}
+                  style={{width:44,height:44,borderRadius:'50%',background:or,color:'#FBF7EE',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,opacity:chatLoading||!chatMsg.trim()?0.5:1}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+         
+
+          {/* ── TAB: ESCRIBENOS (chat interno) ── */}
+          {tab === 'escribenos' && (
+            <div className="fade-up" style={{display:'flex',flexDirection:'column',height:'calc(100vh - 160px)'}}>
+              <div style={{paddingTop:24,marginBottom:16,flexShrink:0}}>
+                <div style={{fontFamily:ffS,fontSize:'1.8rem',fontWeight:400,color:ink}}>Escribenos</div>
+                <div style={{fontSize:'0.65rem',color:mu,marginTop:4}}>Chat directo con el equipo de Monarca</div>
+              </div>
+              <div style={{flex:1,overflowY:'auto',paddingBottom:16}}>
+                {chatMessages.length === 0 && (
+                  <div style={{textAlign:'center',padding:'3rem 0'}}>
+                    <MonarcaButterfly size={48} animate={false} color="rgba(31,20,14,0.1)" style={{margin:'0 auto 12px'}}/>
+                    <div style={{fontFamily:ffS,fontSize:'1.1rem',color:mu,fontStyle:'italic'}}>Nadie ha escrito aún</div>
+                    <p style={{fontSize:'0.7rem',color:mu,marginTop:6}}>Escríbenos y te respondemos pronto.</p>
+                  </div>
+                )}
+                {chatMessages.map((msg,i)=>(
+                  <div key={msg.id||i} style={{display:'flex',justifyContent:msg.sender==='client'?'flex-end':'flex-start',marginBottom:10}}>
+                    <div style={{maxWidth:'78%',padding:'10px 14px',borderRadius:msg.sender==='client'?'16px 16px 4px 16px':'16px 16px 16px 4px',background:msg.sender==='client'?or:theme.cr2,color:msg.sender==='client'?'#FBF7EE':ink,fontSize:'0.82rem',lineHeight:1.5}}>
+                      {msg.content}
+                      <div style={{fontSize:'0.52rem',opacity:0.6,marginTop:4,textAlign:'right'}}>{new Date(msg.created_at).toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'})}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{flexShrink:0,display:'flex',gap:8,paddingTop:12,borderTop:'1px solid '+theme.border}}>
+                <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(!chatMsg.trim())return;setChatLoading(true);fetch('/api/card/messages',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({content:chatMsg.trim()})}).then(r=>r.json()).then(data=>{setChatMessages(prev=>[...prev,data.message]);setChatMsg('')}).catch(()=>showToast('Error al enviar')).finally(()=>setChatLoading(false))}}}
+                  placeholder="Escribe tu mensaje..."
+                  style={{flex:1,padding:'12px 16px',border:'1px solid rgba(31,20,14,0.15)',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',outline:'none',background:theme.cr2,color:ink}}/>
+                <button onClick={()=>{if(!chatMsg.trim())return;setChatLoading(true);fetch('/api/card/messages',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({content:chatMsg.trim()})}).then(r=>r.json()).then(data=>{setChatMessages(prev=>[...prev,data.message]);setChatMsg('')}).catch(()=>showToast('Error al enviar')).finally(()=>setChatLoading(false))}}
+                  disabled={chatLoading||!chatMsg.trim()}
+                  style={{width:44,height:44,borderRadius:'50%',background:or,color:'#FBF7EE',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,opacity:chatLoading||!chatMsg.trim()?0.5:1}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+           {/* ── TAB: CUENTA ── */}
           {tab === 'cuenta' && (
             <div className="fade-up">
               <div style={{paddingTop:28,marginBottom:24}}>
@@ -606,11 +707,11 @@ export default function Card({ session }) {
           </button>
 
           {/* Escribenos */}
-          <button onClick={()=>window.open('https://wa.me/19393499006?text=Hola%20Monarca%20de%20Az%C3%BAcar!','_blank')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:mu,fontFamily:ff,padding:'4px 0'}}>
+          <button onClick={()=>setTab('escribenos')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:tab==='escribenos'?or:mu,fontFamily:ff,padding:'4px 0'}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
-            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:400}}>Escribenos</span>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='escribenos'?600:400}}>Escribenos</span>
           </button>
 
           {/* Cuenta */}
