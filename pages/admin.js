@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+  import React, { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const gold='#E35A1B',black='#1F140E',white='#FBF7EE',gray='#7A6452',gl='#e8e5de',ink='#1F140E'
@@ -69,7 +69,7 @@ function getNotifications(cards) {
   return alerts.sort((a,b) => b.days - a.days)
 }
 
-function DashboardPanel({ cards, sales, onSelectClient, userName }) {
+function DashboardPanel({ cards, sales, supplies, onSelectClient, userName, onOpenQR }) {
   const totalClients = cards.length
   const [showMetrics, setShowMetrics] = useState(false)
   const [messages, setMessages] = useState([])
@@ -149,12 +149,21 @@ function DashboardPanel({ cards, sales, onSelectClient, userName }) {
   return(
     <div>
       {/* SALUDO */}
-      <div style={{marginBottom:'1.5rem'}}>
-        <div style={{fontSize:'0.58rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.25rem'}}>
-          {new Date().toLocaleDateString('es-PR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1.5rem'}}>
+        <div>
+          <div style={{fontSize:'0.58rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.25rem'}}>
+            {new Date().toLocaleDateString('es-PR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}
+          </div>
+          <div style={{fontFamily:ffS,fontSize:'clamp(1.8rem,3vw,2.4rem)',fontWeight:400,color:'#1F140E',lineHeight:1.1}}>
+            {getGreeting()}, <em style={{color:'#E35A1B',fontStyle:'italic'}}>{userName||'Admin'}</em>.
+          </div>
         </div>
-        <div style={{fontFamily:ffS,fontSize:'clamp(1.8rem,3vw,2.4rem)',fontWeight:400,color:'#1F140E',lineHeight:1.1}}>
-          {getGreeting()}, <em style={{color:'#E35A1B',fontStyle:'italic'}}>{userName||'Admin'}</em>.
+        <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexShrink:0,marginTop:'0.25rem'}}>
+          <InventoryDropdown supplies={supplies||[]} catalog={[]}/>
+          <button onClick={()=>onOpenQR&&onOpenQR()}
+            style={{width:40,height:40,borderRadius:'50%',background:'#1F140E',color:'white',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
+          </button>
         </div>
       </div>
 
@@ -526,7 +535,106 @@ function CampaignsPanel({ cards, users }) {
   )
 }
 
-function CatalogPanel({ catalog, onSetCost, onSetSuppliers }) {
+
+function RecipeEditor({ itemId, itemName, supplies, showToast }) {
+  const [ingredients, setIngredients] = React.useState([])
+  const [adding, setAdding] = React.useState(false)
+  const [form, setForm] = React.useState({ supply_id: '', quantity: '', unit: 'g' })
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', white='white'
+
+  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit','custom']
+
+  React.useEffect(() => {
+    if (!itemId) return
+    fetch('/api/admin/recipe-ingredients?catalog_item_id=' + itemId)
+      .then(r=>r.json()).then(d=>setIngredients(d.ingredients||[]))
+  }, [itemId])
+
+  async function addIngredient() {
+    if (!form.supply_id || !form.quantity) { showToast('Completa los campos'); return }
+    const res = await fetch('/api/admin/recipe-ingredients', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ catalog_item_id: itemId, supply_id: form.supply_id, quantity: parseFloat(form.quantity), unit: form.unit })
+    })
+    const data = await res.json()
+    if (data.ingredient) {
+      const supply = (supplies||[]).find(s=>s.id===form.supply_id)
+      setIngredients(prev=>[...prev, {...data.ingredient, supplies: supply}])
+      setForm({ supply_id:'', quantity:'', unit:'g' })
+      setAdding(false)
+      showToast('Ingrediente añadido')
+    }
+  }
+
+  async function removeIngredient(id) {
+    await fetch('/api/admin/recipe-ingredients', { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id}) })
+    setIngredients(prev=>prev.filter(i=>i.id!==id))
+    showToast('Ingrediente eliminado')
+  }
+
+  // Calculate total recipe cost
+  const totalCost = ingredients.reduce((a, ing) => {
+    const cpu = parseFloat(ing.supplies?.cost_per_unit || 0)
+    const qty = parseFloat(ing.quantity || 0)
+    // Convert to base unit cost
+    const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+    const baseQty = qty * (CONV[ing.unit] || 1)
+    return a + (cpu * baseQty)
+  }, 0)
+
+  return (
+    <div style={{marginTop:'0.75rem',padding:'0.75rem',background:'rgba(227,90,27,0.04)',borderRadius:8,border:'1px solid rgba(227,90,27,0.12)'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
+        <div style={{fontSize:'0.58rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu}}>Ingredientes · {itemName}</div>
+        <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+          {totalCost>0&&<span style={{fontSize:'0.65rem',color:or,fontWeight:600}}>Costo: ${totalCost.toFixed(3)}</span>}
+          <button onClick={()=>setAdding(a=>!a)} style={{fontSize:'0.6rem',padding:'0.3rem 0.7rem',background:or,color:white,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+            {adding?'Cancelar':'+ Añadir'}
+          </button>
+        </div>
+      </div>
+
+      {ingredients.map(ing=>(
+        <div key={ing.id} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.3rem 0',borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
+          <span style={{flex:1,fontSize:'0.72rem',color:ink}}>{ing.supplies?.name||'—'}</span>
+          <span style={{fontSize:'0.68rem',color:mu}}>{ing.quantity} {ing.unit}</span>
+          <button onClick={()=>removeIngredient(ing.id)} style={{background:'none',border:'none',color:'rgba(31,20,14,0.25)',cursor:'pointer',fontSize:'0.7rem',padding:'0 0.25rem'}}>✕</button>
+        </div>
+      ))}
+
+      {ingredients.length===0&&!adding&&(
+        <div style={{fontSize:'0.65rem',color:'rgba(31,20,14,0.3)',fontStyle:'italic'}}>Sin ingredientes — añade para calcular costos automáticamente</div>
+      )}
+
+      {adding&&(
+        <div style={{display:'flex',gap:'0.5rem',marginTop:'0.5rem',flexWrap:'wrap'}}>
+          <select value={form.supply_id} onChange={e=>setForm(f=>({...f,supply_id:e.target.value}))}
+            style={{flex:2,minWidth:120,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}>
+            <option value="">Ingrediente...</option>
+            {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>(
+              <optgroup key={cat} label={cat}>
+                {(supplies||[]).filter(s=>s.category===cat).map(s=>(
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <input type="number" placeholder="Cantidad" value={form.quantity} onChange={e=>setForm(f=>({...f,quantity:e.target.value}))}
+            style={{width:70,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}/>
+          <select value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))}
+            style={{width:80,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}>
+            {['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit'].map(u=><option key={u} value={u}>{u}</option>)}
+          </select>
+          <button onClick={addIngredient} style={{padding:'0.4rem 0.75rem',background:ink,color:white,border:'none',borderRadius:4,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>OK</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast }) {
   const [search, setSearch] = useState('')
   const [expandMargin, setExpandMargin] = useState(false)
 
@@ -2034,10 +2142,240 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
   )
 }
 
+
+function QRScannerModal({ onClose, onScan }) {
+  const videoRef = React.useRef(null)
+  const [error, setError] = React.useState('')
+  const [scanning, setScanning] = React.useState(false)
+
+  React.useEffect(() => {
+    let stream = null
+    let interval = null
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.play()
+          setScanning(true)
+          // Use BarcodeDetector if available
+          if ('BarcodeDetector' in window) {
+            const detector = new window.BarcodeDetector({ formats: ['qr_code'] })
+            interval = setInterval(async () => {
+              if (videoRef.current && videoRef.current.readyState === 4) {
+                try {
+                  const codes = await detector.detect(videoRef.current)
+                  if (codes.length > 0) {
+                    clearInterval(interval)
+                    onScan(codes[0].rawValue)
+                  }
+                } catch(e) {}
+              }
+            }, 300)
+          }
+        }
+      } catch(e) {
+        setError('No se pudo acceder a la cámara. Verifica los permisos.')
+      }
+    }
+    startCamera()
+    return () => {
+      if (stream) stream.getTracks().forEach(t => t.stop())
+      if (interval) clearInterval(interval)
+    }
+  }, [])
+
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9100,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+      <div style={{color:'white',fontFamily:ffS,fontSize:'1.3rem',marginBottom:'1rem',fontStyle:'italic'}}>Escanear QR</div>
+      {error
+        ? <div style={{color:'#e74c3c',fontFamily:ff,fontSize:'0.82rem',textAlign:'center',padding:'0 2rem'}}>{error}</div>
+        : <div style={{position:'relative',width:280,height:280}}>
+            <video ref={videoRef} style={{width:280,height:280,objectFit:'cover',borderRadius:16}} playsInline muted/>
+            {/* Scanner frame */}
+            <div style={{position:'absolute',inset:0,borderRadius:16,border:'2px solid #E35A1B',boxShadow:'0 0 0 9999px rgba(0,0,0,0.5)'}}/>
+            <div style={{position:'absolute',top:12,left:12,width:32,height:32,borderTop:'3px solid #E35A1B',borderLeft:'3px solid #E35A1B',borderRadius:'4px 0 0 0'}}/>
+            <div style={{position:'absolute',top:12,right:12,width:32,height:32,borderTop:'3px solid #E35A1B',borderRight:'3px solid #E35A1B',borderRadius:'0 4px 0 0'}}/>
+            <div style={{position:'absolute',bottom:12,left:12,width:32,height:32,borderBottom:'3px solid #E35A1B',borderLeft:'3px solid #E35A1B',borderRadius:'0 0 0 4px'}}/>
+            <div style={{position:'absolute',bottom:12,right:12,width:32,height:32,borderBottom:'3px solid #E35A1B',borderRight:'3px solid #E35A1B',borderRadius:'0 0 4px 0'}}/>
+          </div>
+      }
+      <div style={{color:'rgba(255,255,255,0.5)',fontFamily:ff,fontSize:'0.72rem',marginTop:'1rem'}}>
+        {scanning ? 'Apunta al código QR del cliente' : 'Iniciando cámara...'}
+      </div>
+      <button onClick={onClose} style={{marginTop:'1.5rem',padding:'0.75rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>
+        Cancelar
+      </button>
+    </div>
+  )
+}
+
+
+function InventoryDropdown({ catalog, supplies, cards }) {
+  const [open, setOpen] = React.useState(false)
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or = '#E35A1B', ink = '#1F140E', cr = '#FBF7EE', mu = '#7A6452'
+
+  // Spend this month (from supplies cost_total)
+  const monthSpend = (supplies||[]).reduce((a,s) => a + parseFloat(s.cost_total||0), 0)
+
+  // Stock summary
+  const lowStock = (supplies||[]).filter(s => parseFloat(s.stock_qty||0) < 100 && s.base_unit === 'g')
+  const outOfStock = (supplies||[]).filter(s => parseFloat(s.stock_qty||0) <= 0)
+
+  return (
+    <div style={{position:'relative'}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.6rem 1rem',background:'#FBF7EE',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer',color:ink}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+        Inventario
+        <span style={{transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
+      </button>
+
+      {open&&(
+        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:320,background:'white',borderRadius:12,border:'1px solid rgba(31,20,14,0.1)',boxShadow:'0 8px 32px rgba(0,0,0,0.12)',zIndex:300,overflow:'hidden'}}>
+          {/* Header */}
+          <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+            <div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.25rem'}}>Resumen de Inventario</div>
+            <div style={{fontSize:'0.62rem',color:mu}}>Materias primas y stock</div>
+          </div>
+
+          {/* Spend */}
+          <div style={{padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div>
+              <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:2}}>Costo total materiales</div>
+              <div style={{fontFamily:ffS,fontSize:'1.4rem',color:or}}>${monthSpend.toFixed(2)}</div>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:2}}>Ingredientes</div>
+              <div style={{fontFamily:ffS,fontSize:'1.4rem',color:ink}}>{(supplies||[]).length}</div>
+            </div>
+          </div>
+
+          {/* Alerts */}
+          {(lowStock.length > 0 || outOfStock.length > 0) && (
+            <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+              {outOfStock.length > 0 && (
+                <div style={{fontSize:'0.68rem',color:'#c0392b',marginBottom:4}}>⚠ {outOfStock.length} agotado{outOfStock.length!==1?'s':''}: {outOfStock.slice(0,2).map(s=>s.name).join(', ')}{outOfStock.length>2?'...':''}</div>
+              )}
+              {lowStock.length > 0 && (
+                <div style={{fontSize:'0.68rem',color:'#e67e22'}}>↓ {lowStock.length} bajo stock: {lowStock.slice(0,2).map(s=>s.name).join(', ')}{lowStock.length>2?'...':''}</div>
+              )}
+            </div>
+          )}
+
+          {/* Supplies list */}
+          <div style={{maxHeight:220,overflowY:'auto'}}>
+            {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
+              const items = (supplies||[]).filter(s=>s.category===cat)
+              if(items.length===0) return null
+              return (
+                <div key={cat}>
+                  <div style={{padding:'0.4rem 1.25rem',fontSize:'0.5rem',letterSpacing:'0.14em',textTransform:'uppercase',color:mu,background:'rgba(31,20,14,0.03)'}}>{cat}</div>
+                  {items.map(s=>(
+                    <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.5rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.03)'}}>
+                      <span style={{fontSize:'0.72rem',color:ink}}>{s.name}</span>
+                      <div style={{textAlign:'right'}}>
+                        <div style={{fontSize:'0.65rem',color:parseFloat(s.stock_qty||0)<=0?'#c0392b':parseFloat(s.stock_qty||0)<100?'#e67e22':'#2d8a60',fontWeight:600}}>{parseFloat(s.stock_qty||0).toFixed(0)} {s.base_unit}</div>
+                        <div style={{fontSize:'0.55rem',color:mu}}>${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{padding:'0.75rem 1.25rem',borderTop:'1px solid rgba(31,20,14,0.06)'}}>
+            <div style={{fontSize:'0.6rem',color:mu,textAlign:'center'}}>Edita el stock en <span style={{color:or,cursor:'pointer'}} onClick={()=>setOpen(false)}>Inventario →</span></div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+function StockPanel({ catalog, supplies, loadAll, showToast }) {
+  const [entries, setEntries] = React.useState({})
+  const [recipes, setRecipes] = React.useState({})
+  const [saving, setSaving] = React.useState(false)
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white', gl='rgba(31,20,14,0.1)'
+
+  React.useEffect(() => {
+    fetch('/api/admin/stock').then(r=>r.json()).then(d=>{
+      if(d.recipes) setRecipes(d.recipes)
+    }).catch(()=>{})
+  }, [])
+
+  async function addStock(itemId, itemName) {
+    const qty = parseFloat(entries[itemId] || 0)
+    if (!qty || qty <= 0) { showToast('Pon una cantidad válida'); return }
+    setSaving(true)
+    const res = await fetch('/api/admin/stock', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ catalog_item_id: itemId, qty_added: qty, note: 'Producción manual' })
+    })
+    if (res.ok) {
+      showToast(`+${qty} unidades de ${itemName} añadidas al stock`)
+      setEntries(e => ({...e, [itemId]: ''}))
+      loadAll()
+    } else { showToast('Error al guardar') }
+    setSaving(false)
+  }
+
+  return (
+    <div>
+      <div style={{marginBottom:'1.5rem'}}>
+        <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Stock</div>
+        <div style={{fontSize:'0.72rem',color:mu,marginTop:'0.25rem'}}>Registra lo que horneaste hoy — descuenta materiales automáticamente</div>
+      </div>
+
+      <div style={{background:cr,borderRadius:10,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden'}}>
+        {(catalog||[]).filter(c=>c.active!==false).map((item,i)=>{
+          const ingredientList = recipes[item.id] || []
+          return (
+            <div key={item.id} style={{borderBottom:i<catalog.length-1?'1px solid rgba(31,20,14,0.06)':'none',padding:'1rem 1.25rem'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap'}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:'0.85rem',color:ink,fontWeight:500}}>{item.name}</div>
+                  <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>
+                    {ingredientList.length > 0
+                      ? ingredientList.map(r=>`${r.quantity}${r.unit} ${r.supply_name}`).join(' · ')
+                      : <span style={{color:'rgba(31,20,14,0.3)'}}>Sin receta vinculada — ve a Catálogo para añadir ingredientes</span>
+                    }
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexShrink:0}}>
+                  <input
+                    type="number" min="0" step="1" placeholder="0"
+                    value={entries[item.id]||''}
+                    onChange={e=>setEntries(prev=>({...prev,[item.id]:e.target.value}))}
+                    style={{width:72,padding:'0.5rem 0.6rem',border:'1px solid '+gl,borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',textAlign:'center'}}
+                  />
+                  <span style={{fontSize:'0.65rem',color:mu,flexShrink:0}}>und.</span>
+                  <button onClick={()=>addStock(item.id, item.name)} disabled={saving||!entries[item.id]}
+                    style={{padding:'0.5rem 1rem',background:or,color:white,border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer',opacity:!entries[item.id]?0.4:1}}>
+                    + Añadir
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        {(!catalog||catalog.length===0)&&<div style={{padding:'2rem',textAlign:'center',color:mu,fontSize:'0.82rem'}}>No hay productos en el catálogo.</div>}
+      </div>
+    </div>
+  )
+}
+
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
   const [showDevTools,setShowDevTools]=useState(false)
+  const [showQRScanner,setShowQRScanner]=useState(false)
   const [profileOpen,setProfileOpen]=useState(false)
   const [devPassword,setDevPassword]=useState('')
   const [devUnlocked,setDevUnlocked]=useState(false)
@@ -2293,13 +2631,14 @@ export default function Admin({session}){
 
           {/* MAIN */}
           <div className="admin-main" style={{marginLeft:220,flex:1,padding:'1.75rem',paddingTop:'calc(52px + 1rem)',maxWidth:980}}>
-            {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} userName={users.find(u=>u.id===session?.user?.id)?.full_name?.split(' ')[0]} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}}/>}
+            {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} supplies={supplies} userName={users.find(u=>u.id===session?.user?.id)?.full_name?.split(' ')[0]} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}} onOpenQR={()=>setShowQRScanner(true)}/>}
             {panel==='client'&&selectedClient&&<ClientProfile card={selectedClient} onBack={()=>{setSelectedClient(null);setPanel('dashboard')}}/>}
             {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
             {panel==='bookings'&&<BookingsPanel/>}
             {panel==='campaigns'&&<CampaignsPanel cards={cards} users={users}/>}
             {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/> }
-            {panel==='catalog'&&<CatalogPanel catalog={catalog} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
+            {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
+            {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies}
               onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
               onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,unit:s.unit||'month',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
@@ -2965,7 +3304,9 @@ export default function Admin({session}){
           </div>
         )}
 
-        {toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
+        {showQRScanner&&<QRScannerModal onClose={()=>setShowQRScanner(false)} onScan={handleQRScan}/>}
+
+                {toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
       </div>
     </>
   )
