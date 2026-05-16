@@ -1550,20 +1550,76 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
           </div>
           {/* Stock health bar */}
           <div style={{marginTop:'1rem'}}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:'0.35rem'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.4rem'}}>
               <span style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>Estado del stock</span>
-              <span style={{fontSize:'0.65rem',color:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b',fontWeight:600}}>{stockPct.toFixed(0)}%</span>
+              <span style={{fontSize:'0.72rem',fontWeight:700,color:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b'}}>{stockPct.toFixed(0)}%</span>
             </div>
-            <div style={{height:8,background:'rgba(31,20,14,0.08)',borderRadius:4,overflow:'hidden'}}>
-              <div style={{height:'100%',width:stockPct+'%',background:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b',borderRadius:4,transition:'width 0.6s ease'}}/>
+            <div style={{height:10,background:'rgba(31,20,14,0.08)',borderRadius:5,overflow:'hidden',position:'relative'}}>
+              <div style={{
+                position:'absolute',top:0,left:0,height:'100%',
+                width:stockPct+'%',
+                background:stockPct>70?'linear-gradient(90deg,#27ae60,#2ecc71)':stockPct>40?'linear-gradient(90deg,#e67e22,#f39c12)':'linear-gradient(90deg,#c0392b,#e74c3c)',
+                borderRadius:5,
+                transition:'width 0.8s ease',
+                boxShadow:stockPct>70?'0 0 8px rgba(46,204,113,0.4)':stockPct>40?'0 0 8px rgba(230,126,34,0.4)':'0 0 8px rgba(231,76,60,0.4)'
+              }}/>
             </div>
-            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.25rem'}}>
-              <span style={{fontSize:'0.52rem',color:mu}}>0</span>
-              <span style={{fontSize:'0.52rem',color:mu}}>100%</span>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.3rem'}}>
+              <span style={{fontSize:'0.5rem',color:mu}}>Sin stock</span>
+              <span style={{fontSize:'0.5rem',color:mu}}>Stock completo</span>
             </div>
           </div>
         </div>
       )}
+
+      {/* Inventory summary */}
+      <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+        <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Resumen de inventario</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'0.75rem'}}>
+          {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
+            const items = (supplies||[]).filter(s=>s.category===cat&&parseFloat(s.cost_total||0)>0)
+            if(items.length===0) return null
+            const low = items.filter(s=>parseFloat(s.stock_qty||0)<50)
+            const ok = items.filter(s=>parseFloat(s.stock_qty||0)>=50)
+            const catVal = items.reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+            return (
+              <div key={cat} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)'}}>
+                <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
+                <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>${catVal.toFixed(2)}</div>
+                <div style={{marginTop:'0.3rem',display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
+                  {ok.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(46,204,113,0.1)',color:'#27ae60'}}>✓ {ok.length} bien</span>}
+                  {low.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(230,126,34,0.1)',color:'#e67e22'}}>↓ {low.length} bajo</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+
+      {/* Inventory summary */}
+      <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+        <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Resumen completo</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'0.75rem'}}>
+          {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
+            const items=(supplies||[]).filter(s=>s.category===cat&&parseFloat(s.cost_total||0)>0)
+            if(items.length===0) return null
+            const low=items.filter(s=>parseFloat(s.stock_qty||0)<50)
+            const ok=items.filter(s=>parseFloat(s.stock_qty||0)>=50)
+            const catVal=items.reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+            return(
+              <div key={cat} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)'}}>
+                <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
+                <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>${catVal.toFixed(2)}</div>
+                <div style={{marginTop:'0.3rem',display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
+                  {ok.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(46,204,113,0.1)',color:'#27ae60'}}>✓ {ok.length} bien</span>}
+                  {low.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(230,126,34,0.1)',color:'#e67e22'}}>↓ {low.length} bajo</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       {Object.entries(grouped).map(([cat, items]) => (
         <div key={cat} style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1rem'}}>
@@ -2769,7 +2825,7 @@ export default function Admin({session}){
                   </span>
                   <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>ver →</span>
                 </div>
-                {supplies.filter(s=>parseFloat(s.stock_qty||0)<50).slice(0,3).map(s=>(
+                {supplies.filter(s=>parseFloat(s.cost_total||0)>0&&parseFloat(s.stock_qty||0)<50).slice(0,3).map(s=>(
                   <div key={s.id} style={{display:'flex',justifyContent:'space-between',padding:'0.2rem 0.65rem',fontSize:'0.58rem'}}>
                     <span style={{color:'rgba(255,255,255,0.4)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'70%'}}>{s.name}</span>
                     <span style={{color:'#e67e22',flexShrink:0}}>{parseFloat(s.stock_qty||0).toFixed(0)}{s.base_unit}</span>
@@ -2910,11 +2966,7 @@ export default function Admin({session}){
               {label}
             </button>
           ))}
-          <button onClick={()=>setShowQRScanner(true)}
-            style={{flex:'0 0 auto',padding:'0.5rem 0.75rem',background:'rgba(227,90,27,0.15)',border:'1px solid rgba(227,90,27,0.3)',borderRadius:999,color:gold,fontFamily:ff,fontSize:'0.58rem',display:'flex',alignItems:'center',gap:'0.3rem',cursor:'pointer',letterSpacing:'0.06em',textTransform:'uppercase'}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
-            QR
-          </button>
+
           {[
             ['clients','Clientes'],
           ].map(([id,label])=>(
@@ -3243,7 +3295,7 @@ export default function Admin({session}){
                   <input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={supplyForm.cost} onChange={e=>setSupplyForm(f=>({...f,cost:e.target.value}))}/>
                 </div>
                 <div>
-                  <label style={lbl}>Billing</label>
+                  <label style={lbl}>Medida base</label>
                   <select style={{...inp,marginBottom:0}} value={supplyForm.unit} onChange={e=>setSupplyForm(f=>({...f,unit:e.target.value}))}>
                     <option value="month">Monthly</option>
                     <option value="year">Yearly</option>
