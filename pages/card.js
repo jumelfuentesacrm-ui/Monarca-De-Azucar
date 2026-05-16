@@ -573,47 +573,55 @@ export default function Card({ session }) {
         </div>
 
         {/* ── BOTTOM NAV ── */}
-        <nav style={{position:'fixed',bottom:0,left:0,right:0,background:theme.navBg,backdropFilter:'blur(16px)',borderTop:'1px solid '+theme.border,display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',alignItems:'end',padding:'6px 0 calc(14px + env(safe-area-inset-bottom, 8px))',zIndex:200}}>
-          
+        <nav style={{position:'fixed',bottom:0,left:0,right:0,background:theme.navBg,backdropFilter:'blur(16px)',borderTop:'1px solid '+theme.border,display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',alignItems:'end',padding:'6px 0 calc(14px + env(safe-area-inset-bottom, 8px))',zIndex:200}}>
+
           {/* Club */}
           <button onClick={()=>setTab('tarjeta')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:tab==='tarjeta'?or:mu,fontFamily:ff,padding:'4px 0'}}>
             <MonarcaButterfly size={20} animate={tab==='tarjeta'} color={tab==='tarjeta'?or:mu}/>
-            <span style={{fontSize:'0.54rem',letterSpacing:'0.08em',textTransform:'uppercase',fontWeight:tab==='tarjeta'?600:400}}>Club</span>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='tarjeta'?600:400}}>Club</span>
           </button>
 
-          {/* Menú */}
+          {/* Menú — lines perfectly centered */}
           <button onClick={()=>setTab('menu')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:tab==='menu'?or:mu,fontFamily:ff,padding:'4px 0'}}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/>
+            <svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <line x1="0" y1="2" x2="20" y2="2"/>
+              <line x1="0" y1="8" x2="20" y2="8"/>
+              <line x1="0" y1="14" x2="20" y2="14"/>
             </svg>
-            <span style={{fontSize:'0.54rem',letterSpacing:'0.08em',textTransform:'uppercase',fontWeight:tab==='menu'?600:400}}>Menú</span>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='menu'?600:400}}>Menú</span>
           </button>
 
-          {/* Ordenar — elevated center */}
-          <button onClick={()=>setTab('ordenar')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',fontFamily:ff,padding:'4px 0',position:'relative'}}>
+          {/* Ordenar — elevated */}
+          <button onClick={()=>setTab('ordenar')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',fontFamily:ff,padding:'4px 0'}}>
             <div style={{width:48,height:48,borderRadius:'50%',background:or,display:'flex',alignItems:'center',justifyContent:'center',marginTop:-18,boxShadow:'0 4px 20px rgba(227,90,27,0.45)',position:'relative'}}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
               </svg>
-              {/* Easter egg butterfly */}
-              <div style={{position:'absolute',bottom:-4,right:-4,opacity:0.9}}>
-                <MonarcaButterfly size={14} animate={true} color="white"/>
+              <div style={{position:'absolute',bottom:-3,right:-3}}>
+                <MonarcaButterfly size={13} animate={true} color="white"/>
               </div>
               {cartCount>0&&<div style={{position:'absolute',top:-4,right:-4,width:18,height:18,borderRadius:'50%',background:ink,color:'#FBF7EE',fontSize:'0.55rem',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>{cartCount}</div>}
             </div>
-            <span style={{fontSize:'0.54rem',letterSpacing:'0.08em',textTransform:'uppercase',color:tab==='ordenar'?or:mu,fontWeight:tab==='ordenar'?600:400}}>Ordenar</span>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',color:tab==='ordenar'?or:mu,fontWeight:tab==='ordenar'?600:400}}>Ordenar</span>
           </button>
 
           {/* Escribenos */}
-          <button onClick={()=>window.open('https://wa.me/19393499006?text=Hola%20Monarca%20de%20Azúcar!%20Tengo%20una%20pregunta.','_blank')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:mu,fontFamily:ff,padding:'4px 0'}}>
+          <button onClick={()=>window.open('https://wa.me/19393499006?text=Hola%20Monarca%20de%20Az%C3%BAcar!','_blank')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:mu,fontFamily:ff,padding:'4px 0'}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
             </svg>
-            <span style={{fontSize:'0.54rem',letterSpacing:'0.08em',textTransform:'uppercase',fontWeight:400}}>Escribenos</span>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:400}}>Escribenos</span>
+          </button>
+
+          {/* Cuenta */}
+          <button onClick={()=>setTab('cuenta')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:tab==='cuenta'?or:mu,fontFamily:ff,padding:'4px 0'}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='cuenta'?600:400}}>Cuenta</span>
           </button>
         </nav>
 
-</div>
 
       {toast && <div style={{position:'fixed',bottom:'5.5rem',left:'50%',transform:'translateX(-50%)',background:ink,color:cr,padding:'10px 20px',borderRadius:999,fontSize:'0.72rem',fontWeight:500,zIndex:9999,whiteSpace:'nowrap',boxShadow:'0 4px 20px rgba(0,0,0,0.2)'}}>{toast}</div>}
     </>
