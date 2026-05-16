@@ -1471,10 +1471,11 @@ function SupplyCostHistorial({ supplyId }) {
 function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadAll }) {
   const [stockEdits, setStockEdits] = React.useState({})
   const [savingStock, setSavingStock] = React.useState(null)
+  const [openCats, setOpenCats] = React.useState({})
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
 
-  const CATEGORY_ORDER = ['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
+  const CATEGORY_ORDER = ['Aceites','Chocolates','Empaque','Frutas y Frescos','Huevos','Lácteos','Otros','Saborizantes','Secos']
 
   const grouped = CATEGORY_ORDER.reduce((acc, cat) => {
     const items = (supplies||[])
@@ -1488,15 +1489,19 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
     const qty = parseFloat(stockEdits[supplyId])
     if (isNaN(qty)) return
     setSavingStock(supplyId)
-    await fetch('/api/admin/supplies', {
+    const res = await fetch('/api/admin/supplies', {
       method: 'PATCH',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ id: supplyId, stock_qty: qty })
     })
+    if (res.ok) {
+      showToast('Stock actualizado ✓')
+    } else {
+      showToast('Error al guardar stock')
+    }
     setSavingStock(null)
-    setStockEdits(e => ({...e, [supplyId]: undefined}))
+    setStockEdits(e => {const next={...e}; delete next[supplyId]; return next})
     loadAll && loadAll()
-    showToast('Stock actualizado')
   }
 
   // Calculate donut data
@@ -1583,7 +1588,7 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
             const ok = items.filter(s=>parseFloat(s.stock_qty||0)>=50)
             const catVal = items.reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
             return (
-              <div key={cat} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)'}}>
+              <div key={cat} onClick={()=>{const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
                 <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
                 <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>${catVal.toFixed(2)}</div>
                 <div style={{marginTop:'0.3rem',display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
@@ -1608,7 +1613,7 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
             const ok=items.filter(s=>parseFloat(s.stock_qty||0)>=50)
             const catVal=items.reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
             return(
-              <div key={cat} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)'}}>
+              <div key={cat} onClick={()=>{const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
                 <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
                 <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>${catVal.toFixed(2)}</div>
                 <div style={{marginTop:'0.3rem',display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
@@ -1622,14 +1627,18 @@ function SuppliesPanel({ supplies, onAdd, onEditar, onEliminar, showToast, loadA
       </div>
 
       {Object.entries(grouped).map(([cat, items]) => (
-        <div key={cat} style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1rem'}}>
-          {/* Category header */}
-          <div style={{padding:'0.85rem 1.25rem',background:'rgba(31,20,14,0.03)',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div key={cat} id={'cat-'+cat.replace(/\s/g,'-')} style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1rem'}}>
+          {/* Category header — collapsible */}
+          <button onClick={()=>setOpenCats(o=>({...o,[cat]:!o[cat]}))}
+            style={{width:'100%',padding:'0.85rem 1.25rem',background:'rgba(31,20,14,0.03)',borderBottom:openCats[cat]?'1px solid rgba(31,20,14,0.06)':'none',display:'flex',justifyContent:'space-between',alignItems:'center',border:'none',cursor:'pointer',textAlign:'left'}}>
             <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,color:ink}}>{cat}</div>
-            <span style={{fontSize:'0.6rem',color:mu}}>{items.length} ingrediente{items.length!==1?'s':''}</span>
-          </div>
-          {/* Items */}
-          {items.map((s, i) => {
+            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+              <span style={{fontSize:'0.6rem',color:mu}}>{items.length} ingrediente{items.length!==1?'s':''}</span>
+              <span style={{fontSize:'0.7rem',color:mu,transform:openCats[cat]?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
+            </div>
+          </button>
+          {/* Items — only show when open */}
+          {openCats[cat]&&items.map((s, i) => {
             const isEditing = stockEdits[s.id] !== undefined
             return (
               <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:i<items.length-1?'1px solid rgba(31,20,14,0.05)':'none',flexWrap:'wrap',gap:'0.5rem'}}>
@@ -2818,19 +2827,11 @@ export default function Admin({session}){
                   <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>Panel de administración</div>
                 </div>
               </div>
-              <div style={{marginTop:'0.6rem'}}>
-                <div onClick={()=>setPanel('notifications')} style={{background:getNotifications(cards).length>0?'rgba(192,57,43,0.15)':'rgba(255,255,255,0.04)',border:'1px solid '+(getNotifications(cards).length>0?'rgba(192,57,43,0.25)':'rgba(255,255,255,0.06)'),borderRadius:6,padding:'0.4rem 0.65rem',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:supplies.filter(s=>parseFloat(s.stock_qty||0)<50&&parseFloat(s.stock_qty||0)>=0).length>0?'0.3rem':'0'}}>
-                  <span style={{fontSize:'0.6rem',color:getNotifications(cards).length>0?'#e74c3c':'rgba(255,255,255,0.3)'}}>
-                    {getNotifications(cards).length>0?`⚠ ${getNotifications(cards).length} alerta${getNotifications(cards).length!==1?'s':''}` : '✓ Sin alertas'}
-                  </span>
-                  <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>ver →</span>
-                </div>
-                {supplies.filter(s=>parseFloat(s.cost_total||0)>0&&parseFloat(s.stock_qty||0)<50).slice(0,3).map(s=>(
-                  <div key={s.id} style={{display:'flex',justifyContent:'space-between',padding:'0.2rem 0.65rem',fontSize:'0.58rem'}}>
-                    <span style={{color:'rgba(255,255,255,0.4)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'70%'}}>{s.name}</span>
-                    <span style={{color:'#e67e22',flexShrink:0}}>{parseFloat(s.stock_qty||0).toFixed(0)}{s.base_unit}</span>
-                  </div>
-                ))}
+              <div onClick={()=>setPanel('notifications')} style={{marginTop:'0.6rem',background:getNotifications(cards).length>0?'rgba(192,57,43,0.15)':'rgba(255,255,255,0.04)',border:'1px solid '+(getNotifications(cards).length>0?'rgba(192,57,43,0.25)':'rgba(255,255,255,0.06)'),borderRadius:6,padding:'0.4rem 0.65rem',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:'0.6rem',color:getNotifications(cards).length>0?'#e74c3c':'rgba(255,255,255,0.3)'}}>
+                  {getNotifications(cards).length>0?`⚠ ${getNotifications(cards).length} alerta${getNotifications(cards).length!==1?'s':''}` : '✓ Sin alertas'}
+                </span>
+                <span style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>ver →</span>
               </div>
             </div>
 
