@@ -3074,4 +3074,215 @@ function FilesListForClient({ userId, showToast }) {
     </div>
   )
 }
-                                                                            
+                                                                            function DashboardPanel({ cards, sales, onSelectClient, userName }) {
+  const totalClients = cards.length
+  const [showMetrics, setShowMetrics] = useState(false)
+  const [messages, setMessages] = useState([])
+
+  React.useEffect(() => {
+    fetch('/api/admin/messages').then(r=>r.json()).then(d=>setMessages(d.messages||[])).catch(()=>{})
+  }, [])
+
+  function getGreeting() {
+    const h = parseInt(new Date().toLocaleString('en-US', { timeZone: 'America/Puerto_Rico', hour: 'numeric', hour12: false }))
+    if (h >= 5 && h < 12) return 'Buenos días'
+    if (h >= 12 && h < 18) return 'Buenas tardes'
+    return 'Buenas noches'
+  }
+
+  const now = new Date()
+  const todaySales = (sales||[]).filter(s=>s.status==='paid'&&new Date(s.sale_date).toDateString()===now.toDateString())
+  const todayRevenue = todaySales.reduce((a,s)=>a+parseFloat(s.amount||0),0)
+  const totalStamps = (sales||[]).filter(s=>s.status==='paid').length
+
+  const week7 = Array.from({length:7},(_,i)=>{
+    const d = new Date(now); d.setDate(now.getDate()-6+i)
+    const dayName = ['D','L','M','X','J','V','S'][d.getDay()]
+    const total = (sales||[]).filter(s=>s.status==='paid'&&new Date(s.sale_date).toDateString()===d.toDateString()).reduce((a,s)=>a+parseFloat(s.amount||0),0)
+    return { label:dayName, value:total, isToday:d.toDateString()===now.toDateString() }
+  })
+  const maxDay = Math.max(...week7.map(d=>d.value),1)
+  const weekTotal = week7.reduce((a,d)=>a+d.value,0)
+
+  // Group messages by user, get latest per user
+  const conversations = Object.values((messages||[]).reduce((acc,m)=>{
+    if(!acc[m.user_id]||new Date(m.created_at)>new Date(acc[m.user_id].created_at)) acc[m.user_id]=m
+    return acc
+  },{})).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,3)
+  const unreadCount = (messages||[]).filter(m=>m.sender==='client'&&!m.read).length
+
+  // Clients donut data
+  const clientDonut=[
+    {label:'VIP',value:cards.filter(c=>getStatus(c).label==='VIP').length,color:'#E35A1B'},
+    {label:'Regular',value:cards.filter(c=>getStatus(c).label==='Regular').length,color:'#2d8a60'},
+    {label:'Activo',value:cards.filter(c=>getStatus(c).label==='Active').length,color:'#3498db'},
+    {label:'Nuevo',value:cards.filter(c=>getStatus(c).label==='New').length,color:'#8e44ad'},
+  ].filter(d=>d.value>0)
+
+  function makeSegs(data){const total=data.reduce((a,d)=>a+d.value,0)||1;let cum=0;return data.map(d=>{const s=cum;cum+=d.value/total;return{...d,start:s,pct:d.value/total}})}
+  function polar(pct){const a=pct*2*Math.PI-Math.PI/2;return{x:50+35*Math.cos(a),y:50+35*Math.sin(a)}}
+  function arc(start,pct){if(pct>=1)return'M 50 15 A 35 35 0 1 1 49.99 15 Z';const s=polar(start),e=polar(start+pct),lg=pct>0.5?1:0;return`M 50 50 L ${s.x} ${s.y} A 35 35 0 ${lg} 1 ${e.x} ${e.y} Z`}
+  const clientSegs = makeSegs(clientDonut)
+  const sorted = [...cards].sort((a,b)=>(b.stamps||0)-(a.stamps||0))
+
+  return(
+    <div>
+      {/* GREETING */}
+      <div style={{marginBottom:'1.5rem'}}>
+        <div style={{fontSize:'0.58rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.25rem'}}>
+          {new Date().toLocaleDateString('es-PR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}
+        </div>
+        <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'clamp(1.8rem,3vw,2.4rem)',fontWeight:400,color:'#1F140E',lineHeight:1.1}}>
+          {getGreeting()}, <em style={{color:'#E35A1B',fontStyle:'italic'}}>{userName||'Admin'}</em>.
+        </div>
+      </div>
+
+      {/* VENTAS 7 DÍAS */}
+      <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
+          <div>
+            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.1rem',fontWeight:400}}>Ventas · 7 días</div>
+            <div style={{fontSize:'0.65rem',color:'#7A6452',marginTop:'0.15rem'}}>${weekTotal.toLocaleString('en-US',{minimumFractionDigits:2})} esta semana</div>
+          </div>
+          <button onClick={()=>setShowMetrics(m=>!m)} style={{width:32,height:32,borderRadius:'50%',border:'1.5px solid rgba(31,20,14,0.15)',background:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.2rem',color:'#1F140E',fontWeight:300,lineHeight:1}}>+</button>
+        </div>
+        <div style={{display:'flex',gap:'0.4rem',alignItems:'flex-end',height:60}}>
+          {week7.map((d,i)=>(
+            <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+              <div style={{width:'100%',background:d.isToday?'#E35A1B':d.value>0?'#1F140E':'rgba(31,20,14,0.08)',borderRadius:'3px 3px 0 0',height:d.value>0?Math.max((d.value/maxDay)*48,6):4,transition:'height 0.4s ease'}}/>
+              <span style={{fontSize:'0.55rem',color:d.isToday?'#E35A1B':'#7A6452',fontWeight:d.isToday?700:400}}>{d.label}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:'1rem',marginTop:'0.75rem',fontSize:'0.6rem',color:'#7A6452'}}>
+          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'#E35A1B',marginRight:4}}/>Hoy</span>
+          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'#1F140E',marginRight:4}}/>Pasados</span>
+          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'rgba(31,20,14,0.08)',marginRight:4}}/>Cerrado</span>
+        </div>
+      </div>
+
+      {/* METRICS MODAL */}
+      {showMetrics&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(31,20,14,0.5)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setShowMetrics(false)}>
+          <div style={{background:'#FBF7EE',borderRadius:'14px 14px 0 0',width:'100%',maxWidth:600,padding:'1.5rem',maxHeight:'80vh',overflowY:'auto'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+              <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.3rem',fontWeight:400}}>Métricas</div>
+              <button onClick={()=>setShowMetrics(false)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:'#7A6452'}}>✕</button>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
+              {[
+                ['Ventas hoy','$'+todayRevenue.toFixed(2),'#2d8a60'],
+                ['Sellos totales',totalStamps,'#E35A1B'],
+                ['Total clientes',totalClients,'#5b8dee'],
+                ['Mensajes nuevos',unreadCount,'#8e44ad'],
+              ].map(([label,val,color])=>(
+                <div key={label} style={{background:'white',borderRadius:10,padding:'1rem',border:'1px solid rgba(31,20,14,0.07)'}}>
+                  <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.4rem'}}>{label}</div>
+                  <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.5rem',color,lineHeight:1}}>{val}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MENSAJES */}
+      {(()=>{
+        const [msgOpen, setMsgOpen] = React.useState(false)
+        const [msgSearch, setMsgSearch] = React.useState('')
+        const filtered = conversations.filter(m=>{
+          const name = (m.profiles?.full_name||m.profiles?.business_name||'').toLowerCase()
+          const txt = (m.content||'').toLowerCase()
+          return name.includes(msgSearch.toLowerCase())||txt.includes(msgSearch.toLowerCase())
+        })
+        const displayList = msgOpen ? filtered : filtered.slice(0,3)
+        return (
+          <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1.25rem'}}>
+            <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.05rem',fontWeight:400}}>Mensajes</div>
+                {unreadCount>0&&<span style={{background:'#E35A1B',color:'white',borderRadius:'50%',width:18,height:18,fontSize:'0.6rem',fontWeight:700,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>{unreadCount}</span>}
+              </div>
+              <button onClick={()=>setMsgOpen(o=>!o)} style={{fontSize:'0.62rem',color:'#E35A1B',background:'none',border:'none',cursor:'pointer',fontFamily:'"DM Sans",sans-serif',display:'flex',alignItems:'center',gap:'0.3rem'}}>
+                {msgOpen?'Colapsar':'Ver todas'} <span style={{display:'inline-block',transform:msgOpen?'rotate(180deg)':'rotate(0)',transition:'transform 0.2s'}}>▾</span>
+              </button>
+            </div>
+            {msgOpen&&(
+              <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+                <input value={msgSearch} onChange={e=>setMsgSearch(e.target.value)}
+                  placeholder="Buscar por nombre o mensaje..."
+                  style={{width:'100%',padding:'0.6rem 0.9rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:'"DM Sans",sans-serif',fontSize:'0.78rem',outline:'none',boxSizing:'border-box',background:'white'}}/>
+              </div>
+            )}
+            {filtered.length===0
+              ?<div style={{padding:'1.5rem',textAlign:'center',color:'#7A6452',fontSize:'0.78rem'}}>No hay mensajes aún.</div>
+              :displayList.map((msg,i)=>(
+                <div key={msg.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer'}}>
+                  <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',fontWeight:700,color:'#E35A1B',flexShrink:0}}>
+                    {(msg.profiles?.full_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2)}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:'0.75rem',color:'#1F140E',fontWeight:500}}>{msg.profiles?.full_name||msg.profiles?.business_name||'Cliente'}</div>
+                    <div style={{fontSize:'0.62rem',color:'#7A6452',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:2}}>{msg.content}</div>
+                  </div>
+                  <div style={{fontSize:'0.58rem',color:'#7A6452',flexShrink:0}}>{new Date(msg.created_at).toLocaleDateString('es-PR',{month:'short',day:'numeric'})}</div>
+                </div>
+              ))
+            }
+            {!msgOpen&&conversations.length>3&&(
+              <div style={{padding:'0.6rem',textAlign:'center'}}>
+                <button onClick={()=>setMsgOpen(true)} style={{fontSize:'0.62rem',color:'#E35A1B',background:'none',border:'none',cursor:'pointer',fontFamily:'"DM Sans",sans-serif'}}>
+                  +{conversations.length-3} más
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* CLIENTES — donut + lista */}
+      <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1.25rem'}}>
+        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.05rem',fontWeight:400}}>Clientes</div>
+          <div style={{fontSize:'0.62rem',color:'#7A6452'}}>{totalClients} registrados</div>
+        </div>
+        {/* Donut */}
+        {clientDonut.length>0&&(
+          <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',alignItems:'center',gap:'1rem'}}>
+            <svg viewBox="0 0 100 100" style={{width:80,height:80,flexShrink:0}}>
+              {clientSegs.map((d,i)=><path key={i} d={arc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)}
+              <circle cx="50" cy="50" r="22" fill="#FBF7EE"/>
+              <text x="50" y="54" textAnchor="middle" style={{fontSize:14,fontFamily:'"Instrument Serif",serif',fill:'#1F140E'}}>{totalClients}</text>
+            </svg>
+            <div style={{flex:1}}>
+              {clientDonut.map(d=>(
+                <div key={d.label} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.35rem'}}>
+                  <div style={{width:7,height:7,borderRadius:'50%',background:d.color,flexShrink:0}}/>
+                  <span style={{fontSize:'0.62rem',color:'#7A6452',flex:1}}>{d.label}</span>
+                  <span style={{fontSize:'0.62rem',fontWeight:500,color:'#1F140E'}}>{d.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Lista */}
+        {sorted.slice(0,5).map(card=>{
+          const status=getStatus(card)
+          const cur=card.stamps%5===0&&card.stamps>0?5:card.stamps%5
+          return(
+            <div key={card.id} onClick={()=>onSelectClient(card)} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer'}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'0.75rem',color:'#1F140E',fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card.profiles?.business_name||card.profiles?.full_name}</div>
+                <div style={{fontSize:'0.6rem',color:'#7A6452',marginTop:'0.1rem'}}>#{card.card_number}</div>
+              </div>
+              <div style={{display:'flex',gap:2,flexShrink:0}}>{Array.from({length:5},(_,j)=><div key={j} style={{width:7,height:7,borderRadius:'50%',background:j<cur?'#E35A1B':'rgba(31,20,14,0.08)'}}/>)}</div>
+              <span style={{fontSize:'0.56rem',padding:'0.18rem 0.6rem',borderRadius:20,background:status.bg,color:status.color,whiteSpace:'nowrap',flexShrink:0}}>{status.label}</span>
+            </div>
+          )
+        })}
+        {sorted.length===0&&<div style={{padding:'2rem',textAlign:'center',color:'#7A6452',fontSize:'0.82rem'}}>No hay clientes aún.</div>}
+      </div>
+    </div>
+  )
+}
+
