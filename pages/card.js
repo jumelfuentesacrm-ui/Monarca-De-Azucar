@@ -152,6 +152,19 @@ export default function Card({ session }) {
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
+  function sendChatMsg() {
+    if(!chatMsg.trim()) return
+    setChatLoading(true)
+    fetch('/api/card/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({content:chatMsg.trim()})
+    }).then(r=>r.json()).then(data=>{
+      if(data.message) setChatMessages(prev=>[...prev, data.message])
+      setChatMsg('')
+    }).catch(()=>showToast('Error al enviar')).finally(()=>setChatLoading(false))
+  }
+
   function handleSignOut() {
     supabase.auth.signOut().then(() => window.location.href = '/login')
   }
@@ -205,7 +218,7 @@ export default function Card({ session }) {
         .tap-scale:active{transform:scale(0.96);transition:transform 0.1s}
       `}</style>
 
-      <div style={{minHeight:'100vh',background:cr,paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))',fontFamily:ff}}>
+      <div style={{minHeight:'100vh',background:cr,paddingTop:'calc(52px + env(safe-area-inset-top, 0px))',paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))',fontFamily:ff}}>
 
         {/* TOP NAV */}
         <nav style={{position:'sticky',top:0,zIndex:100,background:theme.navBg,backdropFilter:'blur(12px)',borderBottom:'1px solid '+theme.border,padding:'12px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -458,80 +471,16 @@ export default function Card({ session }) {
             </div>
           )}
 
-          {/* ── TAB: ESCRIBENOS (chat interno) ── */}
+          {TAB: ESCRIBENOS (chat interno) ── */}
           {tab === 'escribenos' && (
-            <div className="fade-up" style={{display:'flex',flexDirection:'column',height:'calc(100vh - 140px)'}}>
-              <div style={{paddingTop:24,marginBottom:16,flexShrink:0}}>
+            <div className="fade-up" style={{display:'flex',flexDirection:'column',height:'calc(100vh - calc(52px + env(safe-area-inset-top,0px)) - calc(64px + env(safe-area-inset-bottom,0px)))',overflow:'hidden'}}>
+              <div style={{padding:'24px 0 12px',flexShrink:0}}>
                 <div style={{fontFamily:ffS,fontSize:'1.8rem',fontWeight:400,color:ink}}>Escribenos</div>
                 <div style={{fontSize:'0.65rem',color:mu,marginTop:4}}>Chat directo con el equipo de Monarca</div>
               </div>
 
-              {/* Messages */}
-              <div style={{flex:1,overflowY:'auto',paddingBottom:16}}>
-                {chatMessages.length === 0 && (
-                  <div style={{textAlign:'center',padding:'3rem 0'}}>
-                    <MonarcaButterfly size={48} animate={false} color="rgba(31,20,14,0.1)" style={{margin:'0 auto 12px'}}/>
-                    <div style={{fontFamily:ffS,fontSize:'1.1rem',color:mu,fontStyle:'italic'}}>Nadie ha escrito aún</div>
-                    <p style={{fontSize:'0.7rem',color:mu,marginTop:6}}>Escríbenos y te respondemos pronto.</p>
-                  </div>
-                )}
-                {chatMessages.map((msg, i) => (
-                  <div key={msg.id||i} style={{display:'flex',justifyContent:msg.sender==='client'?'flex-end':'flex-start',marginBottom:10}}>
-                    <div style={{
-                      maxWidth:'78%',padding:'10px 14px',borderRadius:msg.sender==='client'?'16px 16px 4px 16px':'16px 16px 16px 4px',
-                      background:msg.sender==='client'?or:theme.cr2,
-                      color:msg.sender==='client'?'#FBF7EE':ink,
-                      fontSize:'0.82rem',lineHeight:1.5
-                    }}>
-                      {msg.content}
-                      <div style={{fontSize:'0.52rem',opacity:0.6,marginTop:4,textAlign:'right'}}>
-                        {new Date(msg.created_at).toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'})}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Input */}
-              <div style={{flexShrink:0,display:'flex',gap:8,paddingTop:12,borderTop:'1px solid '+theme.border}}>
-                <input
-                  value={chatMsg}
-                  onChange={e=>setChatMsg(e.target.value)}
-                  onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}}}
-                  placeholder="Escribe tu mensaje..."
-                  style={{flex:1,padding:'12px 16px',border:'1px solid rgba(31,20,14,0.15)',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',outline:'none',background:theme.cr2,color:ink}}
-                />
-                <button onClick={()=>{
-                  if(!chatMsg.trim()) return
-                  setChatLoading(true)
-                  fetch('/api/card/messages', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-                    body:JSON.stringify({content:chatMsg.trim()})
-                  }).then(r=>r.json()).then(data=>{
-                    setChatMessages(prev=>[...prev, data.message])
-                    setChatMsg('')
-                  }).catch(()=>showToast('Error al enviar')).finally(()=>setChatLoading(false))
-                }} disabled={chatLoading||!chatMsg.trim()}
-                  style={{width:44,height:44,borderRadius:'50%',background:or,color:'#FBF7EE',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,opacity:chatLoading||!chatMsg.trim()?0.5:1}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
-
-         
-
-          {/* ── TAB: ESCRIBENOS (chat interno) ── */}
-          {tab === 'escribenos' && (
-            <div className="fade-up" style={{display:'flex',flexDirection:'column',height:'calc(100vh - 160px)'}}>
-              <div style={{paddingTop:24,marginBottom:16,flexShrink:0}}>
-                <div style={{fontFamily:ffS,fontSize:'1.8rem',fontWeight:400,color:ink}}>Escribenos</div>
-                <div style={{fontSize:'0.65rem',color:mu,marginTop:4}}>Chat directo con el equipo de Monarca</div>
-              </div>
-              <div style={{flex:1,overflowY:'auto',paddingBottom:16}}>
+              {/* Messages scroll area */}
+              <div style={{flex:1,overflowY:'auto',overflowX:'hidden',WebkitOverflowScrolling:'touch',paddingBottom:8}}>
                 {chatMessages.length === 0 && (
                   <div style={{textAlign:'center',padding:'3rem 0'}}>
                     <MonarcaButterfly size={48} animate={false} color="rgba(31,20,14,0.1)" style={{margin:'0 auto 12px'}}/>
@@ -540,29 +489,55 @@ export default function Card({ session }) {
                   </div>
                 )}
                 {chatMessages.map((msg,i)=>(
-                  <div key={msg.id||i} style={{display:'flex',justifyContent:msg.sender==='client'?'flex-end':'flex-start',marginBottom:10}}>
-                    <div style={{maxWidth:'78%',padding:'10px 14px',borderRadius:msg.sender==='client'?'16px 16px 4px 16px':'16px 16px 16px 4px',background:msg.sender==='client'?or:theme.cr2,color:msg.sender==='client'?'#FBF7EE':ink,fontSize:'0.82rem',lineHeight:1.5}}>
-                      {msg.content}
-                      <div style={{fontSize:'0.52rem',opacity:0.6,marginTop:4,textAlign:'right'}}>{new Date(msg.created_at).toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'})}</div>
+                  <div key={msg.id||i} style={{display:'flex',justifyContent:msg.sender==='client'?'flex-end':'flex-start',marginBottom:8}}>
+                    {msg.sender==='admin'&&<div style={{width:28,height:28,borderRadius:'50%',background:'rgba(227,90,27,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.6rem',color:or,fontWeight:700,flexShrink:0,marginRight:8,marginTop:2}}>M</div>}
+                    <div style={{maxWidth:'75%',padding:'10px 14px',borderRadius:msg.sender==='client'?'16px 16px 4px 16px':'16px 16px 16px 4px',background:msg.sender==='client'?or:theme.cr2,color:msg.sender==='client'?'#FBF7EE':ink,fontSize:'0.82rem',lineHeight:1.5}}>
+                      {msg.file_url
+                        ? <a href={msg.file_url} target="_blank" style={{color:msg.sender==='client'?'#FBF7EE':or,fontSize:'0.78rem',display:'flex',alignItems:'center',gap:6}}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                            {msg.file_name||'Archivo adjunto'}
+                          </a>
+                        : msg.content
+                      }
+                      <div style={{fontSize:'0.5rem',opacity:0.55,marginTop:4,textAlign:'right'}}>{new Date(msg.created_at).toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'})}</div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div style={{flexShrink:0,display:'flex',gap:8,paddingTop:12,borderTop:'1px solid '+theme.border}}>
+
+              {/* Input bar */}
+              <div style={{flexShrink:0,display:'flex',gap:8,paddingTop:10,borderTop:'1px solid '+theme.border}}>
+                <input type="file" id="chat-file" accept="image/*,.pdf,.doc,.docx" style={{display:'none'}}
+                  onChange={async(e)=>{
+                    const file = e.target.files[0]
+                    if(!file) return
+                    setChatLoading(true)
+                    const fd = new FormData()
+                    fd.append('file', file)
+                    fd.append('sender','client')
+                    const res = await fetch('/api/card/messages',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token},body:fd})
+                    const data = await res.json()
+                    if(data.message) setChatMessages(prev=>[...prev, data.message])
+                    setChatLoading(false)
+                    e.target.value=''
+                  }}
+                />
+                <label htmlFor="chat-file" style={{width:40,height:40,borderRadius:'50%',background:theme.cr2,border:'1px solid '+theme.border,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={mu} strokeWidth="2" strokeLinecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                </label>
                 <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)}
-                  onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(!chatMsg.trim())return;setChatLoading(true);fetch('/api/card/messages',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({content:chatMsg.trim()})}).then(r=>r.json()).then(data=>{setChatMessages(prev=>[...prev,data.message]);setChatMsg('')}).catch(()=>showToast('Error al enviar')).finally(()=>setChatLoading(false))}}}
+                  onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&chatMsg.trim()){e.preventDefault();sendChatMsg()}}}
                   placeholder="Escribe tu mensaje..."
-                  style={{flex:1,padding:'12px 16px',border:'1px solid rgba(31,20,14,0.15)',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',outline:'none',background:theme.cr2,color:ink}}/>
-                <button onClick={()=>{if(!chatMsg.trim())return;setChatLoading(true);fetch('/api/card/messages',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({content:chatMsg.trim()})}).then(r=>r.json()).then(data=>{setChatMessages(prev=>[...prev,data.message]);setChatMsg('')}).catch(()=>showToast('Error al enviar')).finally(()=>setChatLoading(false))}}
-                  disabled={chatLoading||!chatMsg.trim()}
-                  style={{width:44,height:44,borderRadius:'50%',background:or,color:'#FBF7EE',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,opacity:chatLoading||!chatMsg.trim()?0.5:1}}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  style={{flex:1,padding:'10px 14px',border:'1px solid rgba(31,20,14,0.15)',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',outline:'none',background:theme.cr2,color:ink}}/>
+                <button onClick={sendChatMsg} disabled={chatLoading||!chatMsg.trim()}
+                  style={{width:40,height:40,borderRadius:'50%',background:or,color:'#FBF7EE',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,opacity:chatLoading||!chatMsg.trim()?0.4:1}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 </button>
               </div>
             </div>
           )}
 
-           {/* ── TAB: CUENTA ── */}
+          {/* ── /* ── TAB: CUENTA ── */}
           {tab === 'cuenta' && (
             <div className="fade-up">
               <div style={{paddingTop:28,marginBottom:24}}>
@@ -571,18 +546,16 @@ export default function Card({ session }) {
               </div>
 
               {/* Profile card */}
-              <div style={{background:ink,borderRadius:16,padding:'20px',marginBottom:20,display:'flex',alignItems:'center',gap:16}}>
-                <div style={{width:56,height:56,borderRadius:'50%',background:'rgba(227,90,27,0.2)',border:'2px solid rgba(227,90,27,0.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.4rem',flexShrink:0}}>
-                  🦋
+              <div style={{background:'rgba(227,90,27,0.12)',borderRadius:16,padding:'20px',marginBottom:20,border:'1px solid rgba(227,90,27,0.2)'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontFamily:ffS,fontSize:'1.3rem',color:ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card?.profiles?.full_name||session?.user?.email}</div>
+                    <div style={{fontSize:'0.63rem',color:mu,marginTop:3}}>{session?.user?.email}</div>
+                    {card?.profiles?.phone&&<div style={{fontSize:'0.63rem',color:mu,marginTop:2}}>{card.profiles.phone}</div>}
+                  </div>
+                  <button onClick={()=>setProfileEdit(e=>!e)} style={{padding:'8px 16px',background:or,color:'#FBF7EE',border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.6rem',fontWeight:600,cursor:'pointer',flexShrink:0,marginLeft:12}}>Editar</button>
                 </div>
-                <div style={{flex:1}}>
-                  <div style={{fontFamily:ffS,fontSize:'1.2rem',color:cr}}>{card?.profiles?.full_name || session?.user?.email}</div>
-                  <div style={{fontSize:'0.65rem',color:'rgba(251,247,238,0.45)',marginTop:2}}>{session?.user?.email}</div>
-                  {card?.profiles?.phone && <div style={{fontSize:'0.65rem',color:'rgba(251,247,238,0.35)',marginTop:2}}>{card.profiles.phone}</div>}
-                </div>
-                <button onClick={()=>setProfileEdit(e=>!e)} style={{padding:'8px 14px',background:'rgba(255,255,255,0.08)',color:cr,border:'1px solid rgba(255,255,255,0.12)',borderRadius:999,fontFamily:ff,fontSize:'0.6rem',cursor:'pointer'}}>
-                  Editar
-                </button>
+                <div style={{fontSize:'0.52rem',letterSpacing:'0.14em',textTransform:'uppercase',color:or}}>Miembro #{card?.card_number||'—'} · Ciclo {cycle}</div>
               </div>
 
               {/* Edit form */}
