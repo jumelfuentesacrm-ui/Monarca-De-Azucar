@@ -2405,6 +2405,87 @@ function StockPanel({ catalog, supplies, loadAll, showToast }) {
   )
 }
 
+
+function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold, gray }) {
+  const [openCats, setOpenCats] = React.useState({})
+  const [unitSel, setUnitSel] = React.useState({})
+  const CATS = ['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
+  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit']
+  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+
+  return (
+    <div style={{marginBottom:'1.25rem'}}>
+      <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.75rem'}}>Calcular desde ingredientes</div>
+      {CATS.map(cat=>{
+        const items = (supplies||[]).filter(s=>(s.category||'Otros')===cat).sort((a,b)=>a.name.localeCompare(b.name,'es'))
+        if(items.length===0) return null
+        const isOpen = openCats[cat]
+        return (
+          <div key={cat} style={{borderRadius:8,border:'1px solid rgba(31,20,14,0.08)',marginBottom:'0.5rem',overflow:'hidden'}}>
+            <button onClick={()=>setOpenCats(o=>({...o,[cat]:!o[cat]}))}
+              style={{width:'100%',padding:'0.65rem 1rem',display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(31,20,14,0.03)',border:'none',cursor:'pointer',fontFamily:ff}}>
+              <span style={{fontSize:'0.72rem',fontWeight:500,color:black}}>{cat}</span>
+              <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                <span style={{fontSize:'0.58rem',color:gray}}>{items.length}</span>
+                <span style={{fontSize:'0.65rem',color:gray,transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
+              </div>
+            </button>
+            {isOpen&&items.map(s=>{
+              const selUnit = unitSel[s.id] || s.base_unit || 'g'
+              const qtyKey = 'cost_qty_'+s.id
+              const unitKey = 'cost_unit_'+s.id
+              const qty = parseFloat(costForm[qtyKey]||0)
+              const cpu = parseFloat(s.cost_per_unit||0)
+              const baseQty = qty*(CONV[selUnit]||1)
+              const lineTotal = cpu>0?cpu*baseQty:0
+              return (
+                <div key={s.id} style={{padding:'0.65rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.4rem'}}>
+                    <div>
+                      <div style={{fontSize:'0.72rem',color:black,fontWeight:500}}>{s.name}</div>
+                      <div style={{fontSize:'0.56rem',color:gray}}>${cpu.toFixed(4)}/{s.base_unit||'g'}</div>
+                    </div>
+                    {lineTotal>0&&<span style={{fontSize:'0.65rem',color:gold,fontWeight:600}}>${lineTotal.toFixed(3)}</span>}
+                  </div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem',marginBottom:'0.4rem'}}>
+                    {UNITS.map(u=>(
+                      <button key={u} onClick={()=>{
+                        setUnitSel(prev=>({...prev,[s.id]:u}))
+                        setCostForm(f=>({...f,[unitKey]:u}))
+                      }} style={{padding:'0.2rem 0.55rem',borderRadius:999,border:'1px solid '+(selUnit===u?gold:'rgba(31,20,14,0.12)'),background:selUnit===u?'rgba(227,90,27,0.1)':'transparent',color:selUnit===u?gold:'rgba(31,20,14,0.5)',fontSize:'0.56rem',cursor:'pointer',fontFamily:ff}}>
+                        {u}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                    <input type="number" min="0" step="0.1" placeholder="0"
+                      value={costForm[qtyKey]||''}
+                      onChange={e=>{
+                        const val=e.target.value
+                        setCostForm(f=>{
+                          const updated={...f,[qtyKey]:val,[unitKey]:selUnit}
+                          const total=supplies.reduce((acc,sup)=>{
+                            const q=parseFloat(updated['cost_qty_'+sup.id]||0)
+                            const u=updated['cost_unit_'+sup.id]||sup.base_unit||'g'
+                            const bq=q*(CONV[u]||1)
+                            return acc+(parseFloat(sup.cost_per_unit||0)*bq)
+                          },0)
+                          return {...updated,cost:total.toFixed(4)}
+                        })
+                      }}
+                      style={{width:80,padding:'0.4rem 0.6rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',textAlign:'center'}}/>
+                    <span style={{fontSize:'0.65rem',color:gray}}>{selUnit}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
@@ -2925,88 +3006,11 @@ export default function Admin({session}){
             </div>
             <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.25rem'}}>{editCost.name}</p>
 
-                        {/* Supplies calculator */}
+                                    {/* Supplies calculator */}
             {supplies.length>0&&(
-              <div style={{marginBottom:'1.25rem'}}>
-                <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.75rem'}}>Calcular desde ingredientes</div>
-                {{(()=>{
-                  const CATS = ['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
-                  const [openCats, setOpenCats] = React.useState({})
-                  const [unitSel, setUnitSel] = React.useState({})
-                  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit']
-                  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
-                  return CATS.map(cat => {
-                    const items = supplies.filter(s=>(s.category||'Otros')===cat).sort((a,b)=>a.name.localeCompare(b.name,'es'))
-                    if(items.length===0) return null
-                    const isOpen = openCats[cat]
-                    return (
-                      <div key={cat} style={{borderRadius:8,border:'1px solid rgba(31,20,14,0.08)',marginBottom:'0.5rem',overflow:'hidden'}}>
-                        <button onClick={()=>setOpenCats(o=>({...o,[cat]:!o[cat]}))}
-                          style={{width:'100%',padding:'0.65rem 1rem',display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(31,20,14,0.03)',border:'none',cursor:'pointer',fontFamily:ff}}>
-                          <span style={{fontSize:'0.72rem',fontWeight:500,color:black}}>{cat}</span>
-                          <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                            <span style={{fontSize:'0.58rem',color:gray}}>{items.length}</span>
-                            <span style={{fontSize:'0.65rem',color:gray,transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
-                          </div>
-                        </button>
-                        {isOpen&&items.map(s=>{
-                          const selUnit = unitSel[s.id] || s.base_unit || 'g'
-                          const qtyKey = 'cost_qty_'+s.id
-                          const unitKey = 'cost_unit_'+s.id
-                          const qty = parseFloat(costForm[qtyKey]||0)
-                          const cpu = parseFloat(s.cost_per_unit||0)
-                          const baseQty = qty * (CONV[selUnit]||1)
-                          const lineTotal = cpu > 0 ? cpu * baseQty : 0
-                          return (
-                            <div key={s.id} style={{padding:'0.65rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
-                              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.4rem'}}>
-                                <div>
-                                  <div style={{fontSize:'0.72rem',color:black,fontWeight:500}}>{s.name}</div>
-                                  <div style={{fontSize:'0.56rem',color:gray}}>${cpu.toFixed(4)}/{s.base_unit||'g'}</div>
-                                </div>
-                                {lineTotal>0&&<span style={{fontSize:'0.65rem',color:gold,fontWeight:600}}>${lineTotal.toFixed(3)}</span>}
-                              </div>
-                              {/* Unit pills */}
-                              <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem',marginBottom:'0.4rem'}}>
-                                {UNITS.map(u=>(
-                                  <button key={u} onClick={()=>{
-                                    setUnitSel(prev=>({...prev,[s.id]:u}))
-                                    setCostForm(f=>({...f,[unitKey]:u}))
-                                  }}
-                                    style={{padding:'0.2rem 0.55rem',borderRadius:999,border:'1px solid '+(selUnit===u?gold:'rgba(31,20,14,0.12)'),background:selUnit===u?'rgba(227,90,27,0.1)':'transparent',color:selUnit===u?gold:'rgba(31,20,14,0.5)',fontSize:'0.56rem',cursor:'pointer',fontFamily:ff}}>
-                                    {u}
-                                  </button>
-                                ))}
-                              </div>
-                              {/* Quantity input */}
-                              <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                                <input type="number" min="0" step="0.1" placeholder="0"
-                                  value={costForm[qtyKey]||''}
-                                  onChange={e=>{
-                                    const val = e.target.value
-                                    setCostForm(f=>{
-                                      const updated = {...f,[qtyKey]:val,[unitKey]:selUnit}
-                                      const totalFromSupplies = supplies.reduce((acc,sup)=>{
-                                        const q=parseFloat(updated['cost_qty_'+sup.id]||0)
-                                        const u=updated['cost_unit_'+sup.id]||sup.base_unit||'g'
-                                        const bq=q*(CONV[u]||1)
-                                        return acc+(parseFloat(sup.cost_per_unit||0)*bq)
-                                      },0)
-                                      return {...updated,cost:totalFromSupplies.toFixed(4)}
-                                    })
-                                  }}
-                                  style={{width:80,padding:'0.4rem 0.6rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',textAlign:'center'}}/>
-                                <span style={{fontSize:'0.65rem',color:gray}}>{selUnit}</span>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )
-                  })
-                })()}}
-              </div>
+              <CostSuppliesSection supplies={supplies} costForm={costForm} setCostForm={setCostForm} ff={ff} black={black} gold={gold} gray={gray}/>
             )}
+
 
             <div style={{display:'flex',gap:'0.75rem',marginBottom:'1rem',alignItems:'flex-end'}}>
               <div style={{flex:1}}>
