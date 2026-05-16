@@ -45,78 +45,184 @@ function getNotifications(cards) {
 
 function DashboardPanel({ cards, sales, onSelectClient, userName }) {
   const totalClients = cards.length
-  const [showMetrics, setShowMetrics] = React.useState(false)
-  const [messages, setMessages] = React.useState([])
-  const [msgOpen, setMsgOpen] = React.useState(false)
-  const [msgSearch, setMsgSearch] = React.useState('')
+  const [showMetrics, setShowMetrics] = useState(false)
+  const [messages, setMessages] = useState([])
+  const [msgOpen, setMsgOpen] = useState(false)
+  const [msgSearch, setMsgSearch] = useState('')
+  const [replyText, setReplyText] = useState({})
+  const [selectedConv, setSelectedConv] = useState(null)
 
   React.useEffect(() => {
     fetch('/api/admin/messages').then(r=>r.json()).then(d=>setMessages(d.messages||[])).catch(()=>{})
   }, [])
 
+  function refreshMsgs() {
+    fetch('/api/admin/messages').then(r=>r.json()).then(d=>setMessages(d.messages||[])).catch(()=>{})
+  }
+
+  async function deleteMsg(id) {
+    await fetch('/api/admin/messages',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})})
+    setMessages(prev=>prev.filter(m=>m.id!==id))
+  }
+
+  async function sendReply(userId) {
+    const txt = replyText[userId]?.trim()
+    if(!txt) return
+    await fetch('/api/admin/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId,content:txt})})
+    setReplyText(r=>({...r,[userId]:''}))
+    refreshMsgs()
+  }
+
   function getGreeting() {
-    const h = parseInt(new Date().toLocaleString('en-US', { timeZone: 'America/Puerto_Rico', hour: 'numeric', hour12: false }))
-    if (h >= 5 && h < 12) return 'Buenos días'
-    if (h >= 12 && h < 18) return 'Buenas tardes'
+    const h = parseInt(new Date().toLocaleString('en-US',{timeZone:'America/Puerto_Rico',hour:'numeric',hour12:false}))
+    if(h>=5&&h<12) return 'Buenos días'
+    if(h>=12&&h<18) return 'Buenas tardes'
     return 'Buenas noches'
   }
 
   const now = new Date()
   const todaySales = (sales||[]).filter(s=>s.status==='paid'&&new Date(s.sale_date).toDateString()===now.toDateString())
   const todayRevenue = todaySales.reduce((a,s)=>a+parseFloat(s.amount||0),0)
-  const totalStamps = (sales||[]).filter(s=>s.status==='paid').length
 
   const week7 = Array.from({length:7},(_,i)=>{
-    const d = new Date(now); d.setDate(now.getDate()-6+i)
-    const dayName = ['D','L','M','X','J','V','S'][d.getDay()]
-    const total = (sales||[]).filter(s=>s.status==='paid'&&new Date(s.sale_date).toDateString()===d.toDateString()).reduce((a,s)=>a+parseFloat(s.amount||0),0)
-    return { label:dayName, value:total, isToday:d.toDateString()===now.toDateString() }
+    const d=new Date(now); d.setDate(now.getDate()-6+i)
+    const dayName=['D','L','M','X','J','V','S'][d.getDay()]
+    const total=(sales||[]).filter(s=>s.status==='paid'&&new Date(s.sale_date).toDateString()===d.toDateString()).reduce((a,s)=>a+parseFloat(s.amount||0),0)
+    return{label:dayName,value:total,isToday:d.toDateString()===now.toDateString()}
   })
   const maxDay = Math.max(...week7.map(d=>d.value),1)
   const weekTotal = week7.reduce((a,d)=>a+d.value,0)
 
-  const conversations = Object.values((messages||[]).reduce((acc,m)=>{
-    if(!acc[m.user_id]||new Date(m.created_at)>new Date(acc[m.user_id].created_at)) acc[m.user_id]=m
-    return acc
-  },{})).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
+  // Group into conversations by user
+  const convMap = {}
+  ;(messages||[]).forEach(m=>{
+    if(!convMap[m.user_id]) convMap[m.user_id]={userId:m.user_id,msgs:[],name:m.profiles?.full_name||m.profiles?.business_name||'Cliente',latest:m.created_at}
+    convMap[m.user_id].msgs.push(m)
+    if(new Date(m.created_at)>new Date(convMap[m.user_id].latest)) convMap[m.user_id].latest=m.created_at
+  })
+  const conversations = Object.values(convMap).sort((a,b)=>new Date(b.latest)-new Date(a.latest))
   const unreadCount = (messages||[]).filter(m=>m.sender==='client'&&!m.read).length
 
-  const filteredMsgs = conversations.filter(m=>{
-    const name = (m.profiles?.full_name||m.profiles?.business_name||'').toLowerCase()
-    const txt = (m.content||'').toLowerCase()
-    const q = msgSearch.toLowerCase()
-    return !q || name.includes(q) || txt.includes(q)
-  })
-  const displayMsgs = msgOpen ? filteredMsgs : filteredMsgs.slice(0,3)
+  const filteredConvs = conversations.filter(c=>c.name.toLowerCase().includes(msgSearch.toLowerCase()))
 
+  // Clients donut
   const clientDonut=[
     {label:'VIP',value:cards.filter(c=>getStatus(c).label==='VIP').length,color:'#E35A1B'},
     {label:'Regular',value:cards.filter(c=>getStatus(c).label==='Regular').length,color:'#2d8a60'},
     {label:'Activo',value:cards.filter(c=>getStatus(c).label==='Active').length,color:'#3498db'},
     {label:'Nuevo',value:cards.filter(c=>getStatus(c).label==='New').length,color:'#8e44ad'},
   ].filter(d=>d.value>0)
-
   function makeSegs(data){const total=data.reduce((a,d)=>a+d.value,0)||1;let cum=0;return data.map(d=>{const s=cum;cum+=d.value/total;return{...d,start:s,pct:d.value/total}})}
   function polar(pct){const a=pct*2*Math.PI-Math.PI/2;return{x:50+35*Math.cos(a),y:50+35*Math.sin(a)}}
   function arc(start,pct){if(pct>=1)return'M 50 15 A 35 35 0 1 1 49.99 15 Z';const s=polar(start),e=polar(start+pct),lg=pct>0.5?1:0;return`M 50 50 L ${s.x} ${s.y} A 35 35 0 ${lg} 1 ${e.x} ${e.y} Z`}
-  const clientSegs = makeSegs(clientDonut)
-  const sorted = [...cards].sort((a,b)=>(b.stamps||0)-(a.stamps||0))
+  const clientSegs=makeSegs(clientDonut)
+  const sorted=[...cards].sort((a,b)=>(b.stamps||0)-(a.stamps||0))
+
+  const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
 
   return(
     <div>
+      {/* SALUDO */}
       <div style={{marginBottom:'1.5rem'}}>
         <div style={{fontSize:'0.58rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.25rem'}}>
           {new Date().toLocaleDateString('es-PR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}
         </div>
-        <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'clamp(1.8rem,3vw,2.4rem)',fontWeight:400,color:'#1F140E',lineHeight:1.1}}>
+        <div style={{fontFamily:ffS,fontSize:'clamp(1.8rem,3vw,2.4rem)',fontWeight:400,color:'#1F140E',lineHeight:1.1}}>
           {getGreeting()}, <em style={{color:'#E35A1B',fontStyle:'italic'}}>{userName||'Admin'}</em>.
         </div>
       </div>
 
+      {/* ① INBOX */}
+      <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1.25rem'}}>
+        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+            <div style={{fontFamily:ffS,fontSize:'1.05rem',fontWeight:400}}>Inbox</div>
+            {unreadCount>0&&<span style={{background:'#E35A1B',color:'white',borderRadius:'50%',width:18,height:18,fontSize:'0.6rem',fontWeight:700,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>{unreadCount}</span>}
+          </div>
+          <button onClick={()=>setMsgOpen(o=>!o)} style={{fontSize:'0.62rem',color:'#E35A1B',background:'none',border:'none',cursor:'pointer',fontFamily:ff,display:'flex',alignItems:'center',gap:'0.3rem'}}>
+            {msgOpen?'Colapsar':'Ver todo'} <span style={{display:'inline-block',transform:msgOpen?'rotate(180deg)':'none',transition:'transform 0.2s'}}>▾</span>
+          </button>
+        </div>
+
+        {msgOpen&&(
+          <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+            <input value={msgSearch} onChange={e=>setMsgSearch(e.target.value)} placeholder="Buscar conversación..."
+              style={{width:'100%',padding:'0.6rem 0.9rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box',background:'white'}}/>
+          </div>
+        )}
+
+        {/* Conversation list */}
+        {(msgOpen?filteredConvs:filteredConvs.slice(0,2)).map(conv=>{
+          const lastMsg = [...conv.msgs].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0]
+          const isOpen = selectedConv===conv.userId
+          return(
+            <div key={conv.userId} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
+              {/* Conversation header */}
+              <div onClick={()=>setSelectedConv(isOpen?null:conv.userId)}
+                style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',cursor:'pointer',background:isOpen?'rgba(227,90,27,0.04)':'transparent'}}>
+                <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',fontWeight:700,color:'#E35A1B',flexShrink:0}}>
+                  {conv.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:'0.75rem',color:'#1F140E',fontWeight:500}}>{conv.name}</div>
+                  <div style={{fontSize:'0.62rem',color:'#7A6452',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:2}}>
+                    {lastMsg?.sender==='admin'?'Tú: ':''}{lastMsg?.file_url?'📎 Archivo':lastMsg?.content}
+                  </div>
+                </div>
+                <div style={{fontSize:'0.58rem',color:'#7A6452',flexShrink:0}}>{new Date(lastMsg?.created_at).toLocaleDateString('es-PR',{month:'short',day:'numeric'})}</div>
+                <span style={{fontSize:'0.65rem',color:'#7A6452',transition:'transform 0.2s',display:'inline-block',transform:isOpen?'rotate(180deg)':'none'}}>▾</span>
+              </div>
+
+              {/* Expanded conversation */}
+              {isOpen&&(
+                <div style={{background:'white',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
+                  {/* Messages */}
+                  <div style={{maxHeight:240,overflowY:'auto',padding:'0.75rem 1.25rem',display:'flex',flexDirection:'column',gap:8}}>
+                    {[...conv.msgs].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)).map(msg=>(
+                      <div key={msg.id} style={{display:'flex',justifyContent:msg.sender==='admin'?'flex-end':'flex-start',alignItems:'flex-end',gap:6}}>
+                        <div style={{maxWidth:'75%',padding:'8px 12px',borderRadius:msg.sender==='admin'?'12px 12px 3px 12px':'12px 12px 12px 3px',background:msg.sender==='admin'?'#E35A1B':'rgba(31,20,14,0.06)',color:msg.sender==='admin'?'white':'#1F140E',fontSize:'0.78rem',lineHeight:1.5}}>
+                          {msg.file_url
+                            ?<a href={msg.file_url} target="_blank" style={{color:msg.sender==='admin'?'white':'#E35A1B',display:'flex',alignItems:'center',gap:4,fontSize:'0.75rem'}}>📎 {msg.file_name||'Archivo'}</a>
+                            :msg.content
+                          }
+                          <div style={{fontSize:'0.48rem',opacity:0.6,marginTop:3,textAlign:'right'}}>{new Date(msg.created_at).toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'})}</div>
+                        </div>
+                        {/* Admin delete button */}
+                        <button onClick={()=>deleteMsg(msg.id)} title="Borrar"
+                          style={{background:'none',border:'none',cursor:'pointer',color:'rgba(31,20,14,0.2)',fontSize:'0.65rem',padding:2,flexShrink:0,lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Reply input */}
+                  <div style={{display:'flex',gap:8,padding:'0.75rem 1.25rem',borderTop:'1px solid rgba(31,20,14,0.06)'}}>
+                    <input value={replyText[conv.userId]||''} onChange={e=>setReplyText(r=>({...r,[conv.userId]:e.target.value}))}
+                      onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendReply(conv.userId)}}}
+                      placeholder="Responder..."
+                      style={{flex:1,padding:'8px 12px',border:'1px solid rgba(31,20,14,0.12)',borderRadius:999,fontFamily:ff,fontSize:'0.78rem',outline:'none'}}/>
+                    <button onClick={()=>sendReply(conv.userId)} disabled={!replyText[conv.userId]?.trim()}
+                      style={{width:34,height:34,borderRadius:'50%',background:'#E35A1B',color:'white',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,opacity:!replyText[conv.userId]?.trim()?0.4:1}}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {conversations.length===0&&<div style={{padding:'1.5rem',textAlign:'center',color:'#7A6452',fontSize:'0.78rem'}}>No hay mensajes aún.</div>}
+        {!msgOpen&&conversations.length>2&&(
+          <div style={{padding:'0.6rem',textAlign:'center'}}>
+            <button onClick={()=>setMsgOpen(true)} style={{fontSize:'0.62rem',color:'#E35A1B',background:'none',border:'none',cursor:'pointer',fontFamily:ff}}>+{conversations.length-2} más</button>
+          </div>
+        )}
+      </div>
+
+      {/* ② VENTAS 7 DÍAS */}
       <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',padding:'1.25rem',marginBottom:'1.25rem'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
           <div>
-            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.1rem',fontWeight:400}}>Ventas · 7 días</div>
+            <div style={{fontFamily:ffS,fontSize:'1.1rem',fontWeight:400}}>Ventas · 7 días</div>
             <div style={{fontSize:'0.65rem',color:'#7A6452',marginTop:'0.15rem'}}>${weekTotal.toLocaleString('en-US',{minimumFractionDigits:2})} esta semana</div>
           </div>
           <button onClick={()=>setShowMetrics(m=>!m)} style={{width:32,height:32,borderRadius:'50%',border:'1.5px solid rgba(31,20,14,0.15)',background:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.2rem',color:'#1F140E',lineHeight:1}}>+</button>
@@ -124,30 +230,26 @@ function DashboardPanel({ cards, sales, onSelectClient, userName }) {
         <div style={{display:'flex',gap:'0.4rem',alignItems:'flex-end',height:60}}>
           {week7.map((d,i)=>(
             <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-              <div style={{width:'100%',background:d.isToday?'#E35A1B':d.value>0?'#1F140E':'rgba(31,20,14,0.08)',borderRadius:'3px 3px 0 0',height:d.value>0?Math.max((d.value/maxDay)*48,6):4,transition:'height 0.4s'}}/>
+              <div style={{width:'100%',background:d.isToday?'#E35A1B':d.value>0?'#1F140E':'rgba(31,20,14,0.08)',borderRadius:'3px 3px 0 0',height:d.value>0?Math.max((d.value/maxDay)*48,6):4}}/>
               <span style={{fontSize:'0.55rem',color:d.isToday?'#E35A1B':'#7A6452',fontWeight:d.isToday?700:400}}>{d.label}</span>
             </div>
           ))}
         </div>
-        <div style={{display:'flex',gap:'1rem',marginTop:'0.75rem',fontSize:'0.6rem',color:'#7A6452'}}>
-          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'#E35A1B',marginRight:4}}/>Hoy</span>
-          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'#1F140E',marginRight:4}}/>Pasados</span>
-          <span><span style={{display:'inline-block',width:8,height:8,borderRadius:2,background:'rgba(31,20,14,0.08)',marginRight:4}}/>Cerrado</span>
-        </div>
       </div>
 
+      {/* Metrics modal */}
       {showMetrics&&(
         <div style={{position:'fixed',inset:0,background:'rgba(31,20,14,0.5)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setShowMetrics(false)}>
           <div style={{background:'#FBF7EE',borderRadius:'14px 14px 0 0',width:'100%',maxWidth:600,padding:'1.5rem',maxHeight:'80vh',overflowY:'auto'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
-              <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.3rem',fontWeight:400}}>Métricas</div>
+              <div style={{fontFamily:ffS,fontSize:'1.3rem',fontWeight:400}}>Métricas</div>
               <button onClick={()=>setShowMetrics(false)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:'#7A6452'}}>✕</button>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
-              {[['Ventas hoy','$'+todayRevenue.toFixed(2),'#2d8a60'],['Sellos totales',totalStamps,'#E35A1B'],['Total clientes',totalClients,'#5b8dee'],['Mensajes nuevos',unreadCount,'#8e44ad']].map(([label,val,color])=>(
+              {[['Ventas hoy','$'+todayRevenue.toFixed(2),'#2d8a60'],['Clientes',totalClients,'#5b8dee'],['Mensajes nuevos',unreadCount,'#8e44ad'],['Semana','$'+weekTotal.toFixed(2),'#E35A1B']].map(([label,val,color])=>(
                 <div key={label} style={{background:'white',borderRadius:10,padding:'1rem',border:'1px solid rgba(31,20,14,0.07)'}}>
                   <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.4rem'}}>{label}</div>
-                  <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.5rem',color,lineHeight:1}}>{val}</div>
+                  <div style={{fontFamily:ffS,fontSize:'1.5rem',color,lineHeight:1}}>{val}</div>
                 </div>
               ))}
             </div>
@@ -155,62 +257,25 @@ function DashboardPanel({ cards, sales, onSelectClient, userName }) {
         </div>
       )}
 
+      {/* ③ CLIENTES */}
       <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1.25rem'}}>
         <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.05rem',fontWeight:400}}>Mensajes</div>
-            {unreadCount>0&&<span style={{background:'#E35A1B',color:'white',borderRadius:'50%',width:18,height:18,fontSize:'0.6rem',fontWeight:700,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>{unreadCount}</span>}
-          </div>
-          <button onClick={()=>setMsgOpen(o=>!o)} style={{fontSize:'0.62rem',color:'#E35A1B',background:'none',border:'none',cursor:'pointer',fontFamily:'sans-serif',display:'flex',alignItems:'center',gap:'0.3rem'}}>
-            {msgOpen?'Colapsar':'Ver todas'} <span style={{display:'inline-block',transform:msgOpen?'rotate(180deg)':'none',transition:'transform 0.2s'}}>▾</span>
-          </button>
-        </div>
-        {msgOpen&&(
-          <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
-            <input value={msgSearch} onChange={e=>setMsgSearch(e.target.value)} placeholder="Buscar por nombre o mensaje..."
-              style={{width:'100%',padding:'0.6rem 0.9rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:'sans-serif',fontSize:'0.78rem',outline:'none',boxSizing:'border-box',background:'white'}}/>
-          </div>
-        )}
-        {filteredMsgs.length===0
-          ?<div style={{padding:'1.5rem',textAlign:'center',color:'#7A6452',fontSize:'0.78rem'}}>No hay mensajes aún.</div>
-          :displayMsgs.map((msg,i)=>(
-            <div key={msg.id||i} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer'}}>
-              <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',fontWeight:700,color:'#E35A1B',flexShrink:0}}>
-                {(msg.profiles?.full_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2)}
-              </div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:'0.75rem',color:'#1F140E',fontWeight:500}}>{msg.profiles?.full_name||msg.profiles?.business_name||'Cliente'}</div>
-                <div style={{fontSize:'0.62rem',color:'#7A6452',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginTop:2}}>{msg.content}</div>
-              </div>
-              <div style={{fontSize:'0.58rem',color:'#7A6452',flexShrink:0}}>{new Date(msg.created_at).toLocaleDateString('es-PR',{month:'short',day:'numeric'})}</div>
-            </div>
-          ))
-        }
-        {!msgOpen&&conversations.length>3&&(
-          <div style={{padding:'0.6rem',textAlign:'center'}}>
-            <button onClick={()=>setMsgOpen(true)} style={{fontSize:'0.62rem',color:'#E35A1B',background:'none',border:'none',cursor:'pointer'}}>+{conversations.length-3} más</button>
-          </div>
-        )}
-      </div>
-
-      <div style={{background:'#FBF7EE',borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1.25rem'}}>
-        <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.05rem',fontWeight:400}}>Clientes</div>
+          <div style={{fontFamily:ffS,fontSize:'1.05rem',fontWeight:400}}>Clientes</div>
           <div style={{fontSize:'0.62rem',color:'#7A6452'}}>{totalClients} registrados</div>
         </div>
         {clientDonut.length>0&&(
-          <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',alignItems:'center',gap:'1rem'}}>
+          <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',alignItems:'center',gap:'1.25rem'}}>
             <svg viewBox="0 0 100 100" style={{width:80,height:80,flexShrink:0}}>
               {clientSegs.map((d,i)=><path key={i} d={arc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)}
               <circle cx="50" cy="50" r="22" fill="#FBF7EE"/>
-              <text x="50" y="54" textAnchor="middle" style={{fontSize:14,fill:'#1F140E'}}>{totalClients}</text>
+              <text x="50" y="54" textAnchor="middle" style={{fontSize:14,fontFamily:ffS,fill:'#1F140E'}}>{totalClients}</text>
             </svg>
             <div style={{flex:1}}>
               {clientDonut.map(d=>(
-                <div key={d.label} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.35rem'}}>
+                <div key={d.label} style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:'0.35rem'}}>
                   <div style={{width:7,height:7,borderRadius:'50%',background:d.color,flexShrink:0}}/>
                   <span style={{fontSize:'0.62rem',color:'#7A6452',flex:1}}>{d.label}</span>
-                  <span style={{fontSize:'0.62rem',fontWeight:500,color:'#1F140E'}}>{d.value}</span>
+                  <span style={{fontSize:'0.62rem',fontWeight:600,color:'#1F140E'}}>{d.value}</span>
                 </div>
               ))}
             </div>
@@ -2164,7 +2229,7 @@ export default function Admin({session}){
 
           {/* MAIN */}
           <div classNombre="admin-main" style={{marginLeft:220,flex:1,padding:'1.75rem',maxWidth:980}}>
-            {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}}/>}
+            {panel==='dashboard'&&<DashboardPanel cards={cards} sales={sales} userName={users.find(u=>u.id===session?.user?.id)?.full_name?.split(' ')[0]} onSelectClient={(card)=>{setSelectedClient(card);setPanel('client')}}/>}
             {panel==='client'&&selectedClient&&<ClientProfile card={selectedClient} onBack={()=>{setSelectedClient(null);setPanel('dashboard')}}/>}
             {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
             {panel==='bookings'&&<BookingsPanel/>}
