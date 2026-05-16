@@ -2225,11 +2225,11 @@ export default function Admin({session}){
           .mobile-nav{display:flex!important;}
         }
         .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:${ink};z-index:200;border-top:1px solid rgba(227,90,27,0.15);}
-        .mobile-nav button{flex:1;padding:0.75rem 0.1rem;background:none;border:none;color:rgba(255,255,255,0.4);font-family:${ff};font-size:0.65rem;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.2rem;}
+        .mobile-nav button{flex:1;padding:0.85rem 0.1rem;background:none;border:none;color:rgba(255,255,255,0.4);font-family:${ff};font-size:0.65rem;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.2rem;}
         .mobile-nav button.active{color:${gold};}
       `}</style>
       <div style={{background:'#F4EDDD',minHeight:'100vh',fontFamily:ff,paddingBottom:70}}>
-        <div style={{background:black,position:'fixed',top:0,left:0,right:0,zIndex:100,height:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 1.25rem'}}>
+        <div style={{background:black,position:'fixed',top:0,left:0,right:0,zIndex:100,minHeight:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'env(safe-area-inset-top,0px) 1.25rem 0'}}>
           <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
               <LogoButterfly size={22}/>
               <div style={{fontFamily:ffS,fontSize:'1.05rem',color:white}}>Monarca <em style={{color:gold,fontStyle:'italic'}}>de</em> Azúcar</div>
