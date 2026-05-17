@@ -3477,9 +3477,16 @@ export default function Admin({session}){
                       cost: parseFloat(supplyForm.cost) || 0,
                       qty_purchased: parseFloat(supplyForm.qty_purchased) || 0,
                       stock_qty: supplyForm.stock_qty !== '' ? parseFloat(supplyForm.stock_qty) : undefined,
-                      cost_per_unit: (parseFloat(supplyForm.qty_purchased) > 0)
-                        ? (parseFloat(supplyForm.cost) / parseFloat(supplyForm.qty_purchased))
-                        : parseFloat(supplyForm.cost_per_unit) || 0,
+                      cost_per_unit: (() => {
+                        // Priority: manual cost_per_unit > calculated from cost/qty > 0
+                        if (supplyForm.cost_per_unit && parseFloat(supplyForm.cost_per_unit) > 0)
+                          return parseFloat(supplyForm.cost_per_unit)
+                        if (parseFloat(supplyForm.qty_purchased) > 0)
+                          return parseFloat(supplyForm.cost) / parseFloat(supplyForm.qty_purchased)
+                        if (parseFloat(supplyForm.cost) > 0)
+                          return parseFloat(supplyForm.cost) // fallback: treat cost as per-unit
+                        return 0
+                      })(),
                     }
                     await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(saveData)})
                     showToast('Supply updated')
