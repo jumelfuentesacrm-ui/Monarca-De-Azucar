@@ -77,7 +77,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PATCH') {
-    const { id, cost, stock_qty, base_unit, active, cost_per_unit, cost_total, qty_purchased, ...fields } = req.body
+    const { id, cost, stock_qty, base_unit, active, cost_per_unit, cost_total, qty_purchased, skus, ...fields } = req.body
     if (!id) return res.status(400).json({ error: 'id required' })
     const updateData = { ...fields }
     if (cost !== undefined) updateData.cost = parseFloat(cost)
@@ -87,6 +87,7 @@ export default async function handler(req, res) {
     if (stock_qty !== undefined) updateData.stock_qty = parseFloat(stock_qty)
     if (base_unit !== undefined) updateData.base_unit = base_unit
     if (active !== undefined) updateData.active = active
+    if (skus !== undefined) updateData.skus = skus
 
     // Get current cost to compare
     if (cost !== undefined) {
