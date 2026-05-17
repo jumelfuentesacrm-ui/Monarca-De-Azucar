@@ -3408,7 +3408,7 @@ export default function Admin({session}){
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setSupplyModal(null)}>
             <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-                <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{supplyModal==='add'?'Añadir ingrediente':'Editar ingrediente'}</h3>
+                <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{(supplyModal==='add'||!supplyModal?.id)?'Añadir ingrediente':'Editar ingrediente'}</h3>
                 <button onClick={()=>setSupplyModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
               </div>
               <label style={lbl}>Nombre</label>
@@ -3461,7 +3461,23 @@ export default function Admin({session}){
                     await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(supplyForm)})
                     showToast('Supply added')
                   } else {
-                    await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:supplyModal.id,...supplyForm})})
+                    const saveData = {
+                      id: supplyModal.id,
+                      name: supplyForm.name,
+                      category: supplyForm.category,
+                      provider: supplyForm.provider,
+                      notes: supplyForm.notes,
+                      base_unit: supplyForm.unit || supplyForm.base_unit || 'g',
+                      unit: supplyForm.unit || supplyForm.base_unit || 'g',
+                      cost_total: parseFloat(supplyForm.cost) || 0,
+                      cost: parseFloat(supplyForm.cost) || 0,
+                      qty_purchased: parseFloat(supplyForm.qty_purchased) || 0,
+                      stock_qty: supplyForm.stock_qty !== '' ? parseFloat(supplyForm.stock_qty) : undefined,
+                      cost_per_unit: (parseFloat(supplyForm.qty_purchased) > 0)
+                        ? (parseFloat(supplyForm.cost) / parseFloat(supplyForm.qty_purchased))
+                        : parseFloat(supplyForm.cost_per_unit) || 0,
+                    }
+                    await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(saveData)})
                     showToast('Supply updated')
                   }
                   setSupplyModal(null);loadAll()
