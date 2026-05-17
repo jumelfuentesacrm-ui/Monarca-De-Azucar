@@ -589,7 +589,7 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
         <div style={{fontSize:'0.58rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu}}>Ingredientes · {itemName}</div>
         <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-          {totalCost>0&&<span style={{fontSize:'0.65rem',color:or,fontWeight:600}}>Costo: ${totalCost.toFixed(3)}</span>}
+          {totalCost>0&&<span style={{fontSize:'0.65rem',color:or,fontWeight:600}}>Costo x unidad: ${totalCost.toFixed(3)}</span>}
           <button onClick={()=>setAdding(a=>!a)} style={{fontSize:'0.6rem',padding:'0.3rem 0.7rem',background:or,color:white,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
             {adding?'Cancelar':'+ Añadir'}
           </button>
@@ -1468,7 +1468,7 @@ function SupplyCostHistorial({ supplyId }) {
   )
 }
 
-function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, showToast, loadAll }) {
+function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onEliminar, showToast, loadAll }) {
   const [stockEdits, setStockEdits] = React.useState({})
   const [savingStock, setSavingStock] = React.useState(null)
   const [openCats, setOpenCats] = React.useState({})
@@ -1480,14 +1480,17 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
   const CATEGORY_ORDER = ['Aceites','Chocolates','Empaque','Frutas y Frescos','Huevos','Lácteos','Otros','Saborizantes','Secos']
 
   // Include custom categories not in CATEGORY_ORDER
+  const filteredSupplies = search
+    ? (supplies||[]).filter(s=>s.name.toLowerCase().includes(search.toLowerCase()))
+    : (supplies||[])
   const allCategories = [...new Set([
     ...CATEGORY_ORDER,
-    ...(supplies||[]).map(s=>s.category||'Otros')
+    ...filteredSupplies.map(s=>s.category||'Otros')
   ])].sort((a,b)=>a.localeCompare(b,'es'))
 
   const grouped = allCategories.reduce((acc, cat) => {
-    const items = (supplies||[])
-      .filter(s => (s.category||'Otros') === cat && (!search || s.name.toLowerCase().includes(search.toLowerCase())))
+    const items = filteredSupplies
+      .filter(s => (s.category||'Otros') === cat)
       .sort((a,b) => a.name.localeCompare(b.name, 'es'))
     if (items.length > 0) acc[cat] = items
     return acc
@@ -1516,10 +1519,10 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
   }
 
   // Calculate donut data
-  const totalValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+  const totalValue = (supplies||[]).length // just count for donut sizing
   const CATS_COLORS = {Secos:'#E35A1B',Lácteos:'#3498db',Huevos:'#f1c40f',Saborizantes:'#9b59b6',Chocolates:'#795548',Aceites:'#2ecc71',Frutas:'#e91e63',Empaque:'#607d8b',Otros:'#7A6452'}
   const donutData = Object.entries(CATS_COLORS).map(([cat,color])=>{
-    const val = (supplies||[]).filter(s=>(s.category||'Otros')===cat).reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+    const val = (supplies||[]).filter(s=>(s.category||'Otros')===cat).length
     return {cat,color,val,pct:totalValue>0?val/totalValue:0}
   }).filter(d=>d.val>0)
 
@@ -1537,20 +1540,17 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
 
   return (
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showSearch?'0.5rem':'1.25rem'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.75rem'}}>
         <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Inventario</div>
-        <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
-          <button onClick={()=>{setShowSearch(s=>!s);if(showSearch)setSearch('')}} style={{width:36,height:36,borderRadius:'50%',background:'rgba(31,20,14,0.06)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </button>
-          <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
-        </div>
+        <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
       </div>
-      {showSearch&&(
-        <input autoFocus value={search} onChange={e=>setSearch(e.target.value)}
+      <div style={{position:'relative',marginBottom:'1.25rem'}}>
+        <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={mu} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="Buscar ingrediente..."
-          style={{width:'100%',padding:'0.65rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box'}}/>
-      )}
+          style={{width:'100%',padding:'0.65rem 1rem 0.65rem 2.25rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+        {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:mu,fontSize:'1rem',lineHeight:1}}>✕</button>}
+      </div>
 
       {/* Donut + bar */}
       {donutData.length>0&&(
@@ -1560,8 +1560,8 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
             <svg viewBox="0 0 100 100" style={{width:110,height:110,flexShrink:0}}>
               {arcs.map((d,i)=><path key={i} d={makeArc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)}
               <circle cx="50" cy="50" r="26" fill={cr}/>
-              <text x="50" y="47" textAnchor="middle" style={{fontSize:7,fontFamily:ffS,fill:ink}}>Total</text>
-              <text x="50" y="57" textAnchor="middle" style={{fontSize:8,fontFamily:ffS,fill:or,fontWeight:600}}>${totalValue.toFixed(0)}</text>
+              <text x="50" y="47" textAnchor="middle" style={{fontSize:7,fontFamily:ffS,fill:ink}}>{(supplies||[]).length}</text>
+              <text x="50" y="57" textAnchor="middle" style={{fontSize:8,fontFamily:ffS,fill:mu}}>items</text>
             </svg>
             {/* Legend */}
             <div style={{flex:1,minWidth:0}}>
@@ -1569,7 +1569,7 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
                 <div key={d.cat} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.3rem'}}>
                   <div style={{width:8,height:8,borderRadius:'50%',background:d.color,flexShrink:0}}/>
                   <span style={{fontSize:'0.6rem',color:mu,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.cat}</span>
-                  <span style={{fontSize:'0.6rem',color:ink,fontWeight:600,flexShrink:0}}>{(d.pct*100).toFixed(0)}%</span>
+                  <span style={{fontSize:'0.6rem',color:ink,fontWeight:600,flexShrink:0}}>{(supplies||[]).filter(s=>s.category===d.cat).length} items</span>
                 </div>
               ))}
             </div>
@@ -1611,7 +1611,7 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
             return (
               <div key={cat} onClick={()=>{const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
                 <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
-                <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>${catVal.toFixed(2)}</div>
+                <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>{items.length} ingredientes</div>
                 <div style={{marginTop:'0.3rem',display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
                   {ok.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(46,204,113,0.1)',color:'#27ae60'}}>✓ {ok.length} bien</span>}
                   {low.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(230,126,34,0.1)',color:'#e67e22'}}>↓ {low.length} bajo</span>}
@@ -1623,6 +1623,8 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
       </div>
 
 
+
+      <AlcanzaPara catalog={catalog||[]} supplies={supplies||[]}/>
 
       {Object.entries(grouped).map(([cat, items]) => (
         <div key={cat} id={'cat-'+cat.replace(/\s/g,'-')} style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1rem'}}>
@@ -1644,7 +1646,7 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
                 <div style={{flex:1,minWidth:120}}>
                   <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{s.name}</div>
                   <div style={{fontSize:'0.6rem',color:mu,marginTop:2}}>
-                    ${parseFloat(s.cost_total||0).toFixed(2)} · ${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit||'g'}
+                    ${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit||'g'}
                   </div>
                 </div>
                 {/* Stock qty editable */}
@@ -2606,6 +2608,109 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
   )
 }
 
+
+function AlcanzaPara({ catalog, supplies }) {
+  const [expanded, setExpanded] = React.useState(null)
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
+
+  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+
+  // For each catalog item, calculate how many units can be made
+  const supplyMap = {}
+  ;(supplies||[]).forEach(s => { supplyMap[s.id] = s })
+
+  const results = (catalog||[]).filter(c=>c.active!==false).map(item => {
+    const recipe = item.recipe_ingredients || []
+    if (recipe.length === 0) return { item, units: null, missing: [], ingredients: [] }
+
+    let minUnits = Infinity
+    const ingredientStatus = recipe.map(r => {
+      const supply = supplyMap[r.supply_id]
+      if (!supply) return { name: r.supply_name||'?', needed: r.quantity, unit: r.unit, have: 0, missing: true, unitsCanMake: 0 }
+      const stockBase = parseFloat(supply.stock_qty||0) * (CONV[supply.base_unit||'g']||1)
+      const neededBase = parseFloat(r.quantity||0) * (CONV[r.unit||'g']||1)
+      const canMake = neededBase > 0 ? Math.floor(stockBase / neededBase) : Infinity
+      if (canMake < minUnits) minUnits = canMake
+      return {
+        name: supply.name,
+        needed: r.quantity,
+        unit: r.unit,
+        have: parseFloat(supply.stock_qty||0),
+        haveUnit: supply.base_unit||'g',
+        canMake,
+        missing: canMake === 0
+      }
+    })
+
+    const units = minUnits === Infinity ? null : minUnits
+    const missing = ingredientStatus.filter(i => i.missing)
+    return { item, units, missing, ingredients: ingredientStatus }
+  })
+
+  const withRecipes = results.filter(r => r.units !== null)
+
+  if (withRecipes.length === 0) return (
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+      <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'0.5rem'}}>Alcanza para</div>
+      <div style={{fontSize:'0.72rem',color:mu,fontStyle:'italic'}}>Vincula ingredientes a los productos en Catálogo para ver cuánto puedes producir.</div>
+    </div>
+  )
+
+  return (
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1.25rem'}}>
+      <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+        <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400}}>Alcanza para</div>
+        <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>Con el stock actual de ingredientes</div>
+      </div>
+      {withRecipes.map(({item, units, missing, ingredients}) => (
+        <div key={item.id} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
+          {/* Row */}
+          <div onClick={()=>setExpanded(e=>e===item.id?null:item.id)}
+            style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.85rem 1.25rem',cursor:'pointer',background:expanded===item.id?'rgba(227,90,27,0.04)':'transparent'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+              <span style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{item.name}</span>
+              {missing.length > 0 && <span style={{fontSize:'0.56rem',padding:'0.15rem 0.5rem',borderRadius:999,background:'rgba(192,57,43,0.1)',color:'#c0392b'}}>Faltan ingredientes</span>}
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+              <span style={{fontFamily:ffS,fontSize:'1.1rem',color:units===0?'#c0392b':units<12?'#e67e22':'#27ae60',fontWeight:400}}>
+                {units === 0 ? '0' : units} <span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>und.</span>
+              </span>
+              <span style={{fontSize:'0.65rem',color:mu,transform:expanded===item.id?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
+            </div>
+          </div>
+
+          {/* Expanded ingredient detail */}
+          {expanded===item.id&&(
+            <div style={{background:'white',borderTop:'1px solid rgba(31,20,14,0.05)',padding:'0.75rem 1.25rem'}}>
+              {missing.length > 0 && (
+                <div style={{marginBottom:'0.75rem',padding:'0.6rem 0.85rem',background:'rgba(192,57,43,0.06)',borderRadius:6,border:'1px solid rgba(192,57,43,0.15)'}}>
+                  <div style={{fontSize:'0.56rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#c0392b',marginBottom:'0.35rem'}}>Falta:</div>
+                  {missing.map(m=>(
+                    <div key={m.name} style={{fontSize:'0.72rem',color:'#c0392b',marginBottom:2}}>• {m.name} — necesitas {m.needed} {m.unit}, tienes {m.have.toFixed(0)} {m.haveUnit}</div>
+                  ))}
+                </div>
+              )}
+              <div style={{fontSize:'0.56rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.5rem'}}>Ingredientes:</div>
+              {ingredients.map((ing,i)=>(
+                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.35rem 0',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
+                  <span style={{fontSize:'0.72rem',color:ing.missing?'#c0392b':ink}}>{ing.name}</span>
+                  <div style={{textAlign:'right'}}>
+                    <span style={{fontSize:'0.65rem',color:mu}}>{ing.needed} {ing.unit} × unidad</span>
+                    <span style={{fontSize:'0.65rem',color:ing.missing?'#c0392b':'#27ae60',marginLeft:8,fontWeight:600}}>
+                      {ing.missing?'✕ sin stock':'✓'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
@@ -2668,6 +2773,15 @@ export default function Admin({session}){
       fetch('/api/admin/supplies').then(r=>r.json()).catch(()=>({}))
     ])
     setCards(c.cards||[]);setUsers(u.users||[]);setPremios(r.rewards||[]);setCatalog(cat.items||[]);setSupplies(sup.supplies||[])
+    // Load recipe ingredients for each catalog item
+    fetch('/api/admin/recipe-ingredients').then(r=>r.json()).then(d=>{
+      const riMap = {}
+      ;(d.ingredients||[]).forEach(ri=>{
+        if(!riMap[ri.catalog_item_id]) riMap[ri.catalog_item_id]=[]
+        riMap[ri.catalog_item_id].push({...ri, supply_name: ri.supplies?.name})
+      })
+      setCatalog(prev=>prev.map(item=>({...item, recipe_ingredients: riMap[item.id]||[]})))
+    }).catch(()=>{})
     fetch('/api/admin/users?all=1').then(r=>r.json()).then(d=>setAllUsers(d.users||[])).catch(()=>{})
     // Load sales for financial card
     fetch('/api/admin/sales').then(r=>r.json()).then(d=>setSales(d.sales||[])).catch(e=>console.error('Sales fetch error:',e))
@@ -2874,7 +2988,7 @@ export default function Admin({session}){
             {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/> }
             {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
-            {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies}
+            {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog}
               onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
               onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,unit:s.unit||'month',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
               onEliminar={async(id)=>{if(!confirm('Eliminar this supply?'))return;await fetch('/api/admin/supplies',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});showToast('Supply deleted');loadAll()}}
@@ -3295,10 +3409,18 @@ export default function Admin({session}){
                 </div>
                 <div>
                   <label style={lbl}>Medida base</label>
-                  <select style={{...inp,marginBottom:0}} value={supplyForm.unit} onChange={e=>setSupplyForm(f=>({...f,unit:e.target.value}))}>
-                    <option value="month">Monthly</option>
-                    <option value="year">Yearly</option>
-                    <option value="one-time">One-time</option>
+                  <select style={{...inp,marginBottom:0}} value={supplyForm.unit||supplyForm.base_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,unit:e.target.value,base_unit:e.target.value}))}>
+                    <option value="g">g — gramos</option>
+                    <option value="kg">kg — kilogramos</option>
+                    <option value="oz">oz — onzas (peso)</option>
+                    <option value="lb">lb — libras</option>
+                    <option value="ml">ml — mililitros</option>
+                    <option value="l">l — litros</option>
+                    <option value="fl oz">fl oz — onzas líquidas</option>
+                    <option value="tsp">tsp — cucharadita</option>
+                    <option value="tbsp">tbsp — cucharada</option>
+                    <option value="cup">cup — taza</option>
+                    <option value="unit">unit — unidad</option>
                   </select>
                 </div>
               </div>
