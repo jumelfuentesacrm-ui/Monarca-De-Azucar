@@ -1557,6 +1557,8 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
 
 
 
+      <StockValueChart supplies={supplies||[]}/>
+
       {/* ── DONA + BARRA DE STOCK ── */}
       {(()=>{
         const CATS_COLORS = {Secos:'#E35A1B',Lácteos:'#3498db',Huevos:'#f1c40f',Saborizantes:'#9b59b6',Chocolates:'#795548',Aceites:'#2ecc71','Frutas y Frescos':'#e91e63',Empaque:'#607d8b',Otros:'#7A6452'}
@@ -1599,8 +1601,8 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
                   <div key={d.cat} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.3rem'}}>
                     <div style={{width:8,height:8,borderRadius:'50%',background:d.color,flexShrink:0}}/>
                     <span style={{fontSize:'0.6rem',color:mu,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.cat}</span>
-                    <span style={{fontSize:'0.6rem',color:d.stock>0?ink:'rgba(31,20,14,0.3)',fontWeight:d.stock>0?600:400}}>
-                      {d.stock>0?d.stock.toFixed(0)+' en stock':'sin stock'}
+                    <span style={{fontSize:'0.6rem',color:d.stockVal>0?ink:'rgba(31,20,14,0.3)',fontWeight:d.stockVal>0?600:400}}>
+                      {d.stockVal>0?'$'+d.stockVal.toFixed(2):'sin stock'}
                     </span>
                   </div>
                 ))}
@@ -2735,6 +2737,104 @@ function AlcanzaPara({ catalog, supplies }) {
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+
+function StockValueChart({ supplies }) {
+  const [range, setRange] = React.useState('week')
+  const [history, setHistory] = React.useState([])
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE'
+
+  React.useEffect(() => {
+    fetch('/api/admin/supplies?stockHistory=1&range='+range)
+      .then(r=>r.json())
+      .then(d=>setHistory(d.history||[]))
+      .catch(()=>{})
+  }, [range])
+
+  // Calculate current total value from supplies
+  const currentValue = (supplies||[]).reduce((a,s) =>
+    a + parseFloat(s.stock_qty||0) * parseFloat(s.cost_per_unit||0), 0)
+
+  const maxVal = Math.max(...history.map(h=>h.value), currentValue, 1)
+  const labels = {day:'Hoy', week:'7 días', month:'30 días'}
+
+  return (
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
+        <div>
+          <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400}}>Valor del inventario</div>
+          <div style={{fontFamily:ffS,fontSize:'1.6rem',color:or,marginTop:'0.2rem'}}>${currentValue.toFixed(2)}</div>
+          <div style={{fontSize:'0.6rem',color:mu}}>valor actual en materiales</div>
+        </div>
+        <div style={{display:'flex',gap:'0.35rem'}}>
+          {['day','week','month'].map(r=>(
+            <button key={r} onClick={()=>setRange(r)}
+              style={{padding:'0.3rem 0.65rem',borderRadius:999,border:'1px solid rgba(31,20,14,0.12)',background:range===r?ink:'transparent',color:range===r?'white':mu,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer'}}>
+              {labels[r]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {history.length === 0 ? (
+        <div style={{height:80,display:'flex',alignItems:'center',justifyContent:'center',color:mu,fontSize:'0.72rem',fontStyle:'italic'}}>
+          Actualiza el stock para ver el historial aquí
+        </div>
+      ) : (
+        <div style={{position:'relative',height:80}}>
+          {/* Line chart */}
+          <svg width="100%" height="80" style={{overflow:'visible'}}>
+            <defs>
+              <linearGradient id="stockGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={or} stopOpacity={0.3}/>
+                <stop offset="100%" stopColor={or} stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            {history.length > 1 && (() => {
+              const pts = history.map((h,i) => ({
+                x: (i/(history.length-1))*100,
+                y: 80 - (h.value/maxVal)*70
+              }))
+              const line = pts.map((p,i)=>`${i===0?'M':'L'}${p.x}% ${p.y}`).join(' ')
+              const area = line + ` L100% 80 L0 80 Z`
+              return (
+                <>
+                  <path d={area} fill="url(#stockGrad)"/>
+                  <path d={line} fill="none" stroke={or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  {pts.map((p,i)=>(
+                    <circle key={i} cx={p.x+"%"} cy={p.y} r="3" fill={or}/>
+                  ))}
+                </>
+              )
+            })()}
+          </svg>
+          {/* Date labels */}
+          <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.25rem'}}>
+            <span style={{fontSize:'0.5rem',color:mu}}>{history[0]?.date}</span>
+            <span style={{fontSize:'0.5rem',color:mu}}>{history[history.length-1]?.date}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Stats row */}
+      {history.length > 0 && (
+        <div style={{display:'flex',gap:'1rem',marginTop:'0.75rem',paddingTop:'0.75rem',borderTop:'1px solid rgba(31,20,14,0.06)'}}>
+          {[
+            ['Promedio', '$'+(history.reduce((a,h)=>a+h.value,0)/history.length).toFixed(2)],
+            ['Máximo', '$'+Math.max(...history.map(h=>h.value)).toFixed(2)],
+            ['Mínimo', '$'+Math.min(...history.map(h=>h.value)).toFixed(2)],
+          ].map(([label,val])=>(
+            <div key={label}>
+              <div style={{fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>{label}</div>
+              <div style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{val}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
