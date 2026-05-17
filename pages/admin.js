@@ -1472,6 +1472,8 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
   const [stockEdits, setStockEdits] = React.useState({})
   const [savingStock, setSavingStock] = React.useState(null)
   const [openCats, setOpenCats] = React.useState({})
+  const [search, setSearch] = React.useState('')
+  const [showSearch, setShowSearch] = React.useState(false)
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
 
@@ -1532,9 +1534,6 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
 
   // Overall stock health (avg of all items that have recipes)
   const stockPct = Math.min(100, (supplies||[]).filter(s=>parseFloat(s.stock_qty||0)>0).length / Math.max((supplies||[]).length,1) * 100)
-
-  const [search, setSearch] = React.useState('')
-  const [showSearch, setShowSearch] = React.useState(false)
 
   return (
     <div>
