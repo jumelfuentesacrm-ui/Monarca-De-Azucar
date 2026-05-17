@@ -7,6 +7,42 @@ const supabaseAdmin = createClient(
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
+  if (req.method === 'GET' && req.query.stockHistory) {
+    const range = req.query.range || 'week'
+    const days = range === 'month' ? 30 : range === 'day' ? 1 : 7
+    const since = new Date(); since.setDate(since.getDate() - days)
+    const { data: history } = await supabaseAdmin
+      .from('supply_stock_history')
+      .select('stock_qty, cost_per_unit, recorded_at')
+      .gte('recorded_at', since.toISOString())
+      .order('recorded_at', { ascending: true })
+    const byDate = {}
+    ;(history||[]).forEach(h => {
+      const date = h.recorded_at.split('T')[0]
+      if (!byDate[date]) byDate[date] = 0
+      byDate[date] += parseFloat(h.stock_qty||0) * parseFloat(h.cost_per_unit||0)
+    })
+    return res.status(200).json({ history: Object.entries(byDate).map(([date,value])=>({date,value:parseFloat(value.toFixed(2))})) })
+  }
+
+  if (req.method === 'GET' && req.query.stockHistory) {
+    const range = req.query.range || 'week'
+    const days = range === 'month' ? 30 : range === 'day' ? 1 : 7
+    const since = new Date(); since.setDate(since.getDate() - days)
+    const { data: history } = await supabaseAdmin
+      .from('supply_stock_history')
+      .select('stock_qty, cost_per_unit, recorded_at')
+      .gte('recorded_at', since.toISOString())
+      .order('recorded_at', { ascending: true })
+    const byDate = {}
+    ;(history||[]).forEach(h => {
+      const date = h.recorded_at.split('T')[0]
+      if (!byDate[date]) byDate[date] = 0
+      byDate[date] += parseFloat(h.stock_qty||0) * parseFloat(h.cost_per_unit||0)
+    })
+    return res.status(200).json({ history: Object.entries(byDate).map(([date,value])=>({date,value:parseFloat(value.toFixed(2))})) })
+  }
+
   if (req.method === 'GET') {
     // If history param, return cost history for a supply
     if (req.query.history) {
