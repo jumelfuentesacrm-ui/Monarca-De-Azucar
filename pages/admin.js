@@ -1485,7 +1485,7 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
 
   const grouped = allCategories.reduce((acc, cat) => {
     const items = (supplies||[])
-      .filter(s => (s.category||'Otros') === cat)
+      .filter(s => (s.category||'Otros') === cat && (!search || s.name.toLowerCase().includes(search.toLowerCase())))
       .sort((a,b) => a.name.localeCompare(b.name, 'es'))
     if (items.length > 0) acc[cat] = items
     return acc
@@ -1533,12 +1533,25 @@ function SuppliesPanel({ supplies, setSupplies, onAdd, onEditar, onEliminar, sho
   // Overall stock health (avg of all items that have recipes)
   const stockPct = Math.min(100, (supplies||[]).filter(s=>parseFloat(s.stock_qty||0)>0).length / Math.max((supplies||[]).length,1) * 100)
 
+  const [search, setSearch] = React.useState('')
+  const [showSearch, setShowSearch] = React.useState(false)
+
   return (
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showSearch?'0.5rem':'1.25rem'}}>
         <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Inventario</div>
-        <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
+        <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+          <button onClick={()=>{setShowSearch(s=>!s);if(showSearch)setSearch('')}} style={{width:36,height:36,borderRadius:'50%',background:'rgba(31,20,14,0.06)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
+          <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
+        </div>
       </div>
+      {showSearch&&(
+        <input autoFocus value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Buscar ingrediente..."
+          style={{width:'100%',padding:'0.65rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box'}}/>
+      )}
 
       {/* Donut + bar */}
       {donutData.length>0&&(
