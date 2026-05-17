@@ -575,13 +575,14 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
   }
 
   // Calculate total recipe cost
+  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
   const totalCost = ingredients.reduce((a, ing) => {
     const cpu = parseFloat(ing.supplies?.cost_per_unit || 0)
     const qty = parseFloat(ing.quantity || 0)
-    // Convert to base unit cost
-    const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
-    const baseQty = qty * (CONV[ing.unit] || 1)
-    return a + (cpu * baseQty)
+    const supplyUnit = ing.supplies?.base_unit || 'g'
+    const recipeUnit = ing.unit || supplyUnit
+    const convFactor = (CONV[recipeUnit]||1) / (CONV[supplyUnit]||1)
+    return a + (qty * convFactor * cpu)
   }, 0)
 
   return (
@@ -2582,8 +2583,8 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
               const unitKey = 'cost_unit_'+s.id
               const qty = parseFloat(costForm[qtyKey]||0)
               const cpu = parseFloat(s.cost_per_unit||0)
-              const baseQty = qty*(CONV[selUnit]||1)
-              const lineTotal = cpu>0?cpu*baseQty:0
+              const supplyUnit = s.base_unit || 'g'
+              const lineTotal = calcCost(qty, selUnit, supplyUnit, cpu)
               return (
                 <div key={s.id} style={{padding:'0.65rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.4rem'}}>
@@ -2613,8 +2614,7 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
                           const total=supplies.reduce((acc,sup)=>{
                             const q=parseFloat(updated['cost_qty_'+sup.id]||0)
                             const u=updated['cost_unit_'+sup.id]||sup.base_unit||'g'
-                            const bq=q*(CONV[u]||1)
-                            return acc+(parseFloat(sup.cost_per_unit||0)*bq)
+                            return acc+calcCost(q,u,sup.base_unit||'g',parseFloat(sup.cost_per_unit||0))
                           },0)
                           return {...updated,cost:total.toFixed(4)}
                         })
@@ -2652,9 +2652,13 @@ function AlcanzaPara({ catalog, supplies }) {
     const ingredientStatus = recipe.map(r => {
       const supply = supplyMap[r.supply_id]
       if (!supply) return { name: r.supply_name||'?', needed: r.quantity, unit: r.unit, have: 0, missing: true, unitsCanMake: 0 }
-      const stockBase = parseFloat(supply.stock_qty||0) * (CONV[supply.base_unit||'g']||1)
-      const neededBase = parseFloat(r.quantity||0) * (CONV[r.unit||'g']||1)
-      const canMake = neededBase > 0 ? Math.floor(stockBase / neededBase) : Infinity
+      // stock is already in supply's base unit, recipe qty might be different unit
+      const supplyUnit = supply.base_unit || 'g'
+      const recipeUnit = r.unit || supplyUnit
+      const stock = parseFloat(supply.stock_qty||0)
+      const convFactor = (CONV[recipeUnit]||1) / (CONV[supplyUnit]||1)
+      const neededPerUnit = parseFloat(r.quantity||0) * convFactor
+      const canMake = neededPerUnit > 0 ? Math.floor(stock / neededPerUnit) : Infinity
       if (canMake < minUnits) minUnits = canMake
       return {
         name: supply.name,
