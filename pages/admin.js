@@ -1552,77 +1552,101 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
         {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:mu,fontSize:'1rem',lineHeight:1}}>✕</button>}
       </div>
 
-      {/* Donut + bar */}
-      {donutData.length>0&&(
-        <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
-          <div style={{display:'flex',gap:'1.5rem',alignItems:'center',flexWrap:'wrap'}}>
-            {/* Donut */}
-            <svg viewBox="0 0 100 100" style={{width:110,height:110,flexShrink:0}}>
-              {arcs.map((d,i)=><path key={i} d={makeArc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)}
-              <circle cx="50" cy="50" r="26" fill={cr}/>
-              <text x="50" y="47" textAnchor="middle" style={{fontSize:7,fontFamily:ffS,fill:ink}}>{(supplies||[]).length}</text>
-              <text x="50" y="57" textAnchor="middle" style={{fontSize:8,fontFamily:ffS,fill:mu}}>items</text>
-            </svg>
-            {/* Legend */}
-            <div style={{flex:1,minWidth:0}}>
-              {donutData.map(d=>(
-                <div key={d.cat} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.3rem'}}>
-                  <div style={{width:8,height:8,borderRadius:'50%',background:d.color,flexShrink:0}}/>
-                  <span style={{fontSize:'0.6rem',color:mu,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.cat}</span>
-                  <span style={{fontSize:'0.6rem',color:ink,fontWeight:600,flexShrink:0}}>{(supplies||[]).filter(s=>s.category===d.cat).length} items</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Stock health bar */}
-          <div style={{marginTop:'1rem'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.4rem'}}>
-              <span style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>Estado del stock</span>
-              <span style={{fontSize:'0.72rem',fontWeight:700,color:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b'}}>{stockPct.toFixed(0)}%</span>
-            </div>
-            <div style={{height:10,background:'rgba(31,20,14,0.08)',borderRadius:5,overflow:'hidden',position:'relative'}}>
-              <div style={{
-                position:'absolute',top:0,left:0,height:'100%',
-                width:stockPct+'%',
-                background:stockPct>70?'linear-gradient(90deg,#27ae60,#2ecc71)':stockPct>40?'linear-gradient(90deg,#e67e22,#f39c12)':'linear-gradient(90deg,#c0392b,#e74c3c)',
-                borderRadius:5,
-                transition:'width 0.8s ease',
-                boxShadow:stockPct>70?'0 0 8px rgba(46,204,113,0.4)':stockPct>40?'0 0 8px rgba(230,126,34,0.4)':'0 0 8px rgba(231,76,60,0.4)'
-              }}/>
-            </div>
-            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.3rem'}}>
-              <span style={{fontSize:'0.5rem',color:mu}}>Sin stock</span>
-              <span style={{fontSize:'0.5rem',color:mu}}>Stock completo</span>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Inventory summary */}
-      <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
-        <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Resumen de inventario</div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'0.75rem'}}>
-          {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
-            const items = (supplies||[]).filter(s=>s.category===cat&&parseFloat(s.cost_total||0)>0)
-            if(items.length===0) return null
-            const low = items.filter(s=>parseFloat(s.stock_qty||0)<50)
-            const ok = items.filter(s=>parseFloat(s.stock_qty||0)>=50)
-            const catVal = items.reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
-            return (
-              <div key={cat} onClick={()=>{const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
-                <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
-                <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>{items.length} ingredientes</div>
-                <div style={{marginTop:'0.3rem',display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
-                  {ok.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(46,204,113,0.1)',color:'#27ae60'}}>✓ {ok.length} bien</span>}
-                  {low.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(230,126,34,0.1)',color:'#e67e22'}}>↓ {low.length} bajo</span>}
-                </div>
+
+
+
+      {/* ── DONA + BARRA DE STOCK ── */}
+      {(()=>{
+        const CATS_COLORS = {Secos:'#E35A1B',Lácteos:'#3498db',Huevos:'#f1c40f',Saborizantes:'#9b59b6',Chocolates:'#795548',Aceites:'#2ecc71','Frutas y Frescos':'#e91e63',Empaque:'#607d8b',Otros:'#7A6452'}
+        const totalStockValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.stock_qty||0),0)
+        const withStock = (supplies||[]).filter(s=>parseFloat(s.stock_qty||0)>0)
+        const stockPct = (supplies||[]).length>0 ? Math.round(withStock.length/(supplies||[]).length*100) : 0
+
+        const donutData = Object.entries(CATS_COLORS).map(([cat,color])=>{
+          const items=(supplies||[]).filter(s=>(s.category||'Otros')===cat)
+          const stockSum=items.reduce((a,s)=>a+parseFloat(s.stock_qty||0),0)
+          return{cat,color,items:items.length,stock:stockSum}
+        }).filter(d=>d.items>0)
+
+        const total = donutData.reduce((a,d)=>a+d.stock,1) || 1
+        let cum=0
+        function polar(pct){const a=pct*2*Math.PI-Math.PI/2;return{x:50+38*Math.cos(a),y:50+38*Math.sin(a)}}
+        function arc(start,pct){
+          if(pct>=0.999)return'M 50 12 A 38 38 0 1 1 49.99 12 Z'
+          const s=polar(start),e=polar(start+pct),lg=pct>0.5?1:0
+          return`M 50 50 L ${s.x} ${s.y} A 38 38 0 ${lg} 1 ${e.x} ${e.y} Z`
+        }
+        const arcs=donutData.map(d=>{const pct=d.stock/total;const s=cum;cum+=pct;return{...d,start:s,pct}})
+
+        return (
+          <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+            <div style={{display:'flex',gap:'1.5rem',alignItems:'center',flexWrap:'wrap'}}>
+              {/* Donut */}
+              <svg viewBox="0 0 100 100" style={{width:110,height:110,flexShrink:0}}>
+                {totalStockValue===0
+                  ? <circle cx="50" cy="50" r="38" fill="rgba(31,20,14,0.06)"/>
+                  : arcs.map((d,i)=><path key={i} d={arc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)
+                }
+                <circle cx="50" cy="50" r="26" fill={cr}/>
+                <text x="50" y="47" textAnchor="middle" style={{fontSize:7,fill:mu,fontFamily:ffS}}>{stockPct}%</text>
+                <text x="50" y="57" textAnchor="middle" style={{fontSize:6,fill:mu}}>con stock</text>
+              </svg>
+              {/* Legend */}
+              <div style={{flex:1,minWidth:0}}>
+                {donutData.map(d=>(
+                  <div key={d.cat} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.3rem'}}>
+                    <div style={{width:8,height:8,borderRadius:'50%',background:d.color,flexShrink:0}}/>
+                    <span style={{fontSize:'0.6rem',color:mu,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.cat}</span>
+                    <span style={{fontSize:'0.6rem',color:d.stock>0?ink:'rgba(31,20,14,0.3)',fontWeight:d.stock>0?600:400}}>
+                      {d.stock>0?d.stock.toFixed(0)+' en stock':'sin stock'}
+                    </span>
+                  </div>
+                ))}
               </div>
-            )
-          })}
-        </div>
+            </div>
+            {/* Progress bar */}
+            <div style={{marginTop:'1rem'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.4rem'}}>
+                <span style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>Ingredientes con stock</span>
+                <span style={{fontSize:'0.72rem',fontWeight:700,color:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b'}}>{stockPct}%</span>
+              </div>
+              <div style={{height:10,background:'rgba(31,20,14,0.08)',borderRadius:5,overflow:'hidden'}}>
+                <div style={{height:'100%',width:stockPct+'%',background:stockPct>70?'linear-gradient(90deg,#27ae60,#2ecc71)':stockPct>40?'linear-gradient(90deg,#e67e22,#f39c12)':'linear-gradient(90deg,#c0392b,#e74c3c)',borderRadius:5,transition:'width 0.8s ease'}}/>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.3rem'}}>
+                <span style={{fontSize:'0.5rem',color:mu}}>0%</span>
+                <span style={{fontSize:'0.5rem',color:mu}}>{withStock.length} de {(supplies||[]).length} ingredientes</span>
+                <span style={{fontSize:'0.5rem',color:mu}}>100%</span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── RESUMEN POR CATEGORÍA ── */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))',gap:'0.75rem',marginBottom:'1.25rem'}}>
+        {Object.entries(
+          (supplies||[]).reduce((acc,s)=>{
+            const cat=s.category||'Otros'
+            if(!acc[cat]) acc[cat]={total:0,withStock:0}
+            acc[cat].total++
+            if(parseFloat(s.stock_qty||0)>0) acc[cat].withStock++
+            return acc
+          },{})
+        ).sort(([a],[b])=>a.localeCompare(b,'es')).map(([cat,{total,withStock}])=>(
+          <div key={cat} onClick={()=>{
+            const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'))
+            if(el){el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}
+          }} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
+            <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.3rem'}}>{cat}</div>
+            <div style={{fontFamily:ffS,fontSize:'1.1rem',color:withStock>0?'#1F140E':'rgba(31,20,14,0.3)'}}>{withStock}<span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>/{total}</span></div>
+            <div style={{fontSize:'0.52rem',color:withStock===total?'#27ae60':withStock>0?'#e67e22':'#c0392b',marginTop:'0.2rem'}}>
+              {withStock===total?'✓ completo':withStock>0?`${total-withStock} sin stock`:'sin stock'}
+            </div>
+          </div>
+        ))}
       </div>
-
-
 
       <AlcanzaPara catalog={catalog||[]} supplies={supplies||[]}/>
 
