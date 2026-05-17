@@ -1693,7 +1693,10 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
                 <div style={{flex:1,minWidth:120}}>
                   <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{s.name}</div>
                   <div style={{fontSize:'0.6rem',color:mu,marginTop:2}}>
-                    ${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit||'g'}
+                    {parseFloat(s.cost_total||0)>0
+                      ? `$${parseFloat(s.cost_total||0).toFixed(2)} / ${parseFloat(s.qty_purchased||0).toFixed(1)} ${s.base_unit||'g'}`
+                      : <span style={{color:'rgba(31,20,14,0.3)'}}>Sin precio</span>
+                    }
                   </div>
                 </div>
                 {/* Stock qty editable */}
@@ -2352,41 +2355,56 @@ function QRScannerModal({ onClose, onScan }) {
   const [error, setError] = React.useState('')
   const [scanning, setScanning] = React.useState(false)
 
+  const canvasRef = React.useRef(null)
+
   React.useEffect(() => {
-    let stream = null
-    let interval = null
+    let stream = null, interval = null, active = true
     async function startCamera() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: {ideal:1280}, height: {ideal:720} } })
+        if (!active) return
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           videoRef.current.play()
           setScanning(true)
-          // Use BarcodeDetector if available
-          if ('BarcodeDetector' in window) {
-            const detector = new window.BarcodeDetector({ formats: ['qr_code'] })
-            interval = setInterval(async () => {
-              if (videoRef.current && videoRef.current.readyState === 4) {
-                try {
-                  const codes = await detector.detect(videoRef.current)
-                  if (codes.length > 0) {
-                    clearInterval(interval)
-                    onScan(codes[0].rawValue)
-                  }
-                } catch(e) {}
+          interval = setInterval(async () => {
+            const video = videoRef.current
+            const canvas = canvasRef.current
+            if (!video || !canvas || video.readyState < 2) return
+            canvas.width = video.videoWidth
+            canvas.height = video.videoHeight
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(video, 0, 0)
+            // Try BarcodeDetector first (Chrome/Android)
+            if ('BarcodeDetector' in window) {
+              try {
+                const d = new window.BarcodeDetector({ formats: ['qr_code'] })
+                const codes = await d.detect(video)
+                if (codes.length > 0) { clearInterval(interval); onScan(codes[0].rawValue); return }
+              } catch(e) {}
+            }
+            // Fallback: jsQR via canvas
+            try {
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+              if (window.jsQR) {
+                const code = window.jsQR(imageData.data, imageData.width, imageData.height)
+                if (code) { clearInterval(interval); onScan(code.data) }
               }
-            }, 300)
-          }
+            } catch(e) {}
+          }, 300)
         }
       } catch(e) {
-        setError('No se pudo acceder a la cámara. Verifica los permisos.')
+        setError('No se pudo acceder a la cámara. En iPhone: Configuración → Safari → Cámara → Permitir.')
       }
     }
-    startCamera()
-    return () => {
-      if (stream) stream.getTracks().forEach(t => t.stop())
-      if (interval) clearInterval(interval)
-    }
+    // Load jsQR for iOS fallback
+    if (!window.jsQR) {
+      const script = document.createElement('script')
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
+      script.onload = startCamera
+      document.head.appendChild(script)
+    } else { startCamera() }
+    return () => { active = false; stream?.getTracks().forEach(t=>t.stop()); clearInterval(interval) }
   }, [])
 
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
@@ -2880,32 +2898,49 @@ function BarcodeScanner({ onScan, onClose }) {
   const ff = '"DM Sans",sans-serif'
   const or = '#E35A1B', ink = '#1F140E'
 
+  const canvasRef = React.useRef(null)
+
   React.useEffect(() => {
-    let stream = null, interval = null
+    let stream = null, interval = null, active = true
     async function start() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          videoRef.current.play()
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:720} } })
+        if (!active || !videoRef.current) return
+        videoRef.current.srcObject = stream
+        videoRef.current.play()
+        interval = setInterval(async () => {
+          const video = videoRef.current
+          const canvas = canvasRef.current
+          if (!video || !canvas || video.readyState < 2) return
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(video, 0, 0)
           if ('BarcodeDetector' in window) {
-            const detector = new window.BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e'] })
-            interval = setInterval(async () => {
-              if (videoRef.current?.readyState === 4) {
-                try {
-                  const codes = await detector.detect(videoRef.current)
-                  if (codes.length > 0) { clearInterval(interval); onScan(codes[0].rawValue) }
-                } catch(e) {}
-              }
-            }, 300)
-          } else {
-            setError('Tu navegador no soporta el escáner. Escribe el SKU manualmente.')
+            try {
+              const d = new window.BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e'] })
+              const codes = await d.detect(video)
+              if (codes.length > 0) { clearInterval(interval); onScan(codes[0].rawValue); return }
+            } catch(e) {}
           }
-        }
-      } catch(e) { setError('No se pudo acceder a la cámara.') }
+          // jsQR fallback for iOS
+          try {
+            if (window.jsQR) {
+              const id = ctx.getImageData(0,0,canvas.width,canvas.height)
+              const code = window.jsQR(id.data, id.width, id.height)
+              if (code) { clearInterval(interval); onScan(code.data) }
+            }
+          } catch(e) {}
+        }, 300)
+      } catch(e) {
+        setError('No se pudo acceder a la cámara. En iPhone: Configuración → Safari → Cámara → Permitir.')
+      }
     }
-    start()
-    return () => { stream?.getTracks().forEach(t=>t.stop()); clearInterval(interval) }
+    if (!window.jsQR) {
+      const s = document.createElement('script')
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
+      s.onload = start; document.head.appendChild(s)
+    } else { start() }
+    return () => { active=false; stream?.getTracks().forEach(t=>t.stop()); clearInterval(interval) }
   }, [])
 
   return (
@@ -3125,6 +3160,7 @@ export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
   const [showDevTools,setShowDevTools]=useState(false)
+  const [showSupplyScanner,setShowSupplyScanner]=useState(false)
   const [showQRScanner,setShowQRScanner]=useState(false)
   const [profileOpen,setProfileOpen]=useState(false)
   const [devPassword,setDevPassword]=useState('')
@@ -3790,6 +3826,12 @@ export default function Admin({session}){
         )}
 
         {/* MODAL: Supply Add/Editar */}
+        {showSupplyScanner&&<BarcodeScanner onClose={()=>setShowSupplyScanner(false)} onScan={(sku)=>{
+          setShowSupplyScanner(false)
+          setSupplyForm(f=>({...f,skus:[...(f.skus||[]),sku]}))
+          showToast('SKU añadido: '+sku)
+        }}/>}
+
         {supplyModal&&(
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setSupplyModal(null)}>
             <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
@@ -3797,7 +3839,52 @@ export default function Admin({session}){
                 <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{(supplyModal==='add'||!supplyModal?.id)?'Añadir ingrediente':'Editar ingrediente'}</h3>
                 <button onClick={()=>setSupplyModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
               </div>
-              <label style={lbl}>Nombre</label>
+              {/* SKU scanner */}
+              <div style={{marginBottom:'0.75rem'}}>
+                <label style={lbl}>SKUs / Códigos de barras</label>
+                <div style={{display:'flex',gap:'0.5rem',marginBottom:'0.35rem'}}>
+                  <input id="sku-add-input" type="text" placeholder="Escribe un SKU y presiona Enter..."
+                    style={{...inp,marginBottom:0,flex:1}}
+                    onKeyDown={e=>{if(e.key==='Enter'&&e.target.value.trim()){e.preventDefault();setSupplyForm(f=>({...f,skus:[...(f.skus||[]),e.target.value.trim()]}));e.target.value=''}}}/>
+                  <button type="button" onClick={()=>setShowSupplyScanner(true)}
+                    style={{padding:'0.6rem 0.85rem',background:black,color:white,border:'none',borderRadius:6,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',flexShrink:0,display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
+                    Scan
+                  </button>
+                </div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem'}}>
+                  {(supplyForm.skus||[]).map((sku,i)=>(
+                    <span key={i} style={{padding:'0.2rem 0.6rem',background:'rgba(31,20,14,0.06)',borderRadius:999,fontSize:'0.65rem',color:black,display:'flex',alignItems:'center',gap:'0.3rem'}}>
+                      {sku}
+                      <button type="button" onClick={()=>setSupplyForm(f=>({...f,skus:f.skus.filter((_,j)=>j!==i)}))} style={{background:'none',border:'none',cursor:'pointer',color:gray,padding:0,fontSize:'0.7rem',lineHeight:1}}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+                            {/* SKU scanner */}
+              <div style={{marginBottom:'0.75rem'}}>
+                <label style={lbl}>SKUs / Códigos de barras</label>
+                <div style={{display:'flex',gap:'0.5rem',marginBottom:'0.35rem'}}>
+                  <input type="text" placeholder="Escribe un SKU y presiona Enter..."
+                    style={{...inp,marginBottom:0,flex:1}}
+                    onKeyDown={e=>{if(e.key==='Enter'&&e.target.value.trim()){e.preventDefault();setSupplyForm(f=>({...f,skus:[...(f.skus||[]),e.target.value.trim()]}));e.target.value=''}}}/>
+                  <button type="button" onClick={()=>setShowSupplyScanner(true)}
+                    style={{padding:'0.6rem 0.85rem',background:black,color:white,border:'none',borderRadius:6,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',flexShrink:0,display:'flex',alignItems:'center',gap:'0.25rem'}}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
+                    Scan
+                  </button>
+                </div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem'}}>
+                  {(supplyForm.skus||[]).map((sku,i)=>(
+                    <span key={i} style={{padding:'0.2rem 0.6rem',background:'rgba(31,20,14,0.06)',borderRadius:999,fontSize:'0.65rem',color:black,display:'flex',alignItems:'center',gap:'0.3rem'}}>
+                      {sku}<button type="button" onClick={()=>setSupplyForm(f=>({...f,skus:f.skus.filter((_,j)=>j!==i)}))} style={{background:'none',border:'none',cursor:'pointer',color:gray,padding:0}}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+<label style={lbl}>Nombre</label>
               <input style={inp} type="text" placeholder="e.g. Vercel Pro" value={supplyForm.name} onChange={e=>setSupplyForm(f=>({...f,name:e.target.value}))}/>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
                 <div>
