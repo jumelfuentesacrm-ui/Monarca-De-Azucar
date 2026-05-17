@@ -1643,7 +1643,12 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
             if(el){el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}
           }} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
             <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.3rem'}}>{cat}</div>
-            <div style={{fontFamily:ffS,fontSize:'1.1rem',color:withStock>0?'#1F140E':'rgba(31,20,14,0.3)'}}>{withStock}<span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>/{total}</span></div>
+            {(()=>{
+              const catVal = (supplies||[]).filter(s=>s.category===cat).reduce((a,s)=>a+(parseFloat(s.stock_qty||0)*parseFloat(s.cost_per_unit||0)),0)
+              return catVal > 0
+                ? <div style={{fontFamily:ffS,fontSize:'1.1rem',color:'#E35A1B'}}>${catVal.toFixed(2)}</div>
+                : <div style={{fontFamily:ffS,fontSize:'1.1rem',color:withStock>0?'#1F140E':'rgba(31,20,14,0.3)'}}>{withStock}<span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>/{total}</span></div>
+            })()}
             <div style={{fontSize:'0.52rem',color:withStock===total?'#27ae60':withStock>0?'#e67e22':'#c0392b',marginTop:'0.2rem'}}>
               {withStock===total?'✓ completo':withStock>0?`${total-withStock} sin stock`:'sin stock'}
             </div>
@@ -2781,41 +2786,50 @@ function StockValueChart({ supplies }) {
       </div>
 
       {history.length === 0 ? (
-        <div style={{height:80,display:'flex',alignItems:'center',justifyContent:'center',color:mu,fontSize:'0.72rem',fontStyle:'italic'}}>
-          Actualiza el stock para ver el historial aquí
+        <div style={{height:80,position:'relative'}}>
+          <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:4}}>
+            <div style={{width:'100%',height:2,background:'rgba(31,20,14,0.06)',borderRadius:1}}/>
+            <div style={{fontSize:'0.65rem',color:mu,fontStyle:'italic'}}>Actualiza el stock de ingredientes para ver el historial</div>
+          </div>
         </div>
       ) : (
-        <div style={{position:'relative',height:80}}>
-          {/* Line chart */}
-          <svg width="100%" height="80" style={{overflow:'visible'}}>
+        <div style={{position:'relative',height:100}}>
+          <svg width="100%" height="80" viewBox={"0 0 400 80"} preserveAspectRatio="none" style={{display:'block'}}>
             <defs>
-              <linearGradient id="stockGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={or} stopOpacity={0.3}/>
-                <stop offset="100%" stopColor={or} stopOpacity={0}/>
+              <linearGradient id="stockGrad2" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E35A1B" stopOpacity={0.25}/>
+                <stop offset="100%" stopColor="#E35A1B" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            {history.length > 1 && (() => {
-              const pts = history.map((h,i) => ({
-                x: (i/(history.length-1))*100,
-                y: 80 - (h.value/maxVal)*70
+            {(()=>{
+              const pts = history.map((h,i)=>({
+                x: history.length>1 ? (i/(history.length-1))*380+10 : 200,
+                y: 10 + (1 - h.value/maxVal)*60
               }))
-              const line = pts.map((p,i)=>`${i===0?'M':'L'}${p.x}% ${p.y}`).join(' ')
-              const area = line + ` L100% 80 L0 80 Z`
+              if(pts.length===1) return <circle cx={pts[0].x} cy={pts[0].y} r="4" fill="#E35A1B"/>
+              const line = pts.map((p,i)=>`${i===0?'M':'L'}${p.x} ${p.y}`).join(' ')
+              const area = line + ` L${pts[pts.length-1].x} 80 L${pts[0].x} 80 Z`
               return (
                 <>
-                  <path d={area} fill="url(#stockGrad)"/>
-                  <path d={line} fill="none" stroke={or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d={area} fill="url(#stockGrad2)"/>
+                  <path d={line} fill="none" stroke="#E35A1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   {pts.map((p,i)=>(
-                    <circle key={i} cx={p.x+"%"} cy={p.y} r="3" fill={or}/>
+                    <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#E35A1B" stroke="white" strokeWidth="1.5"/>
                   ))}
                 </>
               )
             })()}
           </svg>
-          {/* Date labels */}
-          <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.25rem'}}>
-            <span style={{fontSize:'0.5rem',color:mu}}>{history[0]?.date}</span>
-            <span style={{fontSize:'0.5rem',color:mu}}>{history[history.length-1]?.date}</span>
+          {/* Labels row */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'0.2rem'}}>
+            <div>
+              <div style={{fontSize:'0.5rem',color:mu}}>{history[0]?.date}</div>
+              <div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[0]?.value?.toFixed(2)}</div>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:'0.5rem',color:mu}}>{history[history.length-1]?.date}</div>
+              <div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[history.length-1]?.value?.toFixed(2)}</div>
+            </div>
           </div>
         </div>
       )}
