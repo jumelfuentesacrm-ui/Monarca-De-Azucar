@@ -1475,6 +1475,8 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
   const [openCats, setOpenCats] = React.useState({})
   const [search, setSearch] = React.useState('')
   const [showSearch, setShowSearch] = React.useState(false)
+  const [showPurchase, setShowPurchase] = React.useState(false)
+  const [purchaseSupplyId, setPurchaseSupplyId] = React.useState(null)
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
 
@@ -1541,9 +1543,14 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
 
   return (
     <div>
+      {showPurchase&&<PurchaseModal supplies={supplies||[]} onClose={()=>{setShowPurchase(false);setPurchaseSupplyId(null)}} onSuccess={()=>{setShowPurchase(false);setPurchaseSupplyId(null);loadAll&&loadAll()}} showToast={showToast} initialSupplyId={purchaseSupplyId}/>}
+
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.75rem'}}>
         <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Inventario</div>
-        <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
+        <div style={{display:'flex',gap:'0.5rem'}}>
+          <button onClick={()=>setShowPurchase(true)} style={{background:'rgba(227,90,27,0.1)',color:or,border:'1px solid rgba(227,90,27,0.25)',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>Compra +</button>
+          <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
+        </div>
       </div>
       <div style={{position:'relative',marginBottom:'1.25rem'}}>
         <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={mu} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1658,6 +1665,14 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
 
       <AlcanzaPara catalog={catalog||[]} supplies={supplies||[]}/>
 
+      {/* Search */}
+      <div style={{position:'relative',marginBottom:'1.25rem'}}>
+        <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={mu} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar ingrediente..."
+          style={{width:'100%',padding:'0.65rem 1rem 0.65rem 2.25rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+        {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:mu,fontSize:'1rem',lineHeight:1}}>✕</button>}
+      </div>
+
       {Object.entries(grouped).map(([cat, items]) => (
         <div key={cat} id={'cat-'+cat.replace(/\s/g,'-')} style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1rem'}}>
           {/* Category header — collapsible */}
@@ -1710,6 +1725,11 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
           No hay ingredientes. Corre el SQL de materia prima primero.
         </div>
       )}
+
+      {/* Purchase History */}
+      <div style={{marginTop:'2rem'}}>
+        <PurchaseHistory/>
+      </div>
     </div>
   )
 }
@@ -2853,6 +2873,254 @@ function StockValueChart({ supplies }) {
   )
 }
 
+
+function BarcodeScanner({ onScan, onClose }) {
+  const videoRef = React.useRef(null)
+  const [error, setError] = React.useState('')
+  const ff = '"DM Sans",sans-serif'
+  const or = '#E35A1B', ink = '#1F140E'
+
+  React.useEffect(() => {
+    let stream = null, interval = null
+    async function start() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.play()
+          if ('BarcodeDetector' in window) {
+            const detector = new window.BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e'] })
+            interval = setInterval(async () => {
+              if (videoRef.current?.readyState === 4) {
+                try {
+                  const codes = await detector.detect(videoRef.current)
+                  if (codes.length > 0) { clearInterval(interval); onScan(codes[0].rawValue) }
+                } catch(e) {}
+              }
+            }, 300)
+          } else {
+            setError('Tu navegador no soporta el escáner. Escribe el SKU manualmente.')
+          }
+        }
+      } catch(e) { setError('No se pudo acceder a la cámara.') }
+    }
+    start()
+    return () => { stream?.getTracks().forEach(t=>t.stop()); clearInterval(interval) }
+  }, [])
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',zIndex:9200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+      <div style={{color:'white',fontFamily:ff,fontSize:'0.9rem'}}>Apunta al código de barras</div>
+      {error
+        ? <div style={{color:'#e74c3c',fontFamily:ff,fontSize:'0.78rem',textAlign:'center',padding:'0 2rem'}}>{error}</div>
+        : <div style={{position:'relative',width:280,height:200,borderRadius:12,overflow:'hidden'}}>
+            <video ref={videoRef} style={{width:280,height:200,objectFit:'cover'}} playsInline muted/>
+            <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,border:'2px solid '+or,borderRadius:12}}/>
+            <div style={{position:'absolute',top:'50%',left:20,right:20,height:2,background:or,opacity:0.8,transform:'translateY(-50%)'}}/>
+          </div>
+      }
+      <button onClick={onClose} style={{padding:'0.65rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>Cancelar</button>
+    </div>
+  )
+}
+
+
+function PurchaseModal({ supplies, onClose, onSuccess, showToast, initialSupplyId=null }) {
+  const [supplyId, setSupplyId] = React.useState(initialSupplyId||'')
+  const [qty, setQty] = React.useState('')
+  const [unit, setUnit] = React.useState('g')
+  const [priceTotal, setPriceTotal] = React.useState('')
+  const [notes, setNotes] = React.useState('')
+  const [saving, setSaving] = React.useState(false)
+  const [showScanner, setShowScanner] = React.useState(false)
+  const [skuInput, setSkuInput] = React.useState('')
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', white='white'
+  const inp = {width:'100%',padding:'0.7rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}
+  const lbl = {fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,display:'block',marginBottom:'0.3rem'}
+  const UNITS = ['g','kg','oz','lb','ml','l','fl oz','tsp','tbsp','cup','unit']
+
+  // Auto-set unit from selected supply
+  React.useEffect(() => {
+    const s = (supplies||[]).find(s=>s.id===supplyId)
+    if (s?.base_unit) setUnit(s.base_unit)
+  }, [supplyId])
+
+  function handleScan(sku) {
+    setShowScanner(false)
+    setSkuInput(sku)
+    // Find supply with matching SKU
+    const found = (supplies||[]).find(s=>(s.skus||[]).includes(sku))
+    if (found) { setSupplyId(found.id); showToast('Ingrediente encontrado: '+found.name) }
+    else showToast('SKU no reconocido: '+sku+' — selecciona manualmente')
+  }
+
+  async function save() {
+    if (!supplyId || !qty || !priceTotal) { showToast('Completa supply, cantidad y precio'); return }
+    setSaving(true)
+    const res = await fetch('/api/admin/purchases', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ supply_id: supplyId, qty: parseFloat(qty), unit, price_total: parseFloat(priceTotal), notes })
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (res.ok) {
+      const s = (supplies||[]).find(s=>s.id===supplyId)
+      showToast(`✓ Compra registrada — ${s?.name}: +${qty}${unit}`)
+      onSuccess()
+    } else showToast('Error: '+data.error)
+  }
+
+  const selected = (supplies||[]).find(s=>s.id===supplyId)
+  const pricePerUnit = qty && priceTotal ? (parseFloat(priceTotal)/parseFloat(qty)).toFixed(4) : null
+
+  return (
+    <>
+      {showScanner && <BarcodeScanner onScan={handleScan} onClose={()=>setShowScanner(false)}/>}
+      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:8500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+        <div style={{background:'white',borderRadius:'16px 16px 0 0',width:'100%',maxWidth:520,padding:'1.5rem',maxHeight:'90vh',overflowY:'auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+            <div style={{fontFamily:ffS,fontSize:'1.3rem',fontWeight:400}}>Registrar compra</div>
+            <button onClick={onClose} style={{background:'none',border:'none',fontSize:'1.2rem',cursor:'pointer',color:mu}}>✕</button>
+          </div>
+
+          {/* SKU scanner */}
+          <div style={{marginBottom:'1rem'}}>
+            <label style={lbl}>Escanear código de barras (opcional)</label>
+            <div style={{display:'flex',gap:'0.5rem'}}>
+              <input value={skuInput} onChange={e=>setSkuInput(e.target.value)} placeholder="SKU o código..."
+                style={{...inp,marginBottom:0,flex:1}}/>
+              <button onClick={()=>setShowScanner(true)}
+                style={{padding:'0.7rem 1rem',background:ink,color:white,border:'none',borderRadius:8,cursor:'pointer',fontFamily:ff,fontSize:'0.65rem',flexShrink:0,display:'flex',alignItems:'center',gap:'0.3rem'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
+                Escanear
+              </button>
+            </div>
+          </div>
+
+          {/* Supply select */}
+          <div style={{marginBottom:'1rem'}}>
+            <label style={lbl}>Ingrediente</label>
+            <select value={supplyId} onChange={e=>setSupplyId(e.target.value)} style={{...inp,marginBottom:0}}>
+              <option value="">Seleccionar...</option>
+              {['Aceites','Chocolates','Empaque','Frutas y Frescos','Huevos','Lácteos','Otros','Saborizantes','Secos'].map(cat=>(
+                <optgroup key={cat} label={cat}>
+                  {(supplies||[]).filter(s=>s.category===cat).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(s=>(
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          {/* Qty + Unit */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'1rem'}}>
+            <div>
+              <label style={lbl}>Cantidad comprada</label>
+              <input type="number" min="0" step="0.01" placeholder="0" value={qty} onChange={e=>setQty(e.target.value)} style={{...inp,marginBottom:0}}/>
+            </div>
+            <div>
+              <label style={lbl}>Unidad</label>
+              <select value={unit} onChange={e=>setUnit(e.target.value)} style={{...inp,marginBottom:0}}>
+                {UNITS.map(u=><option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Price */}
+          <div style={{marginBottom:'1rem'}}>
+            <label style={lbl}>Precio total pagado ($)</label>
+            <input type="number" min="0" step="0.01" placeholder="0.00" value={priceTotal} onChange={e=>setPriceTotal(e.target.value)} style={{...inp,marginBottom:0}}/>
+            {pricePerUnit&&<div style={{fontSize:'0.6rem',color:mu,marginTop:'0.3rem'}}>= ${pricePerUnit}/{unit}</div>}
+          </div>
+
+          {/* Current stock preview */}
+          {selected&&(
+            <div style={{background:'rgba(227,90,27,0.05)',borderRadius:8,padding:'0.75rem',marginBottom:'1rem',fontSize:'0.72rem',color:mu}}>
+              Stock actual: <strong style={{color:ink}}>{parseFloat(selected.stock_qty||0).toFixed(1)} {selected.base_unit}</strong>
+              {qty&&<span> → después: <strong style={{color:or}}>{(parseFloat(selected.stock_qty||0)+parseFloat(qty||0)).toFixed(1)} {unit}</strong></span>}
+            </div>
+          )}
+
+          {/* Notes */}
+          <div style={{marginBottom:'1.25rem'}}>
+            <label style={lbl}>Notas (opcional)</label>
+            <input type="text" placeholder="Costco, oferta, etc." value={notes} onChange={e=>setNotes(e.target.value)} style={{...inp,marginBottom:0}}/>
+          </div>
+
+          <button onClick={save} disabled={saving} style={{width:'100%',padding:'0.9rem',background:or,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',fontWeight:600,cursor:'pointer',opacity:saving?0.6:1}}>
+            {saving?'Guardando...':'Registrar compra →'}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+
+function PurchaseHistory() {
+  const [purchases, setPurchases] = React.useState([])
+  const [loading, setLoading] = React.useState(true)
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE'
+
+  React.useEffect(() => {
+    fetch('/api/admin/purchases')
+      .then(r=>r.json())
+      .then(d=>{ setPurchases(d.purchases||[]); setLoading(false) })
+      .catch(()=>setLoading(false))
+  }, [])
+
+  // Group by date
+  const byDate = purchases.reduce((acc, p) => {
+    const date = new Date(p.purchased_at).toLocaleDateString('es-PR',{weekday:'long',year:'numeric',month:'long',day:'numeric',timeZone:'America/Puerto_Rico'})
+    if (!acc[date]) acc[date] = { date, items: [], total: 0 }
+    acc[date].items.push(p)
+    acc[date].total += parseFloat(p.price_total||0)
+    return acc
+  }, {})
+
+  if (loading) return <div style={{textAlign:'center',padding:'2rem',color:mu,fontSize:'0.78rem'}}>Cargando historial...</div>
+  if (purchases.length === 0) return (
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.5rem',textAlign:'center',color:mu,fontSize:'0.78rem',fontStyle:'italic'}}>
+      No hay compras registradas aún. Usa "Compra +" para registrar tu primera compra.
+    </div>
+  )
+
+  return (
+    <div>
+      <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400,marginBottom:'1rem'}}>Historial de compras</div>
+      {Object.values(byDate).map(group=>(
+        <div key={group.date} style={{marginBottom:'1.25rem'}}>
+          {/* Day header */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.5rem 0',borderBottom:'2px solid rgba(31,20,14,0.08)',marginBottom:'0.5rem'}}>
+            <div style={{fontSize:'0.7rem',fontWeight:600,color:ink,textTransform:'capitalize'}}>{group.date}</div>
+            <div style={{fontSize:'0.72rem',color:or,fontWeight:600}}>${group.total.toFixed(2)} total</div>
+          </div>
+          {/* Purchases that day */}
+          {group.items.map(p=>(
+            <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.65rem 0.85rem',background:'white',borderRadius:8,marginBottom:'0.35rem',border:'1px solid rgba(31,20,14,0.05)'}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{p.supplies?.name||'—'}</div>
+                <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>
+                  {parseFloat(p.qty).toFixed(2)} {p.unit}
+                  {p.notes&&<span> · {p.notes}</span>}
+                  <span style={{marginLeft:8,color:'rgba(31,20,14,0.3)'}}>{p.supplies?.category}</span>
+                </div>
+              </div>
+              <div style={{textAlign:'right',flexShrink:0,marginLeft:12}}>
+                <div style={{fontFamily:ffS,fontSize:'1rem',color:or}}>${parseFloat(p.price_total).toFixed(2)}</div>
+                <div style={{fontSize:'0.55rem',color:mu}}>${(p.price_total/p.qty).toFixed(4)}/{p.unit}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
@@ -3591,6 +3859,7 @@ export default function Admin({session}){
                       cost: parseFloat(supplyForm.cost) || 0,
                       qty_purchased: parseFloat(supplyForm.qty_purchased) || 0,
                       stock_qty: supplyForm.stock_qty !== '' ? parseFloat(supplyForm.stock_qty) : undefined,
+                      skus: supplyForm.skus || [],
                       cost_per_unit: (() => {
                         // Priority: manual cost_per_unit > calculated from cost/qty > 0
                         if (supplyForm.cost_per_unit && parseFloat(supplyForm.cost_per_unit) > 0)
