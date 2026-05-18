@@ -2352,68 +2352,69 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
 
 function QRScannerModal({ onClose, onScan }) {
   const videoRef = React.useRef(null)
-  const canvasRef = React.useRef(null)
-  const [status, setStatus] = React.useState('Iniciando cámara...')
+  const [status, setStatus] = React.useState('Cargando escáner...')
   const ff = '"DM Sans",sans-serif'
   const or = '#E35A1B'
 
   React.useEffect(() => {
-    let stream = null
-    let rafId = null
     let stopped = false
-
-    function tick() {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      if (stopped || !video || !canvas) return
-      if (video.readyState >= 2) {
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(video, 0, 0)
-        if (window.jsQR) {
-          const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const code = window.jsQR(img.data, img.width, img.height)
-          if (code?.data) { stopped = true; onScan(code.data); return }
-        }
-      }
-      rafId = requestAnimationFrame(tick)
-    }
+    let codeReader = null
 
     async function start() {
-      // Load jsQR
-      if (!window.jsQR) {
-        await new Promise((resolve, reject) => {
+      if (!window.ZXing) {
+        await new Promise((res, rej) => {
           const s = document.createElement('script')
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
-          s.onload = resolve; s.onerror = reject
+          s.src = 'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js'
+          s.onload = res; s.onerror = res // continue even if fails
           document.head.appendChild(s)
         })
       }
+      if (stopped) return
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } }
-        })
-        if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        setStatus('Apunta al código QR')
-        rafId = requestAnimationFrame(tick)
+        if (window.ZXing) {
+          codeReader = new window.ZXing.BrowserQRCodeReader()
+          setStatus('Apunta al código QR')
+          await codeReader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
+            if (result && !stopped) { stopped = true; codeReader.reset(); onScan(result.getText()) }
+          })
+        } else {
+          // jsQR fallback
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+          if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
+          videoRef.current.srcObject = stream
+          await videoRef.current.play()
+          setStatus('Apunta al código QR')
+          if (!window.jsQR) {
+            await new Promise(res => { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'; s.onload=res; document.head.appendChild(s) })
+          }
+          const canvas = document.createElement('canvas')
+          function scan() {
+            if (stopped) return
+            if (videoRef.current?.readyState >= 2) {
+              canvas.width = videoRef.current.videoWidth; canvas.height = videoRef.current.videoHeight
+              const ctx = canvas.getContext('2d'); ctx.drawImage(videoRef.current, 0, 0)
+              const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
+              const code = window.jsQR?.(img.data, img.width, img.height)
+              if (code?.data) { stopped = true; stream.getTracks().forEach(t => t.stop()); onScan(code.data); return }
+            }
+            requestAnimationFrame(scan)
+          }
+          requestAnimationFrame(scan)
+        }
       } catch(e) {
-        setStatus('Error: ' + (e.name === 'NotAllowedError' ? 'Debes permitir acceso a la cámara en tu navegador' : e.message))
+        if (!stopped) setStatus('Error: ' + (e.name === 'NotAllowedError' ? 'Permite el acceso a la cámara en ajustes' : e.message))
       }
     }
 
     start()
-    return () => { stopped = true; cancelAnimationFrame(rafId); stream?.getTracks().forEach(t => t.stop()) }
+    return () => { stopped = true; if (codeReader) codeReader.reset() }
   }, [])
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9100,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{color:'white',fontFamily:ff,fontSize:'0.85rem',opacity:0.7}}>{status}</div>
+      <div style={{color:'rgba(255,255,255,0.7)',fontFamily:ff,fontSize:'0.82rem'}}>{status}</div>
       <div style={{position:'relative',borderRadius:16,overflow:'hidden',width:280,height:280,background:'#111'}}>
         <video ref={videoRef} style={{width:280,height:280,objectFit:'cover',display:'block'}} playsInline muted autoPlay/>
-        <canvas ref={canvasRef} style={{display:'none'}}/>
         <div style={{position:'absolute',inset:0,border:'2px solid '+or,borderRadius:16,pointerEvents:'none'}}/>
         <div style={{position:'absolute',top:'50%',left:'10%',right:'10%',height:2,background:or,opacity:0.6,transform:'translateY(-50%)'}}/>
       </div>
@@ -2425,71 +2426,103 @@ function QRScannerModal({ onClose, onScan }) {
 
 function BarcodeScanner({ onScan, onClose }) {
   const videoRef = React.useRef(null)
-  const canvasRef = React.useRef(null)
-  const [status, setStatus] = React.useState('Iniciando...')
+  const [status, setStatus] = React.useState('Cargando escáner...')
   const ff = '"DM Sans",sans-serif'
   const or = '#E35A1B'
 
   React.useEffect(() => {
-    let stream = null, rafId = null, stopped = false
-    const FORMATS = ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e']
-
-    function tick() {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      if (stopped || !video || !canvas) return
-      if (video.readyState >= 2) {
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(video, 0, 0)
-        // Try BarcodeDetector (Chrome/Android)
-        if ('BarcodeDetector' in window) {
-          new window.BarcodeDetector({ formats: FORMATS }).detect(video)
-            .then(codes => { if (codes.length > 0 && !stopped) { stopped = true; onScan(codes[0].rawValue) } })
-            .catch(() => {})
-        }
-        // Try jsQR (iOS/Safari)
-        if (window.jsQR) {
-          const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const code = window.jsQR(img.data, img.width, img.height)
-          if (code?.data && !stopped) { stopped = true; onScan(code.data); return }
-        }
-      }
-      rafId = requestAnimationFrame(tick)
-    }
+    let stopped = false
+    let codeReader = null
 
     async function start() {
-      if (!window.jsQR) {
+      // Load ZXing — reads EAN-13, UPC, Code-128, QR, etc on both iOS and Android
+      if (!window.ZXing) {
         await new Promise((res, rej) => {
           const s = document.createElement('script')
-          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
-          s.onload = res; s.onerror = rej; document.head.appendChild(s)
+          s.src = 'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js'
+          s.onload = res
+          s.onerror = () => {
+            // Fallback: try jsQR for QR only
+            const s2 = document.createElement('script')
+            s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
+            s2.onload = res; s2.onerror = rej
+            document.head.appendChild(s2)
+          }
+          document.head.appendChild(s)
         }).catch(() => {})
       }
+
+      if (stopped) return
+
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 } } })
-        if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        setStatus('Apunta al código de barras')
-        rafId = requestAnimationFrame(tick)
+        // Try ZXing first (best barcode support)
+        if (window.ZXing) {
+          const hints = new Map()
+          const formats = [
+            window.ZXing.BarcodeFormat.EAN_13,
+            window.ZXing.BarcodeFormat.EAN_8,
+            window.ZXing.BarcodeFormat.UPC_A,
+            window.ZXing.BarcodeFormat.UPC_E,
+            window.ZXing.BarcodeFormat.CODE_128,
+            window.ZXing.BarcodeFormat.CODE_39,
+            window.ZXing.BarcodeFormat.QR_CODE,
+          ]
+          hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, formats)
+          codeReader = new window.ZXing.BrowserMultiFormatReader(hints)
+          setStatus('Apunta al código')
+          await codeReader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
+            if (result && !stopped) {
+              stopped = true
+              codeReader.reset()
+              onScan(result.getText())
+            }
+          })
+        } else if (window.jsQR) {
+          // jsQR fallback — QR only
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+          if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
+          videoRef.current.srcObject = stream
+          await videoRef.current.play()
+          setStatus('Apunta al código QR')
+          const canvas = document.createElement('canvas')
+          function scan() {
+            if (stopped) return
+            if (videoRef.current?.readyState >= 2) {
+              canvas.width = videoRef.current.videoWidth
+              canvas.height = videoRef.current.videoHeight
+              const ctx = canvas.getContext('2d')
+              ctx.drawImage(videoRef.current, 0, 0)
+              const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
+              const code = window.jsQR(img.data, img.width, img.height)
+              if (code?.data) { stopped = true; stream.getTracks().forEach(t => t.stop()); onScan(code.data); return }
+            }
+            requestAnimationFrame(scan)
+          }
+          requestAnimationFrame(scan)
+        } else {
+          setStatus('Error: No se pudo cargar el escáner')
+        }
       } catch(e) {
-        setStatus('Error: ' + (e.name === 'NotAllowedError' ? 'Permite el acceso a la cámara' : e.message))
+        if (!stopped) setStatus('Error: ' + (e.name === 'NotAllowedError' ? 'Permite el acceso a la cámara en ajustes' : e.message))
       }
     }
 
     start()
-    return () => { stopped = true; cancelAnimationFrame(rafId); stream?.getTracks().forEach(t => t.stop()) }
+    return () => {
+      stopped = true
+      if (codeReader) codeReader.reset()
+    }
   }, [])
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
-      <div style={{color:'white',fontFamily:ff,fontSize:'0.85rem',opacity:0.7}}>{status}</div>
-      <div style={{position:'relative',borderRadius:12,overflow:'hidden',width:280,height:200,background:'#111'}}>
-        <video ref={videoRef} style={{width:280,height:200,objectFit:'cover',display:'block'}} playsInline muted autoPlay/>
-        <canvas ref={canvasRef} style={{display:'none'}}/>
-        <div style={{position:'absolute',top:'50%',left:0,right:0,height:2,background:or,opacity:0.7,transform:'translateY(-50%)'}}/>
+      <div style={{color:'rgba(255,255,255,0.7)',fontFamily:ff,fontSize:'0.82rem'}}>{status}</div>
+      <div style={{position:'relative',borderRadius:12,overflow:'hidden',width:300,height:220,background:'#111'}}>
+        <video ref={videoRef} style={{width:300,height:220,objectFit:'cover',display:'block'}} playsInline muted autoPlay/>
+        <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,border:'2px solid '+or,borderRadius:12,pointerEvents:'none'}}/>
+        <div style={{position:'absolute',top:'50%',left:'8%',right:'8%',height:2,background:or,opacity:0.7,transform:'translateY(-50%)'}}/>
       </div>
+      <div style={{color:'rgba(255,255,255,0.4)',fontFamily:ff,fontSize:'0.65rem'}}>EAN-13 · UPC · Code-128 · QR</div>
       <button onClick={onClose} style={{padding:'0.7rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>Cancelar</button>
     </div>
   )
