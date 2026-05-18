@@ -3074,22 +3074,42 @@ export default function Admin({session}){
     showToast('Premio deleted');loadAll()
   }
 
-  function handleQRScan(value) {
+  async function handleQRScan(value) {
     setShowQRScanner(false)
     const raw=(value||'').trim()
-    const cardNum=raw.startsWith('MA-')?raw:raw.includes('MA-')?'MA-'+raw.split('MA-')[1].replace(/[^0-9]/g,''):raw
-    const found=cards.find(c=>c.card_number===cardNum)
+    // Extract card number from raw value (could be "MA-123456" or full URL)
+    const cardNum=raw.startsWith('MA-')?raw:raw.includes('MA-')?'MA-'+raw.split('MA-').pop().replace(/[^0-9]/g,''):raw
+    // Try local cards first
+    let found=cards.find(c=>c.card_number===cardNum)
+    // If not found locally, fetch from API
+    if(!found){
+      try{
+        const res=await fetch('/api/admin/cards?card_number='+encodeURIComponent(cardNum))
+        const data=await res.json()
+        found=(data.cards||[])[0]
+      }catch(e){}
+    }
     if(found){setSelectedClient(found);setPanel('client');showToast('✓ '+(found.profiles?.full_name||cardNum))}
-    else showToast('QR no reconocido: '+cardNum)
+    else showToast('No se encontró tarjeta: '+cardNum)
   }
 
-  function handleQRScan(value) {
+  async function handleQRScan(value) {
     setShowQRScanner(false)
     const raw=(value||'').trim()
-    const cardNum=raw.startsWith('MA-')?raw:raw.includes('MA-')?'MA-'+raw.split('MA-')[1].replace(/[^0-9]/g,''):raw
-    const found=cards.find(c=>c.card_number===cardNum)
+    // Extract card number from raw value (could be "MA-123456" or full URL)
+    const cardNum=raw.startsWith('MA-')?raw:raw.includes('MA-')?'MA-'+raw.split('MA-').pop().replace(/[^0-9]/g,''):raw
+    // Try local cards first
+    let found=cards.find(c=>c.card_number===cardNum)
+    // If not found locally, fetch from API
+    if(!found){
+      try{
+        const res=await fetch('/api/admin/cards?card_number='+encodeURIComponent(cardNum))
+        const data=await res.json()
+        found=(data.cards||[])[0]
+      }catch(e){}
+    }
     if(found){setSelectedClient(found);setPanel('client');showToast('✓ '+(found.profiles?.full_name||cardNum))}
-    else showToast('QR no reconocido: '+cardNum)
+    else showToast('No se encontró tarjeta: '+cardNum)
   }
 
   const signOut=async()=>{await supabase.auth.signOut();window.location.href='/login'}
