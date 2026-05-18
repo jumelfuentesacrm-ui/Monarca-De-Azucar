@@ -90,30 +90,7 @@ export default async function handler(req, res) {
       .eq('id', product_id)
       .single()
 
-    // Update catalog_items: active status and badges
-    const itemUpdate = {}
-    if (active !== undefined) itemUpdate.active = active
-    if (badge_hoy !== undefined) itemUpdate.badge_hoy = badge_hoy
-    if (badge_nuevo !== undefined) itemUpdate.badge_nuevo = badge_nuevo
-    if (badge_temporada !== undefined) itemUpdate.badge_temporada = badge_temporada
-    if (badge_agotado !== undefined) itemUpdate.badge_agotado = badge_agotado
-    if (price !== undefined) itemUpdate.price = parseFloat(price)
-    if (Object.keys(itemUpdate).length > 0) {
-      await supabase.from('catalog_items').update(itemUpdate).eq('id', product_id)
-    }
-
-        // Update catalog_items: active + badges
-    const itemUpdate = {}
-    if (active !== undefined) itemUpdate.active = active
-    if (badge_hoy !== undefined) itemUpdate.badge_hoy = badge_hoy
-    if (badge_nuevo !== undefined) itemUpdate.badge_nuevo = badge_nuevo
-    if (badge_temporada !== undefined) itemUpdate.badge_temporada = badge_temporada
-    if (badge_agotado !== undefined) itemUpdate.badge_agotado = badge_agotado
-    if (price !== undefined) itemUpdate.price = parseFloat(price)
-    if (Object.keys(itemUpdate).length > 0) {
-      await supabase.from('catalog_items').update(itemUpdate).eq('id', product_id)
-    }
-
+    
     return res.status(200).json({ success: true, item: updated })
   }
 
