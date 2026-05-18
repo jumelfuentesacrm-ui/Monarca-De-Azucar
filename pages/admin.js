@@ -575,14 +575,13 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
   }
 
   // Calculate total recipe cost
-  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
   const totalCost = ingredients.reduce((a, ing) => {
     const cpu = parseFloat(ing.supplies?.cost_per_unit || 0)
     const qty = parseFloat(ing.quantity || 0)
-    const supplyUnit = ing.supplies?.base_unit || 'g'
-    const recipeUnit = ing.unit || supplyUnit
-    const convFactor = (CONV[recipeUnit]||1) / (CONV[supplyUnit]||1)
-    return a + (qty * convFactor * cpu)
+    // Convert to base unit cost
+    const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+    const baseQty = qty * (CONV[ing.unit] || 1)
+    return a + (cpu * baseQty)
   }, 0)
 
   return (
@@ -590,7 +589,7 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
         <div style={{fontSize:'0.58rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu}}>Ingredientes · {itemName}</div>
         <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-          {totalCost>0&&<span style={{fontSize:'0.65rem',color:or,fontWeight:600}}>Costo x unidad: ${totalCost.toFixed(3)}</span>}
+          {totalCost>0&&<span style={{fontSize:'0.65rem',color:or,fontWeight:600}}>Costo: ${totalCost.toFixed(3)}</span>}
           <button onClick={()=>setAdding(a=>!a)} style={{fontSize:'0.6rem',padding:'0.3rem 0.7rem',background:or,color:white,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
             {adding?'Cancelar':'+ Añadir'}
           </button>
@@ -1469,14 +1468,12 @@ function SupplyCostHistorial({ supplyId }) {
   )
 }
 
-function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onEliminar, showToast, loadAll }) {
+function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onEliminar, showToast, loadAll, onCompra, onCompraItem }) {
   const [stockEdits, setStockEdits] = React.useState({})
   const [savingStock, setSavingStock] = React.useState(null)
   const [openCats, setOpenCats] = React.useState({})
   const [search, setSearch] = React.useState('')
   const [showSearch, setShowSearch] = React.useState(false)
-  const [showPurchase, setShowPurchase] = React.useState(false)
-  const [purchaseSupplyId, setPurchaseSupplyId] = React.useState(null)
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
 
@@ -1522,10 +1519,10 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
   }
 
   // Calculate donut data
-  const totalValue = (supplies||[]).length // just count for donut sizing
+  const totalValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
   const CATS_COLORS = {Secos:'#E35A1B',Lácteos:'#3498db',Huevos:'#f1c40f',Saborizantes:'#9b59b6',Chocolates:'#795548',Aceites:'#2ecc71',Frutas:'#e91e63',Empaque:'#607d8b',Otros:'#7A6452'}
   const donutData = Object.entries(CATS_COLORS).map(([cat,color])=>{
-    const val = (supplies||[]).filter(s=>(s.category||'Otros')===cat).length
+    const val = (supplies||[]).filter(s=>(s.category||'Otros')===cat).reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
     return {cat,color,val,pct:totalValue>0?val/totalValue:0}
   }).filter(d=>d.val>0)
 
@@ -1543,135 +1540,95 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
 
   return (
     <div>
-      {showPurchase&&<PurchaseModal supplies={supplies||[]} onClose={()=>{setShowPurchase(false);setPurchaseSupplyId(null)}} onSuccess={()=>{setShowPurchase(false);setPurchaseSupplyId(null);loadAll&&loadAll()}} showToast={showToast} initialSupplyId={purchaseSupplyId}/>}
-
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.75rem'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showSearch?'0.5rem':'1.25rem'}}>
         <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Inventario</div>
-        <div style={{display:'flex',gap:'0.5rem'}}>
-          <button onClick={()=>setShowPurchase(true)} style={{background:'rgba(227,90,27,0.1)',color:or,border:'1px solid rgba(227,90,27,0.25)',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>Compra +</button>
+        <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+          <button onClick={()=>{setShowSearch(s=>!s);if(showSearch)setSearch('')}} style={{width:36,height:36,borderRadius:'50%',background:'rgba(31,20,14,0.06)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </button>
           <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
         </div>
       </div>
-      <div style={{position:'relative',marginBottom:'1.25rem'}}>
-        <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={mu} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input value={search} onChange={e=>setSearch(e.target.value)}
+      {showSearch&&(
+        <input autoFocus value={search} onChange={e=>setSearch(e.target.value)}
           placeholder="Buscar ingrediente..."
-          style={{width:'100%',padding:'0.65rem 1rem 0.65rem 2.25rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
-        {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:mu,fontSize:'1rem',lineHeight:1}}>✕</button>}
+          style={{width:'100%',padding:'0.65rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box'}}/>
+      )}
+
+      {/* Donut + bar */}
+      {donutData.length>0&&(
+        <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+          <div style={{display:'flex',gap:'1.5rem',alignItems:'center',flexWrap:'wrap'}}>
+            {/* Donut */}
+            <svg viewBox="0 0 100 100" style={{width:110,height:110,flexShrink:0}}>
+              {arcs.map((d,i)=><path key={i} d={makeArc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)}
+              <circle cx="50" cy="50" r="26" fill={cr}/>
+              <text x="50" y="47" textAnchor="middle" style={{fontSize:7,fontFamily:ffS,fill:ink}}>Total</text>
+              <text x="50" y="57" textAnchor="middle" style={{fontSize:8,fontFamily:ffS,fill:or,fontWeight:600}}>${totalValue.toFixed(0)}</text>
+            </svg>
+            {/* Legend */}
+            <div style={{flex:1,minWidth:0}}>
+              {donutData.map(d=>(
+                <div key={d.cat} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.3rem'}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:d.color,flexShrink:0}}/>
+                  <span style={{fontSize:'0.6rem',color:mu,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.cat}</span>
+                  <span style={{fontSize:'0.6rem',color:ink,fontWeight:600,flexShrink:0}}>{(d.pct*100).toFixed(0)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Stock health bar */}
+          <div style={{marginTop:'1rem'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.4rem'}}>
+              <span style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>Estado del stock</span>
+              <span style={{fontSize:'0.72rem',fontWeight:700,color:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b'}}>{stockPct.toFixed(0)}%</span>
+            </div>
+            <div style={{height:10,background:'rgba(31,20,14,0.08)',borderRadius:5,overflow:'hidden',position:'relative'}}>
+              <div style={{
+                position:'absolute',top:0,left:0,height:'100%',
+                width:stockPct+'%',
+                background:stockPct>70?'linear-gradient(90deg,#27ae60,#2ecc71)':stockPct>40?'linear-gradient(90deg,#e67e22,#f39c12)':'linear-gradient(90deg,#c0392b,#e74c3c)',
+                borderRadius:5,
+                transition:'width 0.8s ease',
+                boxShadow:stockPct>70?'0 0 8px rgba(46,204,113,0.4)':stockPct>40?'0 0 8px rgba(230,126,34,0.4)':'0 0 8px rgba(231,76,60,0.4)'
+              }}/>
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.3rem'}}>
+              <span style={{fontSize:'0.5rem',color:mu}}>Sin stock</span>
+              <span style={{fontSize:'0.5rem',color:mu}}>Stock completo</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inventory summary */}
+      <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+        <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Resumen de inventario</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'0.75rem'}}>
+          {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
+            const items = (supplies||[]).filter(s=>s.category===cat&&parseFloat(s.cost_total||0)>0)
+            if(items.length===0) return null
+            const low = items.filter(s=>parseFloat(s.stock_qty||0)<50)
+            const ok = items.filter(s=>parseFloat(s.stock_qty||0)>=50)
+            const catVal = items.reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+            return (
+              <div key={cat} onClick={()=>{const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
+                <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
+                <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>${catVal.toFixed(2)}</div>
+                <div style={{marginTop:'0.3rem',display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
+                  {ok.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(46,204,113,0.1)',color:'#27ae60'}}>✓ {ok.length} bien</span>}
+                  {low.length>0&&<span style={{fontSize:'0.52rem',padding:'0.1rem 0.45rem',borderRadius:999,background:'rgba(230,126,34,0.1)',color:'#e67e22'}}>↓ {low.length} bajo</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
-
-
 
 
 
       <StockValueChart supplies={supplies||[]}/>
-
-      {/* ── DONA + BARRA DE STOCK ── */}
-      {(()=>{
-        const CATS_COLORS = {Secos:'#E35A1B',Lácteos:'#3498db',Huevos:'#f1c40f',Saborizantes:'#9b59b6',Chocolates:'#795548',Aceites:'#2ecc71','Frutas y Frescos':'#e91e63',Empaque:'#607d8b',Otros:'#7A6452'}
-        const totalStockValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.stock_qty||0),0)
-        const withStock = (supplies||[]).filter(s=>parseFloat(s.stock_qty||0)>0)
-        const stockPct = (supplies||[]).length>0 ? Math.round(withStock.length/(supplies||[]).length*100) : 0
-
-        const donutData = Object.entries(CATS_COLORS).map(([cat,color])=>{
-          const items=(supplies||[]).filter(s=>(s.category||'Otros')===cat)
-          const stockSum=items.reduce((a,s)=>a+parseFloat(s.stock_qty||0),0)
-          return{cat,color,items:items.length,stock:stockSum}
-        }).filter(d=>d.items>0)
-
-        const total = donutData.reduce((a,d)=>a+d.stock,1) || 1
-        let cum=0
-        function polar(pct){const a=pct*2*Math.PI-Math.PI/2;return{x:50+38*Math.cos(a),y:50+38*Math.sin(a)}}
-        function arc(start,pct){
-          if(pct>=0.999)return'M 50 12 A 38 38 0 1 1 49.99 12 Z'
-          const s=polar(start),e=polar(start+pct),lg=pct>0.5?1:0
-          return`M 50 50 L ${s.x} ${s.y} A 38 38 0 ${lg} 1 ${e.x} ${e.y} Z`
-        }
-        const arcs=donutData.map(d=>{const pct=d.stock/total;const s=cum;cum+=pct;return{...d,start:s,pct}})
-
-        return (
-          <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
-            <div style={{display:'flex',gap:'1.5rem',alignItems:'center',flexWrap:'wrap'}}>
-              {/* Donut */}
-              <svg viewBox="0 0 100 100" style={{width:110,height:110,flexShrink:0}}>
-                {totalStockValue===0
-                  ? <circle cx="50" cy="50" r="38" fill="rgba(31,20,14,0.06)"/>
-                  : arcs.map((d,i)=><path key={i} d={arc(d.start,d.pct)} fill={d.color} opacity={0.85}/>)
-                }
-                <circle cx="50" cy="50" r="26" fill={cr}/>
-                <text x="50" y="47" textAnchor="middle" style={{fontSize:7,fill:mu,fontFamily:ffS}}>{stockPct}%</text>
-                <text x="50" y="57" textAnchor="middle" style={{fontSize:6,fill:mu}}>con stock</text>
-              </svg>
-              {/* Legend */}
-              <div style={{flex:1,minWidth:0}}>
-                {donutData.map(d=>(
-                  <div key={d.cat} style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.3rem'}}>
-                    <div style={{width:8,height:8,borderRadius:'50%',background:d.color,flexShrink:0}}/>
-                    <span style={{fontSize:'0.6rem',color:mu,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.cat}</span>
-                    <span style={{fontSize:'0.6rem',color:d.stockVal>0?ink:'rgba(31,20,14,0.3)',fontWeight:d.stockVal>0?600:400}}>
-                      {d.stockVal>0?'$'+d.stockVal.toFixed(2):'sin stock'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Progress bar */}
-            <div style={{marginTop:'1rem'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.4rem'}}>
-                <span style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>Ingredientes con stock</span>
-                <span style={{fontSize:'0.72rem',fontWeight:700,color:stockPct>70?'#2d8a60':stockPct>40?'#e67e22':'#c0392b'}}>{stockPct}%</span>
-              </div>
-              <div style={{height:10,background:'rgba(31,20,14,0.08)',borderRadius:5,overflow:'hidden'}}>
-                <div style={{height:'100%',width:stockPct+'%',background:stockPct>70?'linear-gradient(90deg,#27ae60,#2ecc71)':stockPct>40?'linear-gradient(90deg,#e67e22,#f39c12)':'linear-gradient(90deg,#c0392b,#e74c3c)',borderRadius:5,transition:'width 0.8s ease'}}/>
-              </div>
-              <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.3rem'}}>
-                <span style={{fontSize:'0.5rem',color:mu}}>0%</span>
-                <span style={{fontSize:'0.5rem',color:mu}}>{withStock.length} de {(supplies||[]).length} ingredientes</span>
-                <span style={{fontSize:'0.5rem',color:mu}}>100%</span>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* ── RESUMEN POR CATEGORÍA ── */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))',gap:'0.75rem',marginBottom:'1.25rem'}}>
-        {Object.entries(
-          (supplies||[]).reduce((acc,s)=>{
-            const cat=s.category||'Otros'
-            if(!acc[cat]) acc[cat]={total:0,withStock:0}
-            acc[cat].total++
-            if(parseFloat(s.stock_qty||0)>0) acc[cat].withStock++
-            return acc
-          },{})
-        ).sort(([a],[b])=>a.localeCompare(b,'es')).map(([cat,{total,withStock}])=>(
-          <div key={cat} onClick={()=>{
-            const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'))
-            if(el){el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}
-          }} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
-            <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.3rem'}}>{cat}</div>
-            {(()=>{
-              const catVal = (supplies||[]).filter(s=>s.category===cat).reduce((a,s)=>a+(parseFloat(s.stock_qty||0)*parseFloat(s.cost_per_unit||0)),0)
-              return catVal > 0
-                ? <div style={{fontFamily:ffS,fontSize:'1.1rem',color:'#E35A1B'}}>${catVal.toFixed(2)}</div>
-                : <div style={{fontFamily:ffS,fontSize:'1.1rem',color:withStock>0?'#1F140E':'rgba(31,20,14,0.3)'}}>{withStock}<span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>/{total}</span></div>
-            })()}
-            <div style={{fontSize:'0.52rem',color:withStock===total?'#27ae60':withStock>0?'#e67e22':'#c0392b',marginTop:'0.2rem'}}>
-              {withStock===total?'✓ completo':withStock>0?`${total-withStock} sin stock`:'sin stock'}
-            </div>
-          </div>
-        ))}
-      </div>
-
       <AlcanzaPara catalog={catalog||[]} supplies={supplies||[]}/>
-
-      {/* Search */}
-      <div style={{position:'relative',marginBottom:'1.25rem'}}>
-        <svg style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={mu} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar ingrediente..."
-          style={{width:'100%',padding:'0.65rem 1rem 0.65rem 2.25rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
-        {search&&<button onClick={()=>setSearch('')} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:mu,fontSize:'1rem',lineHeight:1}}>✕</button>}
-      </div>
 
       {Object.entries(grouped).map(([cat, items]) => (
         <div key={cat} id={'cat-'+cat.replace(/\s/g,'-')} style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1rem'}}>
@@ -1693,10 +1650,7 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
                 <div style={{flex:1,minWidth:120}}>
                   <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{s.name}</div>
                   <div style={{fontSize:'0.6rem',color:mu,marginTop:2}}>
-                    {parseFloat(s.cost_total||0)>0
-                      ? `$${parseFloat(s.cost_total||0).toFixed(2)} / ${parseFloat(s.qty_purchased||0).toFixed(1)} ${s.base_unit||'g'}`
-                      : <span style={{color:'rgba(31,20,14,0.3)'}}>Sin precio</span>
-                    }
+                    ${parseFloat(s.cost_total||0).toFixed(2)} · ${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit||'g'}
                   </div>
                 </div>
                 {/* Stock qty editable */}
@@ -1728,11 +1682,7 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
           No hay ingredientes. Corre el SQL de materia prima primero.
         </div>
       )}
-
-      {/* Purchase History */}
-      <div style={{marginTop:'2rem'}}>
-        <PurchaseHistory/>
-      </div>
+      <div style={{marginTop:'2rem'}}><PurchaseHistory/></div>
     </div>
   )
 }
@@ -2352,603 +2302,255 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
 
 function QRScannerModal({ onClose, onScan }) {
   const videoRef = React.useRef(null)
-  const [status, setStatus] = React.useState('Cargando escáner...')
-  const ff = '"DM Sans",sans-serif'
-  const or = '#E35A1B'
+  const [error, setError] = React.useState('')
+  const [scanning, setScanning] = React.useState(false)
 
   React.useEffect(() => {
-    let stopped = false
-    let codeReader = null
-
-    async function start() {
-      if (!window.ZXing) {
-        await new Promise((res, rej) => {
-          const s = document.createElement('script')
-          s.src = 'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js'
-          s.onload = res; s.onerror = res // continue even if fails
-          document.head.appendChild(s)
-        })
-      }
-      if (stopped) return
+    let stream = null
+    let interval = null
+    async function startCamera() {
       try {
-        if (window.ZXing) {
-          codeReader = new window.ZXing.BrowserQRCodeReader()
-          setStatus('Apunta al código QR')
-          await codeReader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
-            if (result && !stopped) { stopped = true; codeReader.reset(); onScan(result.getText()) }
-          })
-        } else {
-          // jsQR fallback
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-          if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        if (videoRef.current) {
           videoRef.current.srcObject = stream
-          await videoRef.current.play()
-          setStatus('Apunta al código QR')
-          if (!window.jsQR) {
-            await new Promise(res => { const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'; s.onload=res; document.head.appendChild(s) })
+          videoRef.current.play()
+          setScanning(true)
+          // Use BarcodeDetector if available
+          if ('BarcodeDetector' in window) {
+            const detector = new window.BarcodeDetector({ formats: ['qr_code'] })
+            interval = setInterval(async () => {
+              if (videoRef.current && videoRef.current.readyState === 4) {
+                try {
+                  const codes = await detector.detect(videoRef.current)
+                  if (codes.length > 0) {
+                    clearInterval(interval)
+                    onScan(codes[0].rawValue)
+                  }
+                } catch(e) {}
+              }
+            }, 300)
           }
-          const canvas = document.createElement('canvas')
-          function scan() {
-            if (stopped) return
-            if (videoRef.current?.readyState >= 2) {
-              canvas.width = videoRef.current.videoWidth; canvas.height = videoRef.current.videoHeight
-              const ctx = canvas.getContext('2d'); ctx.drawImage(videoRef.current, 0, 0)
-              const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
-              const code = window.jsQR?.(img.data, img.width, img.height)
-              if (code?.data) { stopped = true; stream.getTracks().forEach(t => t.stop()); onScan(code.data); return }
-            }
-            requestAnimationFrame(scan)
-          }
-          requestAnimationFrame(scan)
         }
       } catch(e) {
-        if (!stopped) setStatus('Error: ' + (e.name === 'NotAllowedError' ? 'Permite el acceso a la cámara en ajustes' : e.message))
+        setError('No se pudo acceder a la cámara. Verifica los permisos.')
       }
     }
-
-    start()
-    return () => { stopped = true; if (codeReader) codeReader.reset() }
-  }, [])
-
-  return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9100,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{color:'rgba(255,255,255,0.7)',fontFamily:ff,fontSize:'0.82rem'}}>{status}</div>
-      <div style={{position:'relative',borderRadius:16,overflow:'hidden',width:280,height:280,background:'#111'}}>
-        <video ref={videoRef} style={{width:280,height:280,objectFit:'cover',display:'block'}} playsInline muted autoPlay/>
-        <div style={{position:'absolute',inset:0,border:'2px solid '+or,borderRadius:16,pointerEvents:'none'}}/>
-        <div style={{position:'absolute',top:'50%',left:'10%',right:'10%',height:2,background:or,opacity:0.6,transform:'translateY(-50%)'}}/>
-      </div>
-      <button onClick={onClose} style={{padding:'0.7rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>Cancelar</button>
-    </div>
-  )
-}
-
-
-function BarcodeScanner({ onScan, onClose }) {
-  const videoRef = React.useRef(null)
-  const [status, setStatus] = React.useState('Cargando escáner...')
-  const ff = '"DM Sans",sans-serif'
-  const or = '#E35A1B'
-
-  React.useEffect(() => {
-    let stopped = false
-    let codeReader = null
-
-    async function start() {
-      // Load ZXing — reads EAN-13, UPC, Code-128, QR, etc on both iOS and Android
-      if (!window.ZXing) {
-        await new Promise((res, rej) => {
-          const s = document.createElement('script')
-          s.src = 'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js'
-          s.onload = res
-          s.onerror = () => {
-            // Fallback: try jsQR for QR only
-            const s2 = document.createElement('script')
-            s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
-            s2.onload = res; s2.onerror = rej
-            document.head.appendChild(s2)
-          }
-          document.head.appendChild(s)
-        }).catch(() => {})
-      }
-
-      if (stopped) return
-
-      try {
-        // Try ZXing first (best barcode support)
-        if (window.ZXing) {
-          const hints = new Map()
-          const formats = [
-            window.ZXing.BarcodeFormat.EAN_13,
-            window.ZXing.BarcodeFormat.EAN_8,
-            window.ZXing.BarcodeFormat.UPC_A,
-            window.ZXing.BarcodeFormat.UPC_E,
-            window.ZXing.BarcodeFormat.CODE_128,
-            window.ZXing.BarcodeFormat.CODE_39,
-            window.ZXing.BarcodeFormat.QR_CODE,
-          ]
-          hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, formats)
-          codeReader = new window.ZXing.BrowserMultiFormatReader(hints)
-          setStatus('Apunta al código')
-          await codeReader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
-            if (result && !stopped) {
-              stopped = true
-              codeReader.reset()
-              onScan(result.getText())
-            }
-          })
-        } else if (window.jsQR) {
-          // jsQR fallback — QR only
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
-          if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
-          videoRef.current.srcObject = stream
-          await videoRef.current.play()
-          setStatus('Apunta al código QR')
-          const canvas = document.createElement('canvas')
-          function scan() {
-            if (stopped) return
-            if (videoRef.current?.readyState >= 2) {
-              canvas.width = videoRef.current.videoWidth
-              canvas.height = videoRef.current.videoHeight
-              const ctx = canvas.getContext('2d')
-              ctx.drawImage(videoRef.current, 0, 0)
-              const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
-              const code = window.jsQR(img.data, img.width, img.height)
-              if (code?.data) { stopped = true; stream.getTracks().forEach(t => t.stop()); onScan(code.data); return }
-            }
-            requestAnimationFrame(scan)
-          }
-          requestAnimationFrame(scan)
-        } else {
-          setStatus('Error: No se pudo cargar el escáner')
-        }
-      } catch(e) {
-        if (!stopped) setStatus('Error: ' + (e.name === 'NotAllowedError' ? 'Permite el acceso a la cámara en ajustes' : e.message))
-      }
-    }
-
-    start()
+    startCamera()
     return () => {
-      stopped = true
-      if (codeReader) codeReader.reset()
+      if (stream) stream.getTracks().forEach(t => t.stop())
+      if (interval) clearInterval(interval)
     }
   }, [])
 
-  return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
-      <div style={{color:'rgba(255,255,255,0.7)',fontFamily:ff,fontSize:'0.82rem'}}>{status}</div>
-      <div style={{position:'relative',borderRadius:12,overflow:'hidden',width:300,height:220,background:'#111'}}>
-        <video ref={videoRef} style={{width:300,height:220,objectFit:'cover',display:'block'}} playsInline muted autoPlay/>
-        <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,border:'2px solid '+or,borderRadius:12,pointerEvents:'none'}}/>
-        <div style={{position:'absolute',top:'50%',left:'8%',right:'8%',height:2,background:or,opacity:0.7,transform:'translateY(-50%)'}}/>
-      </div>
-      <div style={{color:'rgba(255,255,255,0.4)',fontFamily:ff,fontSize:'0.65rem'}}>EAN-13 · UPC · Code-128 · QR</div>
-      <button onClick={onClose} style={{padding:'0.7rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>Cancelar</button>
-    </div>
-  )
-}
-
-
-function PurchaseModal({ supplies, onClose, onSuccess, showToast, initialSupplyId=null }) {
-  const [supplyId, setSupplyId] = React.useState(initialSupplyId||'')
-  const [qty, setQty] = React.useState('')
-  const [unit, setUnit] = React.useState('g')
-  const [priceTotal, setPriceTotal] = React.useState('')
-  const [notes, setNotes] = React.useState('')
-  const [saving, setSaving] = React.useState(false)
-  const [showScanner, setShowScanner] = React.useState(false)
-  const [skuInput, setSkuInput] = React.useState('')
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or='#E35A1B', ink='#1F140E', mu='#7A6452', white='white'
-  const inp = {width:'100%',padding:'0.7rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}
-  const lbl = {fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,display:'block',marginBottom:'0.3rem'}
-  const UNITS = ['g','kg','oz','lb','ml','l','fl oz','tsp','tbsp','cup','unit']
-
-  // Auto-set unit from selected supply
-  React.useEffect(() => {
-    const s = (supplies||[]).find(s=>s.id===supplyId)
-    if (s?.base_unit) setUnit(s.base_unit)
-  }, [supplyId])
-
-  function handleScan(sku) {
-    setShowScanner(false)
-    setSkuInput(sku)
-    // Find supply with matching SKU
-    const found = (supplies||[]).find(s=>(s.skus||[]).includes(sku))
-    if (found) { setSupplyId(found.id); showToast('Ingrediente encontrado: '+found.name) }
-    else showToast('SKU no reconocido: '+sku+' — selecciona manualmente')
-  }
-
-  async function save() {
-    if (!supplyId || !qty || !priceTotal) { showToast('Completa supply, cantidad y precio'); return }
-    setSaving(true)
-    const res = await fetch('/api/admin/purchases', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ supply_id: supplyId, qty: parseFloat(qty), unit, price_total: parseFloat(priceTotal), notes })
-    })
-    const data = await res.json()
-    setSaving(false)
-    if (res.ok) {
-      const s = (supplies||[]).find(s=>s.id===supplyId)
-      showToast(`✓ Compra registrada — ${s?.name}: +${qty}${unit}`)
-      onSuccess()
-    } else showToast('Error: '+data.error)
-  }
-
-  const selected = (supplies||[]).find(s=>s.id===supplyId)
-  const pricePerUnit = qty && priceTotal ? (parseFloat(priceTotal)/parseFloat(qty)).toFixed(4) : null
-
   return (
-    <>
-      {showScanner && <BarcodeScanner onScan={handleScan} onClose={()=>setShowScanner(false)}/>}
-      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:8500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-        <div style={{background:'white',borderRadius:'16px 16px 0 0',width:'100%',maxWidth:520,padding:'1.5rem',maxHeight:'90vh',overflowY:'auto'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
-            <div style={{fontFamily:ffS,fontSize:'1.3rem',fontWeight:400}}>Registrar compra</div>
-            <button onClick={onClose} style={{background:'none',border:'none',fontSize:'1.2rem',cursor:'pointer',color:mu}}>✕</button>
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9100,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+      <div style={{color:'white',fontFamily:ffS,fontSize:'1.3rem',marginBottom:'1rem',fontStyle:'italic'}}>Escanear QR</div>
+      {error
+        ? <div style={{color:'#e74c3c',fontFamily:ff,fontSize:'0.82rem',textAlign:'center',padding:'0 2rem'}}>{error}</div>
+        : <div style={{position:'relative',width:280,height:280}}>
+            <video ref={videoRef} style={{width:280,height:280,objectFit:'cover',borderRadius:16}} playsInline muted/>
+            {/* Scanner frame */}
+            <div style={{position:'absolute',inset:0,borderRadius:16,border:'2px solid #E35A1B',boxShadow:'0 0 0 9999px rgba(0,0,0,0.5)'}}/>
+            <div style={{position:'absolute',top:12,left:12,width:32,height:32,borderTop:'3px solid #E35A1B',borderLeft:'3px solid #E35A1B',borderRadius:'4px 0 0 0'}}/>
+            <div style={{position:'absolute',top:12,right:12,width:32,height:32,borderTop:'3px solid #E35A1B',borderRight:'3px solid #E35A1B',borderRadius:'0 4px 0 0'}}/>
+            <div style={{position:'absolute',bottom:12,left:12,width:32,height:32,borderBottom:'3px solid #E35A1B',borderLeft:'3px solid #E35A1B',borderRadius:'0 0 0 4px'}}/>
+            <div style={{position:'absolute',bottom:12,right:12,width:32,height:32,borderBottom:'3px solid #E35A1B',borderRight:'3px solid #E35A1B',borderRadius:'0 0 4px 0'}}/>
           </div>
-
-          {/* SKU scanner */}
-          <div style={{marginBottom:'1rem'}}>
-            <label style={lbl}>Escanear código de barras (opcional)</label>
-            <div style={{display:'flex',gap:'0.5rem'}}>
-              <input value={skuInput} onChange={e=>setSkuInput(e.target.value)} placeholder="SKU o código..."
-                style={{...inp,marginBottom:0,flex:1}}/>
-              <button onClick={()=>setShowScanner(true)}
-                style={{padding:'0.7rem 1rem',background:ink,color:white,border:'none',borderRadius:8,cursor:'pointer',fontFamily:ff,fontSize:'0.65rem',flexShrink:0,display:'flex',alignItems:'center',gap:'0.3rem'}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
-                Escanear
-              </button>
-            </div>
-          </div>
-
-          {/* Supply select */}
-          <div style={{marginBottom:'1rem'}}>
-            <label style={lbl}>Ingrediente</label>
-            <select value={supplyId} onChange={e=>setSupplyId(e.target.value)} style={{...inp,marginBottom:0}}>
-              <option value="">Seleccionar...</option>
-              {['Aceites','Chocolates','Empaque','Frutas y Frescos','Huevos','Lácteos','Otros','Saborizantes','Secos'].map(cat=>(
-                <optgroup key={cat} label={cat}>
-                  {(supplies||[]).filter(s=>s.category===cat).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(s=>(
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-
-          {/* Qty + Unit */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'1rem'}}>
-            <div>
-              <label style={lbl}>Cantidad comprada</label>
-              <input type="number" min="0" step="0.01" placeholder="0" value={qty} onChange={e=>setQty(e.target.value)} style={{...inp,marginBottom:0}}/>
-            </div>
-            <div>
-              <label style={lbl}>Unidad</label>
-              <select value={unit} onChange={e=>setUnit(e.target.value)} style={{...inp,marginBottom:0}}>
-                {UNITS.map(u=><option key={u} value={u}>{u}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Price */}
-          <div style={{marginBottom:'1rem'}}>
-            <label style={lbl}>Precio total pagado ($)</label>
-            <input type="number" min="0" step="0.01" placeholder="0.00" value={priceTotal} onChange={e=>setPriceTotal(e.target.value)} style={{...inp,marginBottom:0}}/>
-            {pricePerUnit&&<div style={{fontSize:'0.6rem',color:mu,marginTop:'0.3rem'}}>= ${pricePerUnit}/{unit}</div>}
-          </div>
-
-          {/* Current stock preview */}
-          {selected&&(
-            <div style={{background:'rgba(227,90,27,0.05)',borderRadius:8,padding:'0.75rem',marginBottom:'1rem',fontSize:'0.72rem',color:mu}}>
-              Stock actual: <strong style={{color:ink}}>{parseFloat(selected.stock_qty||0).toFixed(1)} {selected.base_unit}</strong>
-              {qty&&<span> → después: <strong style={{color:or}}>{(parseFloat(selected.stock_qty||0)+parseFloat(qty||0)).toFixed(1)} {unit}</strong></span>}
-            </div>
-          )}
-
-          {/* Notes */}
-          <div style={{marginBottom:'1.25rem'}}>
-            <label style={lbl}>Notas (opcional)</label>
-            <input type="text" placeholder="Costco, oferta, etc." value={notes} onChange={e=>setNotes(e.target.value)} style={{...inp,marginBottom:0}}/>
-          </div>
-
-          <button onClick={save} disabled={saving} style={{width:'100%',padding:'0.9rem',background:or,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',fontWeight:600,cursor:'pointer',opacity:saving?0.6:1}}>
-            {saving?'Guardando...':'Registrar compra →'}
-          </button>
-        </div>
+      }
+      <div style={{color:'rgba(255,255,255,0.5)',fontFamily:ff,fontSize:'0.72rem',marginTop:'1rem'}}>
+        {scanning ? 'Apunta al código QR del cliente' : 'Iniciando cámara...'}
       </div>
-    </>
-  )
-}
-
-
-function PurchaseHistory() {
-  const [purchases, setPurchases] = React.useState([])
-  const [loading, setLoading] = React.useState(true)
-  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE'
-
-  React.useEffect(() => {
-    fetch('/api/admin/purchases')
-      .then(r=>r.json())
-      .then(d=>{ setPurchases(d.purchases||[]); setLoading(false) })
-      .catch(()=>setLoading(false))
-  }, [])
-
-  // Group by date
-  const byDate = purchases.reduce((acc, p) => {
-    const date = new Date(p.purchased_at).toLocaleDateString('es-PR',{weekday:'long',year:'numeric',month:'long',day:'numeric',timeZone:'America/Puerto_Rico'})
-    if (!acc[date]) acc[date] = { date, items: [], total: 0 }
-    acc[date].items.push(p)
-    acc[date].total += parseFloat(p.price_total||0)
-    return acc
-  }, {})
-
-  if (loading) return <div style={{textAlign:'center',padding:'2rem',color:mu,fontSize:'0.78rem'}}>Cargando historial...</div>
-  if (purchases.length === 0) return (
-    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.5rem',textAlign:'center',color:mu,fontSize:'0.78rem',fontStyle:'italic'}}>
-      No hay compras registradas aún. Usa "Compra +" para registrar tu primera compra.
-    </div>
-  )
-
-  return (
-    <div>
-      <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400,marginBottom:'1rem'}}>Historial de compras</div>
-      {Object.values(byDate).map(group=>(
-        <div key={group.date} style={{marginBottom:'1.25rem'}}>
-          {/* Day header */}
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.5rem 0',borderBottom:'2px solid rgba(31,20,14,0.08)',marginBottom:'0.5rem'}}>
-            <div style={{fontSize:'0.7rem',fontWeight:600,color:ink,textTransform:'capitalize'}}>{group.date}</div>
-            <div style={{fontSize:'0.72rem',color:or,fontWeight:600}}>${group.total.toFixed(2)} total</div>
-          </div>
-          {/* Purchases that day */}
-          {group.items.map(p=>(
-            <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.65rem 0.85rem',background:'white',borderRadius:8,marginBottom:'0.35rem',border:'1px solid rgba(31,20,14,0.05)'}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{p.supplies?.name||'—'}</div>
-                <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>
-                  {parseFloat(p.qty).toFixed(2)} {p.unit}
-                  {p.notes&&<span> · {p.notes}</span>}
-                  <span style={{marginLeft:8,color:'rgba(31,20,14,0.3)'}}>{p.supplies?.category}</span>
-                </div>
-              </div>
-              <div style={{textAlign:'right',flexShrink:0,marginLeft:12}}>
-                <div style={{fontFamily:ffS,fontSize:'1rem',color:or}}>${parseFloat(p.price_total).toFixed(2)}</div>
-                <div style={{fontSize:'0.55rem',color:mu}}>${(p.price_total/p.qty).toFixed(4)}/{p.unit}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ))}
+      <button onClick={onClose} style={{marginTop:'1.5rem',padding:'0.75rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>
+        Cancelar
+      </button>
     </div>
   )
 }
 
 
-function InventoryDropdown({ supplies, recipeMap }) {
+function InventoryDropdown({ catalog, supplies, cards }) {
   const [open, setOpen] = React.useState(false)
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or = '#E35A1B', ink = '#1F140E', mu = '#7A6452'
+  const or = '#E35A1B', ink = '#1F140E', cr = '#FBF7EE', mu = '#7A6452'
 
-  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
-  const lowItems = (supplies||[]).filter(s => {
-    const stock = parseFloat(s.stock_qty||0)
-    if (!parseFloat(s.cost_total||0)) return false
-    if (stock <= 0) return true
-    const usages = (recipeMap||[]).filter(r => r.supply_id === s.id)
-    if (usages.length === 0) return false
-    return usages.some(u => {
-      const perUnit = parseFloat(u.quantity||0) * (CONV[u.unit]||1)
-      if (perUnit <= 0) return false
-      return (stock / perUnit) < 12
-    })
-  })
+  // Spend this month (from supplies cost_total)
+  const monthSpend = (supplies||[]).reduce((a,s) => a + parseFloat(s.cost_total||0), 0)
 
-  if (!open) return (
-    <button onClick={()=>setOpen(true)} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.5rem 0.9rem',background:lowItems.length>0?'rgba(227,90,27,0.1)':'#FBF7EE',border:'1px solid '+(lowItems.length>0?'rgba(227,90,27,0.3)':'rgba(31,20,14,0.12)'),borderRadius:8,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer',color:lowItems.length>0?or:ink}}>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      {lowItems.length>0 ? `${lowItems.length} bajo stock` : 'Inventario OK'}
-    </button>
-  )
+  // Stock summary
+  const lowStock = (supplies||[]).filter(s => parseFloat(s.stock_qty||0) < 100 && s.base_unit === 'g')
+  const outOfStock = (supplies||[]).filter(s => parseFloat(s.stock_qty||0) <= 0)
 
   return (
     <div style={{position:'relative'}}>
-      <button onClick={()=>setOpen(false)} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.5rem 0.9rem',background:lowItems.length>0?'rgba(227,90,27,0.1)':'#FBF7EE',border:'1px solid '+(lowItems.length>0?'rgba(227,90,27,0.3)':'rgba(31,20,14,0.12)'),borderRadius:8,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer',color:lowItems.length>0?or:ink}}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        {lowItems.length>0 ? `${lowItems.length} bajo stock` : 'Inventario OK'} ▾
+      <button onClick={()=>setOpen(o=>!o)} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.6rem 1rem',background:'#FBF7EE',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer',color:ink}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+        Inventario
+        <span style={{transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
       </button>
-      <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:380,background:'white',borderRadius:12,border:'1px solid rgba(31,20,14,0.1)',boxShadow:'0 8px 32px rgba(0,0,0,0.12)',zIndex:300,overflow:'hidden'}}>
-        <div style={{padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <div>
-            <div style={{fontFamily:ffS,fontSize:'0.95rem',fontWeight:400}}>Stock bajo</div>
-            <div style={{fontSize:'0.6rem',color:mu,marginTop:2}}>Menos de 12 unidades producibles</div>
+
+      {open&&(
+        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:320,background:'white',borderRadius:12,border:'1px solid rgba(31,20,14,0.1)',boxShadow:'0 8px 32px rgba(0,0,0,0.12)',zIndex:300,overflow:'hidden'}}>
+          {/* Header */}
+          <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+            <div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.25rem'}}>Resumen de Inventario</div>
+            <div style={{fontSize:'0.62rem',color:mu}}>Materias primas y stock</div>
           </div>
-          <div style={{textAlign:'right'}}>
-            <div style={{fontSize:'0.52rem',letterSpacing:'0.08em',textTransform:'uppercase',color:mu}}>Ingredientes</div>
-            <div style={{fontFamily:ffS,fontSize:'1.1rem',color:or}}>{(supplies||[]).filter(s=>parseFloat(s.cost_total||0)>0).length}</div>
-          </div>
-        </div>
-        {lowItems.length===0
-          ? <div style={{padding:'1.25rem',textAlign:'center',color:mu,fontSize:'0.75rem'}}>Todo el inventario está bien ✓</div>
-          : <div style={{maxHeight:280,overflowY:'auto'}}>
-              {lowItems.map(s=>(
-                <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.65rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
-                  <div>
-                    <div style={{fontSize:'0.72rem',color:ink,fontWeight:500}}>{s.name}</div>
-                    <div style={{fontSize:'0.58rem',color:mu}}>{s.category}</div>
-                  </div>
-                  <div style={{textAlign:'right'}}>
-                    <div style={{fontSize:'0.68rem',color:parseFloat(s.stock_qty||0)<=0?'#c0392b':'#e67e22',fontWeight:700}}>{parseFloat(s.stock_qty||0).toFixed(0)} {s.base_unit}</div>
-                    <div style={{fontSize:'0.55rem',color:'#e67e22'}}>bajo</div>
-                  </div>
-                </div>
-              ))}
+
+          {/* Spend */}
+          <div style={{padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div>
+              <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:2}}>Costo total materiales</div>
+              <div style={{fontFamily:ffS,fontSize:'1.4rem',color:or}}>${monthSpend.toFixed(2)}</div>
             </div>
-        }
-        <div style={{padding:'0.65rem 1.25rem',borderTop:'1px solid rgba(31,20,14,0.06)',fontSize:'0.6rem',color:or,textAlign:'center',cursor:'pointer'}} onClick={()=>setOpen(false)}>Ver más →</div>
-      </div>
-    </div>
-  )
-}
-
-function StockValueChart({ supplies }) {
-  const [range, setRange] = React.useState('week')
-  const [history, setHistory] = React.useState([])
-  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE'
-
-  React.useEffect(() => {
-    fetch('/api/admin/supplies?stockHistory=1&range='+range)
-      .then(r=>r.json()).then(d=>setHistory(d.history||[])).catch(()=>{})
-  }, [range])
-
-  const currentValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.stock_qty||0)*parseFloat(s.cost_per_unit||0),0)
-  const maxVal = Math.max(...history.map(h=>h.value), currentValue, 1)
-  const labels = {day:'Hoy', week:'7 días', month:'30 días'}
-
-  return (
-    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
-        <div>
-          <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400}}>Valor del inventario</div>
-          <div style={{fontFamily:ffS,fontSize:'1.6rem',color:or,marginTop:'0.2rem'}}>${currentValue.toFixed(2)}</div>
-          <div style={{fontSize:'0.6rem',color:mu}}>valor actual en materiales</div>
-        </div>
-        <div style={{display:'flex',gap:'0.35rem'}}>
-          {['day','week','month'].map(r=>(
-            <button key={r} onClick={()=>setRange(r)} style={{padding:'0.3rem 0.65rem',borderRadius:999,border:'1px solid rgba(31,20,14,0.12)',background:range===r?ink:'transparent',color:range===r?'white':mu,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer'}}>
-              {labels[r]}
-            </button>
-          ))}
-        </div>
-      </div>
-      {history.length===0
-        ? <div style={{height:60,display:'flex',alignItems:'center',justifyContent:'center',color:mu,fontSize:'0.7rem',fontStyle:'italic'}}>Actualiza el stock para ver el historial</div>
-        : <div style={{position:'relative'}}>
-            <svg width="100%" height="80" viewBox="0 0 400 80" preserveAspectRatio="none" style={{display:'block'}}>
-              <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={or} stopOpacity={0.25}/><stop offset="100%" stopColor={or} stopOpacity={0}/></linearGradient></defs>
-              {(()=>{
-                const pts=history.map((h,i)=>({x:history.length>1?(i/(history.length-1))*380+10:200,y:10+(1-h.value/maxVal)*60}))
-                if(pts.length===1) return <circle cx={pts[0].x} cy={pts[0].y} r="4" fill={or}/>
-                const line=pts.map((p,i)=>`${i===0?'M':'L'}${p.x} ${p.y}`).join(' ')
-                return(<><path d={line+` L${pts[pts.length-1].x} 80 L${pts[0].x} 80 Z`} fill="url(#sg)"/><path d={line} fill="none" stroke={or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>{pts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="3.5" fill={or} stroke="white" strokeWidth="1.5"/>)}</>)
-              })()}
-            </svg>
-            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.25rem'}}>
-              <div><div style={{fontSize:'0.5rem',color:mu}}>{history[0]?.date}</div><div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[0]?.value?.toFixed(2)}</div></div>
-              <div style={{textAlign:'right'}}><div style={{fontSize:'0.5rem',color:mu}}>{history[history.length-1]?.date}</div><div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[history.length-1]?.value?.toFixed(2)}</div></div>
-            </div>
-            {history.length>1&&<div style={{display:'flex',gap:'1rem',marginTop:'0.5rem',paddingTop:'0.5rem',borderTop:'1px solid rgba(31,20,14,0.06)'}}>
-              {[['Promedio','$'+(history.reduce((a,h)=>a+h.value,0)/history.length).toFixed(2)],['Máximo','$'+Math.max(...history.map(h=>h.value)).toFixed(2)],['Mínimo','$'+Math.min(...history.map(h=>h.value)).toFixed(2)]].map(([l,v])=>(
-                <div key={l}><div style={{fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>{l}</div><div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{v}</div></div>
-              ))}
-            </div>}
-          </div>
-      }
-    </div>
-  )
-}
-
-function AlcanzaPara({ catalog, supplies }) {
-  const [expanded, setExpanded] = React.useState(null)
-  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE', white='white'
-  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
-
-  const supplyMap = {}
-  ;(supplies||[]).forEach(s=>{ supplyMap[s.id]=s })
-
-  const results = (catalog||[]).filter(c=>c.active!==false).map(item=>{
-    const recipe = item.recipe_ingredients||[]
-    if(recipe.length===0) return {item,units:null,missing:[],ingredients:[]}
-    let minUnits = Infinity
-    const ingredientStatus = recipe.map(r=>{
-      const supply = supplyMap[r.supply_id]
-      if(!supply) return {name:r.supply_name||'?',needed:r.quantity,unit:r.unit,have:0,haveUnit:'',canMake:0,missing:true}
-      const stockBase = parseFloat(supply.stock_qty||0)*(CONV[supply.base_unit||'g']||1)
-      const neededBase = parseFloat(r.quantity||0)*(CONV[r.unit||'g']||1)
-      const canMake = neededBase>0?Math.floor(stockBase/neededBase):Infinity
-      if(canMake<minUnits) minUnits=canMake
-      return {name:supply.name,needed:r.quantity,unit:r.unit,have:parseFloat(supply.stock_qty||0),haveUnit:supply.base_unit||'g',canMake,missing:canMake===0}
-    })
-    return {item,units:minUnits===Infinity?null:minUnits,missing:ingredientStatus.filter(i=>i.missing),ingredients:ingredientStatus}
-  })
-
-  const withRecipes = results.filter(r=>r.units!==null)
-  if(withRecipes.length===0) return(
-    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
-      <div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.5rem'}}>Alcanza para</div>
-      <div style={{fontSize:'0.72rem',color:mu,fontStyle:'italic'}}>Vincula ingredientes a los productos en Catálogo para ver cuánto puedes producir.</div>
-    </div>
-  )
-
-  return(
-    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1.25rem'}}>
-      <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
-        <div style={{fontFamily:ffS,fontSize:'1rem'}}>Alcanza para</div>
-        <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>Con el stock actual</div>
-      </div>
-      {withRecipes.map(({item,units,missing,ingredients})=>(
-        <div key={item.id} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
-          <div onClick={()=>setExpanded(e=>e===item.id?null:item.id)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.85rem 1.25rem',cursor:'pointer',background:expanded===item.id?'rgba(227,90,27,0.04)':'transparent'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-              <span style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{item.name}</span>
-              {missing.length>0&&<span style={{fontSize:'0.56rem',padding:'0.15rem 0.5rem',borderRadius:999,background:'rgba(192,57,43,0.1)',color:'#c0392b'}}>Faltan ingredientes</span>}
-            </div>
-            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-              <span style={{fontFamily:ffS,fontSize:'1.1rem',color:units===0?'#c0392b':units<12?'#e67e22':'#27ae60'}}>{units} <span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>und.</span></span>
-              <span style={{fontSize:'0.65rem',color:mu,transform:expanded===item.id?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:2}}>Ingredientes</div>
+              <div style={{fontFamily:ffS,fontSize:'1.4rem',color:ink}}>{(supplies||[]).length}</div>
             </div>
           </div>
-          {expanded===item.id&&(
-            <div style={{background:'white',borderTop:'1px solid rgba(31,20,14,0.05)',padding:'0.75rem 1.25rem'}}>
-              {missing.length>0&&<div style={{marginBottom:'0.75rem',padding:'0.6rem 0.85rem',background:'rgba(192,57,43,0.06)',borderRadius:6,border:'1px solid rgba(192,57,43,0.15)'}}>
-                <div style={{fontSize:'0.56rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#c0392b',marginBottom:'0.35rem'}}>Falta:</div>
-                {missing.map(m=><div key={m.name} style={{fontSize:'0.72rem',color:'#c0392b',marginBottom:2}}>• {m.name} — necesitas {m.needed} {m.unit}, tienes {m.have.toFixed(0)} {m.haveUnit}</div>)}
-              </div>}
-              {ingredients.map((ing,i)=>(
-                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.35rem 0',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
-                  <span style={{fontSize:'0.72rem',color:ing.missing?'#c0392b':ink}}>{ing.name}</span>
-                  <div style={{textAlign:'right'}}>
-                    <span style={{fontSize:'0.65rem',color:mu}}>{ing.needed} {ing.unit}</span>
-                    <span style={{fontSize:'0.65rem',color:ing.missing?'#c0392b':'#27ae60',marginLeft:8,fontWeight:600}}>{ing.missing?'✕':'✓'}</span>
-                  </div>
-                </div>
-              ))}
+
+          {/* Alerts */}
+          {(lowStock.length > 0 || outOfStock.length > 0) && (
+            <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+              {outOfStock.length > 0 && (
+                <div style={{fontSize:'0.68rem',color:'#c0392b',marginBottom:4}}>⚠ {outOfStock.length} agotado{outOfStock.length!==1?'s':''}: {outOfStock.slice(0,2).map(s=>s.name).join(', ')}{outOfStock.length>2?'...':''}</div>
+              )}
+              {lowStock.length > 0 && (
+                <div style={{fontSize:'0.68rem',color:'#e67e22'}}>↓ {lowStock.length} bajo stock: {lowStock.slice(0,2).map(s=>s.name).join(', ')}{lowStock.length>2?'...':''}</div>
+              )}
             </div>
           )}
+
+          {/* Supplies list */}
+          <div style={{maxHeight:220,overflowY:'auto'}}>
+            {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
+              const items = (supplies||[]).filter(s=>s.category===cat)
+              if(items.length===0) return null
+              return (
+                <div key={cat}>
+                  <div style={{padding:'0.4rem 1.25rem',fontSize:'0.5rem',letterSpacing:'0.14em',textTransform:'uppercase',color:mu,background:'rgba(31,20,14,0.03)'}}>{cat}</div>
+                  {items.map(s=>(
+                    <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.5rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.03)'}}>
+                      <span style={{fontSize:'0.72rem',color:ink}}>{s.name}</span>
+                      <div style={{textAlign:'right'}}>
+                        <div style={{fontSize:'0.65rem',color:parseFloat(s.stock_qty||0)<=0?'#c0392b':parseFloat(s.stock_qty||0)<100?'#e67e22':'#2d8a60',fontWeight:600}}>{parseFloat(s.stock_qty||0).toFixed(0)} {s.base_unit}</div>
+                        <div style={{fontSize:'0.55rem',color:mu}}>${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{padding:'0.75rem 1.25rem',borderTop:'1px solid rgba(31,20,14,0.06)'}}>
+            <div style={{fontSize:'0.6rem',color:mu,textAlign:'center'}}>Edita el stock en <span style={{color:or,cursor:'pointer'}} onClick={()=>setOpen(false)}>Inventario →</span></div>
+          </div>
         </div>
-      ))}
+      )}
     </div>
   )
 }
+
+
+function StockPanel({ catalog, supplies, loadAll, showToast }) {
+  const [entries, setEntries] = React.useState({})
+  const [recipes, setRecipes] = React.useState({})
+  const [saving, setSaving] = React.useState(false)
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white', gl='rgba(31,20,14,0.1)'
+
+  React.useEffect(() => {
+    fetch('/api/admin/stock').then(r=>r.json()).then(d=>{
+      if(d.recipes) setRecipes(d.recipes)
+    }).catch(()=>{})
+  }, [])
+
+  async function addStock(itemId, itemName) {
+    const qty = parseFloat(entries[itemId] || 0)
+    if (!qty || qty <= 0) { showToast('Pon una cantidad válida'); return }
+    setSaving(true)
+    const res = await fetch('/api/admin/stock', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ catalog_item_id: itemId, qty_added: qty, note: 'Producción manual' })
+    })
+    if (res.ok) {
+      showToast(`+${qty} unidades de ${itemName} añadidas al stock`)
+      setEntries(e => ({...e, [itemId]: ''}))
+      loadAll()
+    } else { showToast('Error al guardar') }
+    setSaving(false)
+  }
+
+  return (
+    <div>
+      <div style={{marginBottom:'1.5rem'}}>
+        <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Stock</div>
+        <div style={{fontSize:'0.72rem',color:mu,marginTop:'0.25rem'}}>Registra lo que horneaste hoy — descuenta materiales automáticamente</div>
+      </div>
+
+      <div style={{background:cr,borderRadius:10,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden'}}>
+        {(catalog||[]).filter(c=>c.active!==false).map((item,i)=>{
+          const ingredientList = recipes[item.id] || []
+          return (
+            <div key={item.id} style={{borderBottom:i<catalog.length-1?'1px solid rgba(31,20,14,0.06)':'none',padding:'1rem 1.25rem'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap'}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:'0.85rem',color:ink,fontWeight:500}}>{item.name}</div>
+                  <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>
+                    {ingredientList.length > 0
+                      ? ingredientList.map(r=>`${r.quantity}${r.unit} ${r.supply_name}`).join(' · ')
+                      : <span style={{color:'rgba(31,20,14,0.3)'}}>Sin receta vinculada — ve a Catálogo para añadir ingredientes</span>
+                    }
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexShrink:0}}>
+                  <input
+                    type="number" min="0" step="1" placeholder="0"
+                    value={entries[item.id]||''}
+                    onChange={e=>setEntries(prev=>({...prev,[item.id]:e.target.value}))}
+                    style={{width:72,padding:'0.5rem 0.6rem',border:'1px solid '+gl,borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',textAlign:'center'}}
+                  />
+                  <span style={{fontSize:'0.65rem',color:mu,flexShrink:0}}>und.</span>
+                  <button onClick={()=>addStock(item.id, item.name)} disabled={saving||!entries[item.id]}
+                    style={{padding:'0.5rem 1rem',background:or,color:white,border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer',opacity:!entries[item.id]?0.4:1}}>
+                    + Añadir
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+        {(!catalog||catalog.length===0)&&<div style={{padding:'2rem',textAlign:'center',color:mu,fontSize:'0.82rem'}}>No hay productos en el catálogo.</div>}
+      </div>
+    </div>
+  )
+}
+
 
 function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold, gray }) {
   const [openCats, setOpenCats] = React.useState({})
   const [unitSel, setUnitSel] = React.useState({})
   const CATS = ['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
-  const UNITS = ['g','kg','oz','lb','ml','l','fl oz','tsp','tbsp','cup','unit']
+  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit']
   const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+
   const [search, setSearch] = React.useState('')
 
-  function calcCost(qty, selUnit, supplyUnit, cpu) {
-    if(!qty||!cpu) return 0
-    return qty*(CONV[selUnit]||1)/(CONV[supplyUnit]||1)*cpu
-  }
-
-  return(
+  return (
     <div style={{marginBottom:'1.25rem'}}>
       <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.5rem'}}>Calcular desde ingredientes</div>
       <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar ingrediente..."
         style={{width:'100%',padding:'0.55rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box'}}/>
       {CATS.map(cat=>{
-        const items=(supplies||[]).filter(s=>(s.category||'Otros')===cat&&(!search||s.name.toLowerCase().includes(search.toLowerCase())))
+        const items = (supplies||[]).filter(s=>(s.category||'Otros')===cat&&(!search||s.name.toLowerCase().includes(search.toLowerCase()))).sort((a,b)=>a.name.localeCompare(b.name,'es'))
         if(items.length===0) return null
-        const isOpen=openCats[cat]
-        return(
+        const isOpen = openCats[cat]
+        return (
           <div key={cat} style={{borderRadius:8,border:'1px solid rgba(31,20,14,0.08)',marginBottom:'0.5rem',overflow:'hidden'}}>
-            <button onClick={()=>setOpenCats(o=>({...o,[cat]:!o[cat]}))} style={{width:'100%',padding:'0.65rem 1rem',display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(31,20,14,0.03)',border:'none',cursor:'pointer',fontFamily:ff}}>
+            <button onClick={()=>setOpenCats(o=>({...o,[cat]:!o[cat]}))}
+              style={{width:'100%',padding:'0.65rem 1rem',display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(31,20,14,0.03)',border:'none',cursor:'pointer',fontFamily:ff}}>
               <span style={{fontSize:'0.72rem',fontWeight:500,color:black}}>{cat}</span>
               <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
                 <span style={{fontSize:'0.58rem',color:gray}}>{items.length}</span>
@@ -2956,12 +2558,14 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
               </div>
             </button>
             {isOpen&&items.map(s=>{
-              const selUnit=unitSel[s.id]||s.base_unit||'g'
-              const qtyKey='cost_qty_'+s.id, unitKey='cost_unit_'+s.id
-              const qty=parseFloat(costForm[qtyKey]||0)
-              const cpu=parseFloat(s.cost_per_unit||0)
-              const lineTotal=calcCost(qty,selUnit,s.base_unit||'g',cpu)
-              return(
+              const selUnit = unitSel[s.id] || s.base_unit || 'g'
+              const qtyKey = 'cost_qty_'+s.id
+              const unitKey = 'cost_unit_'+s.id
+              const qty = parseFloat(costForm[qtyKey]||0)
+              const cpu = parseFloat(s.cost_per_unit||0)
+              const baseQty = qty*(CONV[selUnit]||1)
+              const lineTotal = cpu>0?cpu*baseQty:0
+              return (
                 <div key={s.id} style={{padding:'0.65rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.4rem'}}>
                     <div>
@@ -2972,14 +2576,17 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem',marginBottom:'0.4rem'}}>
                     {UNITS.map(u=>(
-                      <button key={u} onClick={()=>{setUnitSel(p=>({...p,[s.id]:u}));setCostForm(f=>({...f,[unitKey]:u}))}}
-                        style={{padding:'0.2rem 0.55rem',borderRadius:999,border:'1px solid '+(selUnit===u?gold:'rgba(31,20,14,0.12)'),background:selUnit===u?'rgba(227,90,27,0.1)':'transparent',color:selUnit===u?gold:'rgba(31,20,14,0.5)',fontSize:'0.56rem',cursor:'pointer',fontFamily:ff}}>
+                      <button key={u} onClick={()=>{
+                        setUnitSel(prev=>({...prev,[s.id]:u}))
+                        setCostForm(f=>({...f,[unitKey]:u}))
+                      }} style={{padding:'0.2rem 0.55rem',borderRadius:999,border:'1px solid '+(selUnit===u?gold:'rgba(31,20,14,0.12)'),background:selUnit===u?'rgba(227,90,27,0.1)':'transparent',color:selUnit===u?gold:'rgba(31,20,14,0.5)',fontSize:'0.56rem',cursor:'pointer',fontFamily:ff}}>
                         {u}
                       </button>
                     ))}
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                    <input type="number" min="0" step="0.1" placeholder="0" value={costForm[qtyKey]||''}
+                    <input type="number" min="0" step="0.1" placeholder="0"
+                      value={costForm[qtyKey]||''}
                       onChange={e=>{
                         const val=e.target.value
                         setCostForm(f=>{
@@ -2987,7 +2594,8 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
                           const total=supplies.reduce((acc,sup)=>{
                             const q=parseFloat(updated['cost_qty_'+sup.id]||0)
                             const u=updated['cost_unit_'+sup.id]||sup.base_unit||'g'
-                            return acc+calcCost(q,u,sup.base_unit||'g',parseFloat(sup.cost_per_unit||0))
+                            const bq=q*(CONV[u]||1)
+                            return acc+(parseFloat(sup.cost_per_unit||0)*bq)
                           },0)
                           return {...updated,cost:total.toFixed(4)}
                         })
@@ -3005,10 +2613,319 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
   )
 }
 
+
+function AlcanzaPara({ catalog, supplies }) {
+  const [expanded, setExpanded] = React.useState(null)
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
+
+  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+
+  // For each catalog item, calculate how many units can be made
+  const supplyMap = {}
+  ;(supplies||[]).forEach(s => { supplyMap[s.id] = s })
+
+  const results = (catalog||[]).filter(c=>c.active!==false).map(item => {
+    const recipe = item.recipe_ingredients || []
+    if (recipe.length === 0) return { item, units: null, missing: [], ingredients: [] }
+
+    let minUnits = Infinity
+    const ingredientStatus = recipe.map(r => {
+      const supply = supplyMap[r.supply_id]
+      if (!supply) return { name: r.supply_name||'?', needed: r.quantity, unit: r.unit, have: 0, missing: true, unitsCanMake: 0 }
+      const stockBase = parseFloat(supply.stock_qty||0) * (CONV[supply.base_unit||'g']||1)
+      const neededBase = parseFloat(r.quantity||0) * (CONV[r.unit||'g']||1)
+      const canMake = neededBase > 0 ? Math.floor(stockBase / neededBase) : Infinity
+      if (canMake < minUnits) minUnits = canMake
+      return {
+        name: supply.name,
+        needed: r.quantity,
+        unit: r.unit,
+        have: parseFloat(supply.stock_qty||0),
+        haveUnit: supply.base_unit||'g',
+        canMake,
+        missing: canMake === 0
+      }
+    })
+
+    const units = minUnits === Infinity ? null : minUnits
+    const missing = ingredientStatus.filter(i => i.missing)
+    return { item, units, missing, ingredients: ingredientStatus }
+  })
+
+  const withRecipes = results.filter(r => r.units !== null)
+
+  if (withRecipes.length === 0) return (
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+      <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'0.5rem'}}>Alcanza para</div>
+      <div style={{fontSize:'0.72rem',color:mu,fontStyle:'italic'}}>Vincula ingredientes a los productos en Catálogo para ver cuánto puedes producir.</div>
+    </div>
+  )
+
+  return (
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1.25rem'}}>
+      <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+        <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400}}>Alcanza para</div>
+        <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>Con el stock actual de ingredientes</div>
+      </div>
+      {withRecipes.map(({item, units, missing, ingredients}) => (
+        <div key={item.id} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
+          {/* Row */}
+          <div onClick={()=>setExpanded(e=>e===item.id?null:item.id)}
+            style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.85rem 1.25rem',cursor:'pointer',background:expanded===item.id?'rgba(227,90,27,0.04)':'transparent'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+              <span style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{item.name}</span>
+              {missing.length > 0 && <span style={{fontSize:'0.56rem',padding:'0.15rem 0.5rem',borderRadius:999,background:'rgba(192,57,43,0.1)',color:'#c0392b'}}>Faltan ingredientes</span>}
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+              <span style={{fontFamily:ffS,fontSize:'1.1rem',color:units===0?'#c0392b':units<12?'#e67e22':'#27ae60',fontWeight:400}}>
+                {units === 0 ? '0' : units} <span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>und.</span>
+              </span>
+              <span style={{fontSize:'0.65rem',color:mu,transform:expanded===item.id?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
+            </div>
+          </div>
+
+          {/* Expanded ingredient detail */}
+          {expanded===item.id&&(
+            <div style={{background:'white',borderTop:'1px solid rgba(31,20,14,0.05)',padding:'0.75rem 1.25rem'}}>
+              {missing.length > 0 && (
+                <div style={{marginBottom:'0.75rem',padding:'0.6rem 0.85rem',background:'rgba(192,57,43,0.06)',borderRadius:6,border:'1px solid rgba(192,57,43,0.15)'}}>
+                  <div style={{fontSize:'0.56rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#c0392b',marginBottom:'0.35rem'}}>Falta:</div>
+                  {missing.map(m=>(
+                    <div key={m.name} style={{fontSize:'0.72rem',color:'#c0392b',marginBottom:2}}>• {m.name} — necesitas {m.needed} {m.unit}, tienes {m.have.toFixed(0)} {m.haveUnit}</div>
+                  ))}
+                </div>
+              )}
+              <div style={{fontSize:'0.56rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.5rem'}}>Ingredientes:</div>
+              {ingredients.map((ing,i)=>(
+                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.35rem 0',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
+                  <span style={{fontSize:'0.72rem',color:ing.missing?'#c0392b':ink}}>{ing.name}</span>
+                  <div style={{textAlign:'right'}}>
+                    <span style={{fontSize:'0.65rem',color:mu}}>{ing.needed} {ing.unit} × unidad</span>
+                    <span style={{fontSize:'0.65rem',color:ing.missing?'#c0392b':'#27ae60',marginLeft:8,fontWeight:600}}>
+                      {ing.missing?'✕ sin stock':'✓'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+
+function StockValueChart({ supplies }) {
+  const [range, setRange] = React.useState('week')
+  const [history, setHistory] = React.useState([])
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE'
+  React.useEffect(() => {
+    fetch('/api/admin/supplies?stockHistory=1&range='+range)
+      .then(r=>r.json()).then(d=>setHistory(d.history||[])).catch(()=>{})
+  }, [range])
+  const currentValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.stock_qty||0)*parseFloat(s.cost_per_unit||0),0)
+  const maxVal = Math.max(...history.map(h=>h.value), currentValue, 1)
+  return (
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
+        <div>
+          <div style={{fontFamily:ffS,fontSize:'1rem'}}>Valor del inventario</div>
+          <div style={{fontFamily:ffS,fontSize:'1.6rem',color:or}}>${currentValue.toFixed(2)}</div>
+          <div style={{fontSize:'0.6rem',color:mu}}>valor actual en materiales</div>
+        </div>
+        <div style={{display:'flex',gap:'0.35rem'}}>
+          {[['day','Hoy'],['week','7 días'],['month','30 días']].map(([r,l])=>(
+            <button key={r} onClick={()=>setRange(r)} style={{padding:'0.3rem 0.65rem',borderRadius:999,border:'1px solid rgba(31,20,14,0.12)',background:range===r?ink:'transparent',color:range===r?'white':mu,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer'}}>{l}</button>
+          ))}
+        </div>
+      </div>
+      {history.length===0
+        ? <div style={{height:60,display:'flex',alignItems:'center',justifyContent:'center',color:mu,fontSize:'0.7rem',fontStyle:'italic'}}>Actualiza el stock para ver el historial</div>
+        : <div>
+            <svg width="100%" height="80" viewBox="0 0 400 80" preserveAspectRatio="none" style={{display:'block'}}>
+              <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={or} stopOpacity={0.25}/><stop offset="100%" stopColor={or} stopOpacity={0}/></linearGradient></defs>
+              {(()=>{
+                const pts=history.map((h,i)=>({x:history.length>1?(i/(history.length-1))*380+10:200,y:10+(1-h.value/maxVal)*60}))
+                if(pts.length===1) return <circle cx={pts[0].x} cy={pts[0].y} r="4" fill={or}/>
+                const line=pts.map((p,i)=>`${i===0?'M':'L'}${p.x} ${p.y}`).join(' ')
+                return(<><path d={line+` L${pts[pts.length-1].x} 80 L${pts[0].x} 80 Z`} fill="url(#sg)"/><path d={line} fill="none" stroke={or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>{pts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="3.5" fill={or} stroke="white" strokeWidth="1.5"/>)}</>)
+              })()}
+            </svg>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.25rem'}}>
+              <div><div style={{fontSize:'0.5rem',color:mu}}>{history[0]?.date}</div><div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[0]?.value?.toFixed(2)}</div></div>
+              <div style={{textAlign:'right'}}><div style={{fontSize:'0.5rem',color:mu}}>{history[history.length-1]?.date}</div><div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[history.length-1]?.value?.toFixed(2)}</div></div>
+            </div>
+          </div>
+      }
+    </div>
+  )
+}
+
+
+function BarcodeScanner({ onScan, onClose }) {
+  const videoRef = React.useRef(null)
+  const [status, setStatus] = React.useState('Cargando escáner...')
+  const ff = '"DM Sans",sans-serif', or = '#E35A1B'
+  React.useEffect(() => {
+    let stopped = false, codeReader = null
+    async function start() {
+      if (!window.ZXing) {
+        await new Promise(res => { const s=document.createElement('script'); s.src='https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js'; s.onload=res; s.onerror=res; document.head.appendChild(s) })
+      }
+      if (stopped) return
+      try {
+        if (window.ZXing) {
+          codeReader = new window.ZXing.BrowserMultiFormatReader()
+          setStatus('Apunta al código')
+          await codeReader.decodeFromVideoDevice(null, videoRef.current, (result) => {
+            if (result && !stopped) { stopped=true; codeReader.reset(); onScan(result.getText()) }
+          })
+        } else {
+          if (!window.jsQR) { await new Promise(res=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js';s.onload=res;document.head.appendChild(s)}) }
+          const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}})
+          if (stopped){stream.getTracks().forEach(t=>t.stop());return}
+          videoRef.current.srcObject=stream; await videoRef.current.play(); setStatus('Apunta al código QR')
+          const canvas=document.createElement('canvas')
+          function scan(){if(stopped)return;if(videoRef.current?.readyState>=2){canvas.width=videoRef.current.videoWidth;canvas.height=videoRef.current.videoHeight;const ctx=canvas.getContext('2d');ctx.drawImage(videoRef.current,0,0);const img=ctx.getImageData(0,0,canvas.width,canvas.height);const code=window.jsQR(img.data,img.width,img.height);if(code?.data){stopped=true;stream.getTracks().forEach(t=>t.stop());onScan(code.data);return}};requestAnimationFrame(scan)}
+          requestAnimationFrame(scan)
+        }
+      } catch(e) { if(!stopped) setStatus('Error: '+(e.name==='NotAllowedError'?'Permite el acceso a la cámara':e.message)) }
+    }
+    start()
+    return () => { stopped=true; if(codeReader) codeReader.reset() }
+  }, [])
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+      <div style={{color:'rgba(255,255,255,0.7)',fontFamily:ff,fontSize:'0.82rem'}}>{status}</div>
+      <div style={{position:'relative',borderRadius:12,overflow:'hidden',width:300,height:220,background:'#111'}}>
+        <video ref={videoRef} style={{width:300,height:220,objectFit:'cover',display:'block'}} playsInline muted autoPlay/>
+        <div style={{position:'absolute',inset:0,border:'2px solid '+or,borderRadius:12,pointerEvents:'none'}}/>
+        <div style={{position:'absolute',top:'50%',left:'8%',right:'8%',height:2,background:or,opacity:0.7,transform:'translateY(-50%)'}}/>
+      </div>
+      <div style={{color:'rgba(255,255,255,0.4)',fontFamily:ff,fontSize:'0.62rem'}}>EAN-13 · UPC · Code-128 · QR</div>
+      <button onClick={onClose} style={{padding:'0.7rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>Cancelar</button>
+    </div>
+  )
+}
+
+
+function PurchaseModal({ supplies, onClose, onSuccess, showToast, initialSupplyId=null }) {
+  const [supplyId, setSupplyId] = React.useState(initialSupplyId||'')
+  const [qty, setQty] = React.useState('')
+  const [unit, setUnit] = React.useState('g')
+  const [priceTotal, setPriceTotal] = React.useState('')
+  const [notes, setNotes] = React.useState('')
+  const [saving, setSaving] = React.useState(false)
+  const [showScanner, setShowScanner] = React.useState(false)
+  const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', white='white'
+  const inp={width:'100%',padding:'0.7rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}
+  const lbl={fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,display:'block',marginBottom:'0.3rem'}
+  const UNITS=['g','kg','oz','lb','ml','l','fl oz','tsp','tbsp','cup','unit']
+  React.useEffect(()=>{ const s=(supplies||[]).find(s=>s.id===supplyId); if(s?.base_unit) setUnit(s.base_unit) },[supplyId])
+  function handleScan(sku){setShowScanner(false);const found=(supplies||[]).find(s=>(s.skus||[]).includes(sku));if(found){setSupplyId(found.id);showToast('Ingrediente: '+found.name)}else showToast('SKU no reconocido: '+sku)}
+  async function save(){
+    if(!supplyId||!qty||!priceTotal){showToast('Completa supply, cantidad y precio');return}
+    setSaving(true)
+    const res=await fetch('/api/admin/purchases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({supply_id:supplyId,qty:parseFloat(qty),unit,price_total:parseFloat(priceTotal),notes})})
+    setSaving(false)
+    if(res.ok){const s=(supplies||[]).find(s=>s.id===supplyId);showToast('✓ Compra registrada — '+(s?.name||'')+': +'+qty+unit);onSuccess()}
+    else showToast('Error al guardar')
+  }
+  const selected=(supplies||[]).find(s=>s.id===supplyId)
+  const pricePerUnit=qty&&priceTotal?(parseFloat(priceTotal)/parseFloat(qty)).toFixed(4):null
+  return (
+    <>
+      {showScanner&&<BarcodeScanner onScan={handleScan} onClose={()=>setShowScanner(false)}/>}
+      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:8500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+        <div style={{background:'white',borderRadius:'16px 16px 0 0',width:'100%',maxWidth:520,padding:'1.5rem',maxHeight:'90vh',overflowY:'auto'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+            <div style={{fontFamily:ffS,fontSize:'1.3rem'}}>Registrar compra</div>
+            <button onClick={onClose} style={{background:'none',border:'none',fontSize:'1.2rem',cursor:'pointer',color:mu}}>✕</button>
+          </div>
+          <label style={lbl}>Escanear código de barras</label>
+          <div style={{display:'flex',gap:'0.5rem',marginBottom:'1rem'}}>
+            <input type="text" placeholder="SKU o código..." style={{...inp,marginBottom:0,flex:1}}/>
+            <button onClick={()=>setShowScanner(true)} style={{padding:'0.7rem 1rem',background:ink,color:white,border:'none',borderRadius:8,cursor:'pointer',fontFamily:ff,fontSize:'0.65rem',flexShrink:0}}>Escanear</button>
+          </div>
+          <label style={lbl}>Ingrediente</label>
+          <select value={supplyId} onChange={e=>setSupplyId(e.target.value)} style={{...inp,marginBottom:'1rem'}}>
+            <option value="">Seleccionar...</option>
+            {['Aceites','Chocolates','Empaque','Frutas y Frescos','Huevos','Lácteos','Otros','Saborizantes','Secos'].map(cat=>(
+              <optgroup key={cat} label={cat}>
+                {(supplies||[]).filter(s=>s.category===cat).sort((a,b)=>a.name.localeCompare(b.name,'es')).map(s=>(
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'1rem'}}>
+            <div><label style={lbl}>Cantidad comprada</label><input type="number" min="0" step="0.01" placeholder="0" value={qty} onChange={e=>setQty(e.target.value)} style={{...inp,marginBottom:0}}/></div>
+            <div><label style={lbl}>Unidad</label><select value={unit} onChange={e=>setUnit(e.target.value)} style={{...inp,marginBottom:0}}>{UNITS.map(u=><option key={u} value={u}>{u}</option>)}</select></div>
+          </div>
+          <label style={lbl}>Precio total pagado ($)</label>
+          <input type="number" min="0" step="0.01" placeholder="0.00" value={priceTotal} onChange={e=>setPriceTotal(e.target.value)} style={{...inp,marginBottom:pricePerUnit?'0.25rem':'1rem'}}/>
+          {pricePerUnit&&<div style={{fontSize:'0.6rem',color:mu,marginBottom:'1rem'}}>= ${pricePerUnit}/{unit}</div>}
+          {selected&&<div style={{background:'rgba(227,90,27,0.05)',borderRadius:8,padding:'0.75rem',marginBottom:'1rem',fontSize:'0.72rem',color:mu}}>Stock actual: <strong style={{color:ink}}>{parseFloat(selected.stock_qty||0).toFixed(1)} {selected.base_unit}</strong>{qty&&<span> → <strong style={{color:or}}>{(parseFloat(selected.stock_qty||0)+parseFloat(qty||0)).toFixed(1)} {unit}</strong></span>}</div>}
+          <label style={lbl}>Notas (opcional)</label>
+          <input type="text" placeholder="Costco, oferta..." value={notes} onChange={e=>setNotes(e.target.value)} style={{...inp,marginBottom:'1.25rem'}}/>
+          <button onClick={save} disabled={saving} style={{width:'100%',padding:'0.9rem',background:or,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',fontWeight:600,cursor:'pointer',opacity:saving?0.6:1}}>{saving?'Guardando...':'Registrar compra →'}</button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+
+function PurchaseHistory() {
+  const [purchases, setPurchases] = React.useState([])
+  const [loading, setLoading] = React.useState(true)
+  const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE'
+  React.useEffect(()=>{fetch('/api/admin/purchases').then(r=>r.json()).then(d=>{setPurchases(d.purchases||[]);setLoading(false)}).catch(()=>setLoading(false))},[])
+  const byDate=purchases.reduce((acc,p)=>{
+    const date=new Date(p.purchased_at).toLocaleDateString('es-PR',{weekday:'long',year:'numeric',month:'long',day:'numeric',timeZone:'America/Puerto_Rico'})
+    if(!acc[date]) acc[date]={date,items:[],total:0}
+    acc[date].items.push(p); acc[date].total+=parseFloat(p.price_total||0); return acc
+  },{})
+  if(loading) return <div style={{textAlign:'center',padding:'2rem',color:mu,fontSize:'0.78rem'}}>Cargando...</div>
+  if(!purchases.length) return <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.5rem',textAlign:'center',color:mu,fontSize:'0.78rem',fontStyle:'italic'}}>No hay compras registradas aún.</div>
+  return (
+    <div>
+      <div style={{fontFamily:ffS,fontSize:'1.2rem',marginBottom:'1rem'}}>Historial de compras</div>
+      {Object.values(byDate).map(group=>(
+        <div key={group.date} style={{marginBottom:'1.25rem'}}>
+          <div style={{display:'flex',justifyContent:'space-between',padding:'0.5rem 0',borderBottom:'2px solid rgba(31,20,14,0.08)',marginBottom:'0.5rem'}}>
+            <div style={{fontSize:'0.7rem',fontWeight:600,color:ink,textTransform:'capitalize'}}>{group.date}</div>
+            <div style={{fontSize:'0.72rem',color:or,fontWeight:600}}>${group.total.toFixed(2)}</div>
+          </div>
+          {group.items.map(p=>(
+            <div key={p.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.65rem 0.85rem',background:'white',borderRadius:8,marginBottom:'0.35rem',border:'1px solid rgba(31,20,14,0.05)'}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{p.supplies?.name||'—'}</div>
+                <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>{parseFloat(p.qty).toFixed(2)} {p.unit}{p.notes?' · '+p.notes:''}</div>
+              </div>
+              <div style={{textAlign:'right',flexShrink:0,marginLeft:12}}>
+                <div style={{fontFamily:ffS,fontSize:'1rem',color:or}}>${parseFloat(p.price_total).toFixed(2)}</div>
+                <div style={{fontSize:'0.55rem',color:mu}}>${(p.price_total/p.qty).toFixed(4)}/{p.unit}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
   const [showDevTools,setShowDevTools]=useState(false)
+  const [showPurchase,setShowPurchase]=useState(false)
+  const [purchaseSupplyId,setPurchaseSupplyId]=useState(null)
   const [showSupplyScanner,setShowSupplyScanner]=useState(false)
   const [showQRScanner,setShowQRScanner]=useState(false)
   const [profileOpen,setProfileOpen]=useState(false)
@@ -3157,6 +3074,24 @@ export default function Admin({session}){
     showToast('Premio deleted');loadAll()
   }
 
+  function handleQRScan(value) {
+    setShowQRScanner(false)
+    const raw=(value||'').trim()
+    const cardNum=raw.startsWith('MA-')?raw:raw.includes('MA-')?'MA-'+raw.split('MA-')[1].replace(/[^0-9]/g,''):raw
+    const found=cards.find(c=>c.card_number===cardNum)
+    if(found){setSelectedClient(found);setPanel('client');showToast('✓ '+(found.profiles?.full_name||cardNum))}
+    else showToast('QR no reconocido: '+cardNum)
+  }
+
+  function handleQRScan(value) {
+    setShowQRScanner(false)
+    const raw=(value||'').trim()
+    const cardNum=raw.startsWith('MA-')?raw:raw.includes('MA-')?'MA-'+raw.split('MA-')[1].replace(/[^0-9]/g,''):raw
+    const found=cards.find(c=>c.card_number===cardNum)
+    if(found){setSelectedClient(found);setPanel('client');showToast('✓ '+(found.profiles?.full_name||cardNum))}
+    else showToast('QR no reconocido: '+cardNum)
+  }
+
   const signOut=async()=>{await supabase.auth.signOut();window.location.href='/login'}
 
   async function subscribeToPush() {
@@ -3283,7 +3218,7 @@ export default function Admin({session}){
             {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/> }
             {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
-            {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog}
+            {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog} onCompra={()=>setShowPurchase(true)} onCompraItem={(id)=>{setPurchaseSupplyId(id);setShowPurchase(true)}}
               onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
               onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,unit:s.unit||'month',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
               onEliminar={async(id)=>{if(!confirm('Eliminar this supply?'))return;await fetch('/api/admin/supplies',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});showToast('Supply deleted');loadAll()}}
@@ -3675,36 +3610,354 @@ export default function Admin({session}){
         )}
 
         {/* MODAL: Supply Add/Editar */}
-        {showSupplyScanner&&<BarcodeScanner onClose={()=>setShowSupplyScanner(false)} onScan={(sku)=>{
-          setShowSupplyScanner(false)
-          setSupplyForm(f=>({...f,skus:[...(f.skus||[]),sku]}))
-          showToast('SKU añadido: '+sku)
-        }}/>}
+        {showSupplyScanner&&<BarcodeScanner onClose={()=>setShowSupplyScanner(false)} onScan={(sku)=>{setShowSupplyScanner(false);setSupplyForm(f=>({...f,skus:[...(f.skus||[]),sku]}));showToast('SKU: '+sku)}}/>}
+        {showPurchase&&<PurchaseModal supplies={supplies||[]} onClose={()=>{setShowPurchase(false);setPurchaseSupplyId(null)}} onSuccess={()=>{setShowPurchase(false);setPurchaseSupplyId(null);loadAll()}} showToast={showToast} initialSupplyId={purchaseSupplyId}/>}
 
         {supplyModal&&(
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setSupplyModal(null)}>
             <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-                <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{(supplyModal==='add'||!supplyModal?.id)?'Añadir ingrediente':'Editar ingrediente'}</h3>
+                <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{supplyModal==='add'?'Añadir ingrediente':'Editar ingrediente'}</h3>
                 <button onClick={()=>setSupplyModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
-              </div>              {/* SKU */}
-              <label style={lbl}>SKUs / Códigos de barras</label>
+              </div>
+                            <label style={lbl}>SKUs / Códigos de barras</label>
               <div style={{display:'flex',gap:'0.5rem',marginBottom:'0.35rem'}}>
-                <input type="text" placeholder="Escribe un SKU y presiona Enter..."
-                  style={{...inp,marginBottom:0,flex:1}}
+                <input type="text" placeholder="Escribe un SKU y presiona Enter..." style={{...inp,marginBottom:0,flex:1}}
                   onKeyDown={e=>{if(e.key==='Enter'&&e.target.value.trim()){e.preventDefault();setSupplyForm(f=>({...f,skus:[...(f.skus||[]),e.target.value.trim()]}));e.target.value=''}}}/>
-                <button type="button" onClick={()=>setShowSupplyScanner(true)}
-                  style={{padding:'0.6rem 0.85rem',background:black,color:white,border:'none',borderRadius:6,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',flexShrink:0,display:'flex',alignItems:'center',gap:'0.25rem'}}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
-                  Scan
-                </button>
+                <button type="button" onClick={()=>setShowSupplyScanner(true)} style={{padding:'0.6rem 0.85rem',background:black,color:white,border:'none',borderRadius:6,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',flexShrink:0}}>Scan</button>
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem',marginBottom:'0.75rem'}}>
                 {(supplyForm.skus||[]).map((sku,i)=>(
                   <span key={i} style={{padding:'0.2rem 0.6rem',background:'rgba(31,20,14,0.06)',borderRadius:999,fontSize:'0.65rem',color:black,display:'flex',alignItems:'center',gap:'0.3rem'}}>
-                    {sku}<button type="button" onClick={()=>setSupplyForm(f=>({...f,skus:f.skus.filter((_,j)=>j!==i)}))} style={{background:'none',border:'none',cursor:'pointer',color:gray,padding:0}}>✕</button>
+                    {sku}<button type="button" onClick={()=>setSupplyForm(f=>({...f,skus:f.skus.filter((_,j)=>j!==i)}))} style={{background:'none',border:'none',cursor:'pointer',color:gray,padding:0,lineHeight:1}}>✕</button>
                   </span>
                 ))}
               </div>
+<label style={lbl}>Nombre</label>
+              <input style={inp} type="text" placeholder="e.g. Vercel Pro" value={supplyForm.name} onChange={e=>setSupplyForm(f=>({...f,name:e.target.value}))}/>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
+                <div>
+                  <label style={lbl}>Categoría</label>
+                  <input style={{...inp,marginBottom:0}} list="supply-categories" type="text" placeholder="Secos, Lácteos, Empaque..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
+                  <datalist id="supply-categories">
+                    {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros'].map(c=><option key={c} value={c}/>)}
+                  </datalist>
+                </div>
+                <div>
+                  <label style={lbl}>Proveedor</label>
+                  <input style={{...inp,marginBottom:0}} type="text" placeholder="Vercel, GoDaddy..." value={supplyForm.provider} onChange={e=>setSupplyForm(f=>({...f,provider:e.target.value}))}/>
+                </div>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginTop:'1rem'}}>
+                <div>
+                  <label style={lbl}>Precio total ($)</label>
+                  <input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={supplyForm.cost} onChange={e=>setSupplyForm(f=>({...f,cost:e.target.value}))}/>
+                </div>
+                <div>
+                  <label style={lbl}>Medida base</label>
+                  <select style={{...inp,marginBottom:0}} value={supplyForm.unit} onChange={e=>setSupplyForm(f=>({...f,unit:e.target.value}))}>
+                    <option value="month">Monthly</option>
+                    <option value="year">Yearly</option>
+                    <option value="one-time">One-time</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{marginTop:'1rem'}}>
+                <label style={lbl}>Renewal Fecha (optional)</label>
+                <input style={inp} type="date" value={supplyForm.renewal_date} onChange={e=>setSupplyForm(f=>({...f,renewal_date:e.target.value}))}/>
+              </div>
+              <label style={lbl}>Notas (opcional)</label>
+              <input style={inp} type="text" placeholder="Any additional info..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
+              <div style={{display:'flex',gap:'0.75rem'}}>
+                <button onClick={async()=>{
+                  if(!supplyForm.name||!supplyForm.cost){showToast('Nombre and cost required');return}
+                  if(supplyModal==='add'){
+                    await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(supplyForm)})
+                    showToast('Supply added')
+                  } else {
+                    await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:supplyModal.id,...supplyForm})})
+                    showToast('Supply updated')
+                  }
+                  setSupplyModal(null);loadAll()
+                }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar</button>
+                <button onClick={()=>setSupplyModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancelar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        
+        {/* PROFILE OVERLAY */}
+        {profileOpen&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:8000,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setProfileOpen(false)}>
+            <div style={{background:white,borderRadius:'16px 16px 0 0',width:'100%',maxWidth:480,padding:'1.5rem',maxHeight:'85vh',overflowY:'auto'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.3rem',fontWeight:400}}>Mi perfil</div>
+                <button onClick={()=>setProfileOpen(false)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(227,90,27,0.06)',borderRadius:12,border:'1px solid rgba(227,90,27,0.12)'}}>
+                <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(227,90,27,0.15)',border:'2px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                  <LogoButterfly size={32}/>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:ffS,fontSize:'1.1rem',color:black}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
+                  <div style={{fontSize:'0.63rem',color:gray,marginTop:2}}>{session?.user?.email}</div>
+                  <div style={{fontSize:'0.58rem',color:gold,marginTop:2,textTransform:'uppercase',letterSpacing:'0.1em'}}></div>
+                </div>
+              </div>
+              {[['Nombre completo','full_name','text'],['Cargo / Título','cargo','text'],['Nuevo email','email','email'],['Nueva contraseña','password','password']].map(([label,key,type])=>(
+                <div key={key} style={{marginBottom:'0.85rem'}}>
+                  <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:'0.3rem'}}>{label}</div>
+                  <input type={type} placeholder={label} style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                </div>
+              ))}
+              <div style={{display:'flex',gap:'0.75rem',marginTop:'0.5rem'}}>
+                <button onClick={()=>setProfileOpen(false)} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Guardar</button>
+                <button onClick={()=>{setProfileOpen(false);setPanel('system')}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Panel admin →</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDevTools&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&setShowDevTools(false)}>
+            <div style={{background:white,borderRadius:16,width:'100%',maxWidth:500,maxHeight:'90vh',overflowY:'auto'}}>
+              <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.08)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400}}>Dev Tools</div>
+                <button onClick={()=>{setShowDevTools(false);setDevPassword('');setDevUnlocked(false)}} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+              <div style={{padding:'1.5rem'}}>
+                {!devUnlocked?(
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
+                    <div style={{fontFamily:ffS,fontSize:'1.1rem',marginBottom:'0.5rem'}}>Acceso restringido</div>
+                    <input type="password" placeholder="Password..." value={devPassword} onChange={e=>setDevPassword(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'){if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}}
+                      style={{width:'100%',padding:'0.75rem 1rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:8,fontFamily:ff,fontSize:'0.88rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box',textAlign:'center'}} autoFocus/>
+                    <button onClick={()=>{if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}
+                      style={{width:'100%',padding:'0.75rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.68rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Entrar</button>
+                  </div>
+                ):(
+                  <div>
+                    {[{section:'🎨 Landing — Colores',items:[['Color primario','primary'],['Fondo','background'],['Texto','text']],type:'color'},{section:'🖥️ Admin Panel — Colores',items:[['Sidebar','adminSidebar'],['Acento','adminAccent'],['Header','adminHeader']],type:'color'},{section:'📱 App Cliente — Colores',items:[['Acento','clientAccent'],['Fondo tarjeta','clientCard'],['Texto secundario','clientMuted']],type:'color'}].map(({section,items})=>(
+                      <div key={section} style={{marginBottom:'1.25rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.75rem',paddingBottom:'0.4rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
+                        {items.map(([label,key])=>(
+                          <div key={key} style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.65rem'}}>
+                            <span style={{fontSize:'0.72rem',color:black}}>{label}</span>
+                            <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                              <input type="color" value={devColors[key]||'#E35A1B'} onChange={e=>setDevColors(c=>({...c,[key]:e.target.value}))} style={{width:32,height:26,border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,cursor:'pointer',padding:2}}/>
+                              <span style={{fontSize:'0.6rem',color:gray,fontFamily:'monospace'}}>{devColors[key]||'—'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'0.5rem 0 1.25rem'}}/>
+                    {[{section:'✏️ Landing — Textos',items:[['Título hero','hero'],['Subtítulo','sub'],['Botón CTA','cta']]},{section:'✏️ App Cliente — Textos',items:[['Saludo tarjeta','cardGreeting'],['CTA recompensa','rewardCta']]}].map(({section,items})=>(
+                      <div key={section} style={{marginBottom:'1.25rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.75rem',paddingBottom:'0.4rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
+                        {items.map(([label,key])=>(
+                          <div key={key} style={{marginBottom:'0.65rem'}}>
+                            <div style={{fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,marginBottom:'0.25rem'}}>{label}</div>
+                            <input value={devTexts[key]||''} onChange={e=>setDevTexts(t=>({...t,[key]:e.target.value}))} placeholder="Texto..." style={{width:'100%',padding:'0.55rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}}/>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <div style={{display:'flex',gap:'0.75rem',marginTop:'0.5rem'}}>
+                      <button onClick={()=>{showToast('Cambios publicados ✓');setShowDevTools(false);setDevUnlocked(false)}} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Publicar todo</button>
+                      <button onClick={()=>{setDevColors({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E',adminSidebar:'#1F140E',adminAccent:'#E35A1B',adminHeader:'#1F140E',clientAccent:'#E35A1B',clientCard:'#F4EDDD',clientMuted:'#7A6452'});setDevTexts({hero:'Galletas que vuelan del mostrador.',sub:'Horneado fresco cada mañana',cta:'Ordenar → Order',cardGreeting:'Hola',rewardCta:'Canjear en mostrador →'})}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Reset</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
 
+        {/* PROFILE OVERLAY */}
+        {profileOpen&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:8000,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setProfileOpen(false)}>
+            <div style={{background:white,borderRadius:'16px 16px 0 0',width:'100%',maxWidth:480,padding:'1.5rem',maxHeight:'85vh',overflowY:'auto'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.3rem',fontWeight:400}}>Mi perfil</div>
+                <button onClick={()=>setProfileOpen(false)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+
+              {/* Avatar */}
+              <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(227,90,27,0.06)',borderRadius:12,border:'1px solid rgba(227,90,27,0.12)'}}>
+                <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(227,90,27,0.15)',border:'2px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',overflow:'hidden'}}>
+                  <LogoButterfly size={32}/>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:ffS,fontSize:'1.1rem',color:black}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
+                  <div style={{fontSize:'0.63rem',color:gray,marginTop:2}}>{session?.user?.email}</div>
+                  <div style={{fontSize:'0.58rem',color:gold,marginTop:2,textTransform:'uppercase',letterSpacing:'0.1em'}}></div>
+                </div>
+              </div>
+
+              {/* Edit fields */}
+              {[['Nombre completo','full_name','text'],['Teléfono','phone','tel'],['Nuevo email','email','email'],['Nueva contraseña','password','password']].map(([label,key,type])=>(
+                <div key={key} style={{marginBottom:'0.85rem'}}>
+                  <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:'0.3rem'}}>{label}</div>
+                  <input type={type} placeholder={label}
+                    style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
+                </div>
+              ))}
+
+              <div style={{display:'flex',gap:'0.75rem',marginTop:'0.5rem'}}>
+                <button onClick={()=>setProfileOpen(false)} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Guardar cambios</button>
+                <button onClick={()=>{setProfileOpen(false);setPanel('system')}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Panel admin →</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DEV TOOLS MODAL */}
+        {showDevTools&&(
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem'}} onClick={e=>e.target===e.currentTarget&&setShowDevTools(false)}>
+            <div style={{background:white,borderRadius:16,width:'100%',maxWidth:500,maxHeight:'90vh',overflowY:'auto'}}>
+              <div style={{padding:'1.25rem 1.5rem',borderBottom:'1px solid rgba(31,20,14,0.08)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:400}}>Dev Tools</div>
+                <button onClick={()=>{setShowDevTools(false);setDevPassword('');setDevUnlocked(false)}} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
+              </div>
+              <div style={{padding:'1.5rem'}}>
+                {!devUnlocked?(
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
+                    <div style={{fontFamily:ffS,fontSize:'1.1rem',marginBottom:'0.5rem'}}>Acceso restringido</div>
+                    <input type="password" placeholder="Password..." value={devPassword} onChange={e=>setDevPassword(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter'){if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}}
+                      style={{width:'100%',padding:'0.75rem 1rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:8,fontFamily:ff,fontSize:'0.88rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box',textAlign:'center'}} autoFocus/>
+                    <button onClick={()=>{if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}
+                      style={{width:'100%',padding:'0.75rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.68rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Entrar</button>
+                  </div>
+                ):(
+                  <div>
+                    {[{section:'🎨 Landing — Colores',items:[['Color primario','primary'],['Fondo','background'],['Texto','text']]},{section:'🖥️ Admin — Colores',items:[['Sidebar','adminSidebar'],['Acento','adminAccent']]},{section:'📱 Cliente — Colores',items:[['Acento','clientAccent'],['Fondo tarjeta','clientCard']]}].map(({section,items})=>(
+                      <div key={section} style={{marginBottom:'1.25rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.6rem',paddingBottom:'0.3rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
+                        {items.map(([label,key])=>(
+                          <div key={key} style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.6rem'}}>
+                            <span style={{fontSize:'0.72rem',color:black}}>{label}</span>
+                            <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                              <input type="color" value={devColors[key]||'#E35A1B'} onChange={e=>setDevColors(c=>({...c,[key]:e.target.value}))} style={{width:32,height:26,border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,cursor:'pointer',padding:2}}/>
+                              <span style={{fontSize:'0.6rem',color:gray,fontFamily:'monospace'}}>{devColors[key]}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'0.5rem 0 1.25rem'}}/>
+                    {[{section:'✏️ Landing — Textos',items:[['Hero','hero'],['Subtítulo','sub'],['CTA','cta']]},{section:'✏️ Cliente — Textos',items:[['Saludo','cardGreeting'],['CTA recompensa','rewardCta']]}].map(({section,items})=>(
+                      <div key={section} style={{marginBottom:'1.25rem'}}>
+                        <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.6rem',paddingBottom:'0.3rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
+                        {items.map(([label,key])=>(
+                          <div key={key} style={{marginBottom:'0.65rem'}}>
+                            <div style={{fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,marginBottom:'0.25rem'}}>{label}</div>
+                            <input value={devTexts[key]||''} onChange={e=>setDevTexts(t=>({...t,[key]:e.target.value}))} style={{width:'100%',padding:'0.55rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}}/>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                    <div style={{display:'flex',gap:'0.75rem',marginTop:'0.5rem'}}>
+                      <button onClick={()=>{showToast('Cambios publicados ✓');setShowDevTools(false);setDevUnlocked(false)}} style={{flex:1,padding:'0.85rem',background:black,color:white,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>Publicar todo</button>
+                      <button onClick={()=>{setDevColors({primary:'#E35A1B',background:'#FBF7EE',text:'#1F140E',adminSidebar:'#1F140E',adminAccent:'#E35A1B',clientAccent:'#E35A1B',clientCard:'#F4EDDD'});setDevTexts({hero:'Galletas que vuelan del mostrador.',sub:'Horneado fresco cada mañana',cta:'Ordenar → Order',cardGreeting:'Hola',rewardCta:'Canjear en mostrador →'})}} style={{padding:'0.85rem 1rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:8,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Reset</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showQRScanner&&<QRScannerModal onClose={()=>setShowQRScanner(false)} onScan={handleQRScan}/>}
+
+                {toast&&<div style={{position:'fixed',bottom:'5rem',right:'1rem',background:black,color:white,padding:'0.85rem 1.25rem',borderRadius:8,fontSize:'0.74rem',borderLeft:'3px solid '+gold,zIndex:9999,maxWidth:280}}>{toast}</div>}
+      </div>
+    </>
+  )
+}
+
+function ClientHistorial({ client }) {
+  const [sales, setSales] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(()=>{
+    fetch('/api/admin/sales?email='+encodeURIComponent(client.email||client.user_email||''))
+      .then(r=>r.json())
+      .then(d=>{ setSales(d.sales||[]); setLoading(false) })
+      .catch(()=>setLoading(false))
+  },[client.id])
+
+  const total = sales.filter(s=>s.status==='paid').reduce((a,s)=>a+parseFloat(s.amount||0),0)
+
+  return(
+    <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
+      {/* Scrollable list */}
+      <div style={{flex:1,overflowY:'auto',padding:'0 1.5rem'}}>
+        {loading&&<div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'2rem'}}>Cargando...</div>}
+        {!loading&&sales.length===0&&<div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'2rem'}}>No transactions found.</div>}
+        {!loading&&sales.length>0&&(
+          <div style={{border:'1px solid rgba(31,20,14,0.07)',borderRadius:8,overflow:'hidden'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.5rem 1rem',background:'rgba(31,20,14,0.03)',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#7A6452',gap:'0.5rem'}}>
+              <span>Transaction ID</span><span>Fecha</span><span style={{textAlign:'right'}}>Amount</span>
+            </div>
+            {sales.map((s,i)=>(
+              <div key={s.id} style={{display:'grid',gridTemplateColumns:'1fr 120px 100px',padding:'0.75rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)',alignItems:'center',gap:'0.5rem'}}>
+                <div style={{fontSize:'0.62rem',color:'#7A6452',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontFamily:'monospace'}}>{s.id}</div>
+                <div style={{fontSize:'0.68rem',color:'#1F140E'}}>{new Date(s.sale_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+                <div style={{fontSize:'0.75rem',fontWeight:600,color:s.status==='paid'?'#2d8a60':'#c0392b',textAlign:'right'}}>{s.status==='refunded'?'-':''}${Math.abs(parseFloat(s.amount||0)).toFixed(2)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Total — always visible at bottom */}
+      <div style={{padding:'1rem 1.5rem 1.5rem',borderTop:'1px solid rgba(31,20,14,0.07)',flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',background:'#FBF7EE'}}>
+        <span style={{fontSize:'0.62rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase'}}>{sales.filter(s=>s.status==='paid').length} payment{sales.filter(s=>s.status==='paid').length!==1?'s':''}</span>
+        <div style={{textAlign:'right'}}>
+          <div style={{fontSize:'0.56rem',color:'#7A6452',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.15rem'}}>Total Spent</div>
+          <div style={{fontSize:'1.1rem',fontFamily:'Instrument Serif,serif',fontWeight:300,color:'#1F140E'}}>${total.toFixed(2)}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ArchivosListForClient({ userId, showToast }) {
+  const [files, setArchivos] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(()=>{ loadArchivos() },[userId])
+
+  async function loadArchivos() {
+    setLoading(true)
+    const res = await fetch('/api/admin/files?user_id='+userId)
+    const data = await res.json()
+    setArchivos(data.files||[])
+    setLoading(false)
+  }
+
+  async function deleteFile(path) {
+    await fetch('/api/admin/files', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ path }) })
+    showToast('File deleted')
+    loadArchivos()
+  }
+
+  async function viewFile(name) {
+    window.open('/api/admin/files?user_id='+userId+'&file='+encodeURIComponent(name),'_blank')
+  }
+
+  if(loading) return <div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'1rem 0'}}>Cargando...</div>
+  if(files.length===0) return <div style={{textAlign:'center',color:'#7A6452',fontSize:'0.78rem',padding:'1rem 0'}}>Sin archivos guardados.</div>
+
+  return(
+    <div>
+      <div style={{fontSize:'0.56rem',letterSpacing:'0.13em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.75rem'}}>Guardard files</div>
+      {files.map(f=>(<div key={f.name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 0',borderBottom:'1px solid rgba(31,20,14,0.06)'}}><div style={{fontSize:'0.78rem',color:'#1F140E',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,marginRight:'1rem'}}>{f.name.replace(/^\d+_/,'')}</div><div style={{display:'flex',gap:'0.4rem',flexShrink:0}}><button onClick={()=>viewFile(f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(227,90,27,0.1)',color:'#E35A1B',border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>Ver</button><button onClick={()=>deleteFile('clients/'+userId+'/'+f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>x</button></div></div>))}
+    </div>
+  )
+}
