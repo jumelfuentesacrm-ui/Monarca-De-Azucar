@@ -11,6 +11,7 @@ export default async function handler(req, res) {
       .from('catalog_items')
       .select(`
         id, name, description, active, created_at, updated_at,
+        badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price,
         catalog_prices ( id, amount, currency, interval, active ),
         catalog_costs ( id, cost, notes, suppliers, updated_at )
       `)
@@ -66,6 +67,19 @@ export default async function handler(req, res) {
       })
     }
 
+    // Update catalog_items with active status and badges
+    const itemUpdate = {}
+    if (active !== undefined) itemUpdate.active = active
+    if (badge_hoy !== undefined) itemUpdate.badge_hoy = badge_hoy
+    if (badge_nuevo !== undefined) itemUpdate.badge_nuevo = badge_nuevo
+    if (badge_temporada !== undefined) itemUpdate.badge_temporada = badge_temporada
+    if (badge_agotado !== undefined) itemUpdate.badge_agotado = badge_agotado
+    if (price !== undefined) itemUpdate.price = parseFloat(price)
+    if (Object.keys(itemUpdate).length > 0) {
+      const { error: itemErr } = await supabase.from('catalog_items').update(itemUpdate).eq('id', product_id)
+      if (itemErr) console.error('catalog_items update error:', itemErr)
+    }
+
     const { data: updated } = await supabase
       .from('catalog_items')
       .select(`
@@ -75,6 +89,30 @@ export default async function handler(req, res) {
       `)
       .eq('id', product_id)
       .single()
+
+    // Update catalog_items: active status and badges
+    const itemUpdate = {}
+    if (active !== undefined) itemUpdate.active = active
+    if (badge_hoy !== undefined) itemUpdate.badge_hoy = badge_hoy
+    if (badge_nuevo !== undefined) itemUpdate.badge_nuevo = badge_nuevo
+    if (badge_temporada !== undefined) itemUpdate.badge_temporada = badge_temporada
+    if (badge_agotado !== undefined) itemUpdate.badge_agotado = badge_agotado
+    if (price !== undefined) itemUpdate.price = parseFloat(price)
+    if (Object.keys(itemUpdate).length > 0) {
+      await supabase.from('catalog_items').update(itemUpdate).eq('id', product_id)
+    }
+
+        // Update catalog_items: active + badges
+    const itemUpdate = {}
+    if (active !== undefined) itemUpdate.active = active
+    if (badge_hoy !== undefined) itemUpdate.badge_hoy = badge_hoy
+    if (badge_nuevo !== undefined) itemUpdate.badge_nuevo = badge_nuevo
+    if (badge_temporada !== undefined) itemUpdate.badge_temporada = badge_temporada
+    if (badge_agotado !== undefined) itemUpdate.badge_agotado = badge_agotado
+    if (price !== undefined) itemUpdate.price = parseFloat(price)
+    if (Object.keys(itemUpdate).length > 0) {
+      await supabase.from('catalog_items').update(itemUpdate).eq('id', product_id)
+    }
 
     return res.status(200).json({ success: true, item: updated })
   }
