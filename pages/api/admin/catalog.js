@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PATCH') {
-    const { product_id, cost, notes, suppliers } = req.body
+    const { product_id, cost, notes, suppliers, active, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price } = req.body
     if (!product_id) return res.status(400).json({ error: 'product_id required' })
 
     const { data: existing } = await supabase
