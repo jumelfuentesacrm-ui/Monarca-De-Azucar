@@ -2352,541 +2352,72 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
 
 function QRScannerModal({ onClose, onScan }) {
   const videoRef = React.useRef(null)
-  const [error, setError] = React.useState('')
-  const [scanning, setScanning] = React.useState(false)
-
   const canvasRef = React.useRef(null)
+  const [status, setStatus] = React.useState('Iniciando cámara...')
+  const ff = '"DM Sans",sans-serif'
+  const or = '#E35A1B'
 
   React.useEffect(() => {
-    let stream = null, interval = null, active = true
-    async function startCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: {ideal:1280}, height: {ideal:720} } })
-        if (!active) return
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          videoRef.current.play()
-          setScanning(true)
-          interval = setInterval(async () => {
-            const video = videoRef.current
-            const canvas = canvasRef.current
-            if (!video || !canvas || video.readyState < 2) return
-            canvas.width = video.videoWidth
-            canvas.height = video.videoHeight
-            const ctx = canvas.getContext('2d')
-            ctx.drawImage(video, 0, 0)
-            // Try BarcodeDetector first (Chrome/Android)
-            if ('BarcodeDetector' in window) {
-              try {
-                const d = new window.BarcodeDetector({ formats: ['qr_code'] })
-                const codes = await d.detect(video)
-                if (codes.length > 0) { clearInterval(interval); onScan(codes[0].rawValue); return }
-              } catch(e) {}
-            }
-            // Fallback: jsQR via canvas
-            try {
-              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-              if (window.jsQR) {
-                const code = window.jsQR(imageData.data, imageData.width, imageData.height)
-                if (code) { clearInterval(interval); onScan(code.data) }
-              }
-            } catch(e) {}
-          }, 300)
+    let stream = null
+    let rafId = null
+    let stopped = false
+
+    function tick() {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      if (stopped || !video || !canvas) return
+      if (video.readyState >= 2) {
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(video, 0, 0)
+        if (window.jsQR) {
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          const code = window.jsQR(img.data, img.width, img.height)
+          if (code?.data) { stopped = true; onScan(code.data); return }
         }
+      }
+      rafId = requestAnimationFrame(tick)
+    }
+
+    async function start() {
+      // Load jsQR
+      if (!window.jsQR) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script')
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
+          s.onload = resolve; s.onerror = reject
+          document.head.appendChild(s)
+        })
+      }
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } }
+        })
+        if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+        setStatus('Apunta al código QR')
+        rafId = requestAnimationFrame(tick)
       } catch(e) {
-        setError('No se pudo acceder a la cámara. En iPhone: Configuración → Safari → Cámara → Permitir.')
+        setStatus('Error: ' + (e.name === 'NotAllowedError' ? 'Debes permitir acceso a la cámara en tu navegador' : e.message))
       }
     }
-    // Load jsQR for iOS fallback
-    if (!window.jsQR) {
-      const script = document.createElement('script')
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
-      script.onload = startCamera
-      document.head.appendChild(script)
-    } else { startCamera() }
-    return () => { active = false; stream?.getTracks().forEach(t=>t.stop()); clearInterval(interval) }
+
+    start()
+    return () => { stopped = true; cancelAnimationFrame(rafId); stream?.getTracks().forEach(t => t.stop()) }
   }, [])
 
-  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9100,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
-      <div style={{color:'white',fontFamily:ffS,fontSize:'1.3rem',marginBottom:'1rem',fontStyle:'italic'}}>Escanear QR</div>
-      {error
-        ? <div style={{color:'#e74c3c',fontFamily:ff,fontSize:'0.82rem',textAlign:'center',padding:'0 2rem'}}>{error}</div>
-        : <div style={{position:'relative',width:280,height:280}}>
-            <video ref={videoRef} style={{width:280,height:280,objectFit:'cover',borderRadius:16}} playsInline muted/>
-            {/* Scanner frame */}
-            <div style={{position:'absolute',inset:0,borderRadius:16,border:'2px solid #E35A1B',boxShadow:'0 0 0 9999px rgba(0,0,0,0.5)'}}/>
-            <div style={{position:'absolute',top:12,left:12,width:32,height:32,borderTop:'3px solid #E35A1B',borderLeft:'3px solid #E35A1B',borderRadius:'4px 0 0 0'}}/>
-            <div style={{position:'absolute',top:12,right:12,width:32,height:32,borderTop:'3px solid #E35A1B',borderRight:'3px solid #E35A1B',borderRadius:'0 4px 0 0'}}/>
-            <div style={{position:'absolute',bottom:12,left:12,width:32,height:32,borderBottom:'3px solid #E35A1B',borderLeft:'3px solid #E35A1B',borderRadius:'0 0 0 4px'}}/>
-            <div style={{position:'absolute',bottom:12,right:12,width:32,height:32,borderBottom:'3px solid #E35A1B',borderRight:'3px solid #E35A1B',borderRadius:'0 0 4px 0'}}/>
-          </div>
-      }
-      <div style={{color:'rgba(255,255,255,0.5)',fontFamily:ff,fontSize:'0.72rem',marginTop:'1rem'}}>
-        {scanning ? 'Apunta al código QR del cliente' : 'Iniciando cámara...'}
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9100,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{color:'white',fontFamily:ff,fontSize:'0.85rem',opacity:0.7}}>{status}</div>
+      <div style={{position:'relative',borderRadius:16,overflow:'hidden',width:280,height:280,background:'#111'}}>
+        <video ref={videoRef} style={{width:280,height:280,objectFit:'cover',display:'block'}} playsInline muted autoPlay/>
+        <canvas ref={canvasRef} style={{display:'none'}}/>
+        <div style={{position:'absolute',inset:0,border:'2px solid '+or,borderRadius:16,pointerEvents:'none'}}/>
+        <div style={{position:'absolute',top:'50%',left:'10%',right:'10%',height:2,background:or,opacity:0.6,transform:'translateY(-50%)'}}/>
       </div>
-      <button onClick={onClose} style={{marginTop:'1.5rem',padding:'0.75rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>
-        Cancelar
-      </button>
-    </div>
-  )
-}
-
-
-function InventoryDropdown({ catalog, supplies, cards }) {
-  const [open, setOpen] = React.useState(false)
-  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or = '#E35A1B', ink = '#1F140E', cr = '#FBF7EE', mu = '#7A6452'
-
-  // Spend this month (from supplies cost_total)
-  const monthSpend = (supplies||[]).reduce((a,s) => a + parseFloat(s.cost_total||0), 0)
-
-  // Stock summary
-  const lowStock = (supplies||[]).filter(s => parseFloat(s.stock_qty||0) < 100 && s.base_unit === 'g')
-  const outOfStock = (supplies||[]).filter(s => parseFloat(s.stock_qty||0) <= 0)
-
-  return (
-    <div style={{position:'relative'}}>
-      <button onClick={()=>setOpen(o=>!o)} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.6rem 1rem',background:'#FBF7EE',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer',color:ink}}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
-        Inventario
-        <span style={{transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
-      </button>
-
-      {open&&(
-        <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:320,background:'white',borderRadius:12,border:'1px solid rgba(31,20,14,0.1)',boxShadow:'0 8px 32px rgba(0,0,0,0.12)',zIndex:300,overflow:'hidden'}}>
-          {/* Header */}
-          <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
-            <div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.25rem'}}>Resumen de Inventario</div>
-            <div style={{fontSize:'0.62rem',color:mu}}>Materias primas y stock</div>
-          </div>
-
-          {/* Spend */}
-          <div style={{padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <div>
-              <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:2}}>Costo total materiales</div>
-              <div style={{fontFamily:ffS,fontSize:'1.4rem',color:or}}>${monthSpend.toFixed(2)}</div>
-            </div>
-            <div style={{textAlign:'right'}}>
-              <div style={{fontSize:'0.55rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:2}}>Ingredientes</div>
-              <div style={{fontFamily:ffS,fontSize:'1.4rem',color:ink}}>{(supplies||[]).length}</div>
-            </div>
-          </div>
-
-          {/* Alerts */}
-          {(lowStock.length > 0 || outOfStock.length > 0) && (
-            <div style={{padding:'0.75rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
-              {outOfStock.length > 0 && (
-                <div style={{fontSize:'0.68rem',color:'#c0392b',marginBottom:4}}>⚠ {outOfStock.length} agotado{outOfStock.length!==1?'s':''}: {outOfStock.slice(0,2).map(s=>s.name).join(', ')}{outOfStock.length>2?'...':''}</div>
-              )}
-              {lowStock.length > 0 && (
-                <div style={{fontSize:'0.68rem',color:'#e67e22'}}>↓ {lowStock.length} bajo stock: {lowStock.slice(0,2).map(s=>s.name).join(', ')}{lowStock.length>2?'...':''}</div>
-              )}
-            </div>
-          )}
-
-          {/* Supplies list */}
-          <div style={{maxHeight:220,overflowY:'auto'}}>
-            {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
-              const items = (supplies||[]).filter(s=>s.category===cat)
-              if(items.length===0) return null
-              return (
-                <div key={cat}>
-                  <div style={{padding:'0.4rem 1.25rem',fontSize:'0.5rem',letterSpacing:'0.14em',textTransform:'uppercase',color:mu,background:'rgba(31,20,14,0.03)'}}>{cat}</div>
-                  {items.map(s=>(
-                    <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.5rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.03)'}}>
-                      <span style={{fontSize:'0.72rem',color:ink}}>{s.name}</span>
-                      <div style={{textAlign:'right'}}>
-                        <div style={{fontSize:'0.65rem',color:parseFloat(s.stock_qty||0)<=0?'#c0392b':parseFloat(s.stock_qty||0)<100?'#e67e22':'#2d8a60',fontWeight:600}}>{parseFloat(s.stock_qty||0).toFixed(0)} {s.base_unit}</div>
-                        <div style={{fontSize:'0.55rem',color:mu}}>${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )
-            })}
-          </div>
-
-          <div style={{padding:'0.75rem 1.25rem',borderTop:'1px solid rgba(31,20,14,0.06)'}}>
-            <div style={{fontSize:'0.6rem',color:mu,textAlign:'center'}}>Edita el stock en <span style={{color:or,cursor:'pointer'}} onClick={()=>setOpen(false)}>Inventario →</span></div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-
-function StockPanel({ catalog, supplies, loadAll, showToast }) {
-  const [entries, setEntries] = React.useState({})
-  const [recipes, setRecipes] = React.useState({})
-  const [saving, setSaving] = React.useState(false)
-  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white', gl='rgba(31,20,14,0.1)'
-
-  React.useEffect(() => {
-    fetch('/api/admin/stock').then(r=>r.json()).then(d=>{
-      if(d.recipes) setRecipes(d.recipes)
-    }).catch(()=>{})
-  }, [])
-
-  async function addStock(itemId, itemName) {
-    const qty = parseFloat(entries[itemId] || 0)
-    if (!qty || qty <= 0) { showToast('Pon una cantidad válida'); return }
-    setSaving(true)
-    const res = await fetch('/api/admin/stock', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ catalog_item_id: itemId, qty_added: qty, note: 'Producción manual' })
-    })
-    if (res.ok) {
-      showToast(`+${qty} unidades de ${itemName} añadidas al stock`)
-      setEntries(e => ({...e, [itemId]: ''}))
-      loadAll()
-    } else { showToast('Error al guardar') }
-    setSaving(false)
-  }
-
-  return (
-    <div>
-      <div style={{marginBottom:'1.5rem'}}>
-        <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Stock</div>
-        <div style={{fontSize:'0.72rem',color:mu,marginTop:'0.25rem'}}>Registra lo que horneaste hoy — descuenta materiales automáticamente</div>
-      </div>
-
-      <div style={{background:cr,borderRadius:10,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden'}}>
-        {(catalog||[]).filter(c=>c.active!==false).map((item,i)=>{
-          const ingredientList = recipes[item.id] || []
-          return (
-            <div key={item.id} style={{borderBottom:i<catalog.length-1?'1px solid rgba(31,20,14,0.06)':'none',padding:'1rem 1.25rem'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'1rem',flexWrap:'wrap'}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:'0.85rem',color:ink,fontWeight:500}}>{item.name}</div>
-                  <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>
-                    {ingredientList.length > 0
-                      ? ingredientList.map(r=>`${r.quantity}${r.unit} ${r.supply_name}`).join(' · ')
-                      : <span style={{color:'rgba(31,20,14,0.3)'}}>Sin receta vinculada — ve a Catálogo para añadir ingredientes</span>
-                    }
-                  </div>
-                </div>
-                <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexShrink:0}}>
-                  <input
-                    type="number" min="0" step="1" placeholder="0"
-                    value={entries[item.id]||''}
-                    onChange={e=>setEntries(prev=>({...prev,[item.id]:e.target.value}))}
-                    style={{width:72,padding:'0.5rem 0.6rem',border:'1px solid '+gl,borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',textAlign:'center'}}
-                  />
-                  <span style={{fontSize:'0.65rem',color:mu,flexShrink:0}}>und.</span>
-                  <button onClick={()=>addStock(item.id, item.name)} disabled={saving||!entries[item.id]}
-                    style={{padding:'0.5rem 1rem',background:or,color:white,border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer',opacity:!entries[item.id]?0.4:1}}>
-                    + Añadir
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-        {(!catalog||catalog.length===0)&&<div style={{padding:'2rem',textAlign:'center',color:mu,fontSize:'0.82rem'}}>No hay productos en el catálogo.</div>}
-      </div>
-    </div>
-  )
-}
-
-
-function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold, gray }) {
-  const [openCats, setOpenCats] = React.useState({})
-  const [unitSel, setUnitSel] = React.useState({})
-  const CATS = ['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
-  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit']
-  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
-
-  const [search, setSearch] = React.useState('')
-
-  return (
-    <div style={{marginBottom:'1.25rem'}}>
-      <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.5rem'}}>Calcular desde ingredientes</div>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar ingrediente..."
-        style={{width:'100%',padding:'0.55rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box'}}/>
-      {CATS.map(cat=>{
-        const items = (supplies||[]).filter(s=>(s.category||'Otros')===cat&&(!search||s.name.toLowerCase().includes(search.toLowerCase()))).sort((a,b)=>a.name.localeCompare(b.name,'es'))
-        if(items.length===0) return null
-        const isOpen = openCats[cat]
-        return (
-          <div key={cat} style={{borderRadius:8,border:'1px solid rgba(31,20,14,0.08)',marginBottom:'0.5rem',overflow:'hidden'}}>
-            <button onClick={()=>setOpenCats(o=>({...o,[cat]:!o[cat]}))}
-              style={{width:'100%',padding:'0.65rem 1rem',display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(31,20,14,0.03)',border:'none',cursor:'pointer',fontFamily:ff}}>
-              <span style={{fontSize:'0.72rem',fontWeight:500,color:black}}>{cat}</span>
-              <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                <span style={{fontSize:'0.58rem',color:gray}}>{items.length}</span>
-                <span style={{fontSize:'0.65rem',color:gray,transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
-              </div>
-            </button>
-            {isOpen&&items.map(s=>{
-              const selUnit = unitSel[s.id] || s.base_unit || 'g'
-              const qtyKey = 'cost_qty_'+s.id
-              const unitKey = 'cost_unit_'+s.id
-              const qty = parseFloat(costForm[qtyKey]||0)
-              const cpu = parseFloat(s.cost_per_unit||0)
-              const supplyUnit = s.base_unit || 'g'
-              const lineTotal = calcCost(qty, selUnit, supplyUnit, cpu)
-              return (
-                <div key={s.id} style={{padding:'0.65rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.4rem'}}>
-                    <div>
-                      <div style={{fontSize:'0.72rem',color:black,fontWeight:500}}>{s.name}</div>
-                      <div style={{fontSize:'0.56rem',color:gray}}>${cpu.toFixed(4)}/{s.base_unit||'g'}</div>
-                    </div>
-                    {lineTotal>0&&<span style={{fontSize:'0.65rem',color:gold,fontWeight:600}}>${lineTotal.toFixed(3)}</span>}
-                  </div>
-                  <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem',marginBottom:'0.4rem'}}>
-                    {UNITS.map(u=>(
-                      <button key={u} onClick={()=>{
-                        setUnitSel(prev=>({...prev,[s.id]:u}))
-                        setCostForm(f=>({...f,[unitKey]:u}))
-                      }} style={{padding:'0.2rem 0.55rem',borderRadius:999,border:'1px solid '+(selUnit===u?gold:'rgba(31,20,14,0.12)'),background:selUnit===u?'rgba(227,90,27,0.1)':'transparent',color:selUnit===u?gold:'rgba(31,20,14,0.5)',fontSize:'0.56rem',cursor:'pointer',fontFamily:ff}}>
-                        {u}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                    <input type="number" min="0" step="0.1" placeholder="0"
-                      value={costForm[qtyKey]||''}
-                      onChange={e=>{
-                        const val=e.target.value
-                        setCostForm(f=>{
-                          const updated={...f,[qtyKey]:val,[unitKey]:selUnit}
-                          const total=supplies.reduce((acc,sup)=>{
-                            const q=parseFloat(updated['cost_qty_'+sup.id]||0)
-                            const u=updated['cost_unit_'+sup.id]||sup.base_unit||'g'
-                            return acc+calcCost(q,u,sup.base_unit||'g',parseFloat(sup.cost_per_unit||0))
-                          },0)
-                          return {...updated,cost:total.toFixed(4)}
-                        })
-                      }}
-                      style={{width:80,padding:'0.4rem 0.6rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',textAlign:'center'}}/>
-                    <span style={{fontSize:'0.65rem',color:gray}}>{selUnit}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-
-function AlcanzaPara({ catalog, supplies }) {
-  const [expanded, setExpanded] = React.useState(null)
-  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
-
-  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
-
-  // For each catalog item, calculate how many units can be made
-  const supplyMap = {}
-  ;(supplies||[]).forEach(s => { supplyMap[s.id] = s })
-
-  const results = (catalog||[]).filter(c=>c.active!==false).map(item => {
-    const recipe = item.recipe_ingredients || []
-    if (recipe.length === 0) return { item, units: null, missing: [], ingredients: [] }
-
-    let minUnits = Infinity
-    const ingredientStatus = recipe.map(r => {
-      const supply = supplyMap[r.supply_id]
-      if (!supply) return { name: r.supply_name||'?', needed: r.quantity, unit: r.unit, have: 0, missing: true, unitsCanMake: 0 }
-      // stock is already in supply's base unit, recipe qty might be different unit
-      const supplyUnit = supply.base_unit || 'g'
-      const recipeUnit = r.unit || supplyUnit
-      const stock = parseFloat(supply.stock_qty||0)
-      const convFactor = (CONV[recipeUnit]||1) / (CONV[supplyUnit]||1)
-      const neededPerUnit = parseFloat(r.quantity||0) * convFactor
-      const canMake = neededPerUnit > 0 ? Math.floor(stock / neededPerUnit) : Infinity
-      if (canMake < minUnits) minUnits = canMake
-      return {
-        name: supply.name,
-        needed: r.quantity,
-        unit: r.unit,
-        have: parseFloat(supply.stock_qty||0),
-        haveUnit: supply.base_unit||'g',
-        canMake,
-        missing: canMake === 0
-      }
-    })
-
-    const units = minUnits === Infinity ? null : minUnits
-    const missing = ingredientStatus.filter(i => i.missing)
-    return { item, units, missing, ingredients: ingredientStatus }
-  })
-
-  const withRecipes = results.filter(r => r.units !== null)
-
-  if (withRecipes.length === 0) return (
-    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
-      <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'0.5rem'}}>Alcanza para</div>
-      <div style={{fontSize:'0.72rem',color:mu,fontStyle:'italic'}}>Vincula ingredientes a los productos en Catálogo para ver cuánto puedes producir.</div>
-    </div>
-  )
-
-  return (
-    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1.25rem'}}>
-      <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
-        <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400}}>Alcanza para</div>
-        <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>Con el stock actual de ingredientes</div>
-      </div>
-      {withRecipes.map(({item, units, missing, ingredients}) => (
-        <div key={item.id} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
-          {/* Row */}
-          <div onClick={()=>setExpanded(e=>e===item.id?null:item.id)}
-            style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.85rem 1.25rem',cursor:'pointer',background:expanded===item.id?'rgba(227,90,27,0.04)':'transparent'}}>
-            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-              <span style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{item.name}</span>
-              {missing.length > 0 && <span style={{fontSize:'0.56rem',padding:'0.15rem 0.5rem',borderRadius:999,background:'rgba(192,57,43,0.1)',color:'#c0392b'}}>Faltan ingredientes</span>}
-            </div>
-            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-              <span style={{fontFamily:ffS,fontSize:'1.1rem',color:units===0?'#c0392b':units<12?'#e67e22':'#27ae60',fontWeight:400}}>
-                {units === 0 ? '0' : units} <span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>und.</span>
-              </span>
-              <span style={{fontSize:'0.65rem',color:mu,transform:expanded===item.id?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
-            </div>
-          </div>
-
-          {/* Expanded ingredient detail */}
-          {expanded===item.id&&(
-            <div style={{background:'white',borderTop:'1px solid rgba(31,20,14,0.05)',padding:'0.75rem 1.25rem'}}>
-              {missing.length > 0 && (
-                <div style={{marginBottom:'0.75rem',padding:'0.6rem 0.85rem',background:'rgba(192,57,43,0.06)',borderRadius:6,border:'1px solid rgba(192,57,43,0.15)'}}>
-                  <div style={{fontSize:'0.56rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#c0392b',marginBottom:'0.35rem'}}>Falta:</div>
-                  {missing.map(m=>(
-                    <div key={m.name} style={{fontSize:'0.72rem',color:'#c0392b',marginBottom:2}}>• {m.name} — necesitas {m.needed} {m.unit}, tienes {m.have.toFixed(0)} {m.haveUnit}</div>
-                  ))}
-                </div>
-              )}
-              <div style={{fontSize:'0.56rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.5rem'}}>Ingredientes:</div>
-              {ingredients.map((ing,i)=>(
-                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.35rem 0',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
-                  <span style={{fontSize:'0.72rem',color:ing.missing?'#c0392b':ink}}>{ing.name}</span>
-                  <div style={{textAlign:'right'}}>
-                    <span style={{fontSize:'0.65rem',color:mu}}>{ing.needed} {ing.unit} × unidad</span>
-                    <span style={{fontSize:'0.65rem',color:ing.missing?'#c0392b':'#27ae60',marginLeft:8,fontWeight:600}}>
-                      {ing.missing?'✕ sin stock':'✓'}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-
-function StockValueChart({ supplies }) {
-  const [range, setRange] = React.useState('week')
-  const [history, setHistory] = React.useState([])
-  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
-  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE'
-
-  React.useEffect(() => {
-    fetch('/api/admin/supplies?stockHistory=1&range='+range)
-      .then(r=>r.json())
-      .then(d=>setHistory(d.history||[]))
-      .catch(()=>{})
-  }, [range])
-
-  // Calculate current total value from supplies
-  const currentValue = (supplies||[]).reduce((a,s) =>
-    a + parseFloat(s.stock_qty||0) * parseFloat(s.cost_per_unit||0), 0)
-
-  const maxVal = Math.max(...history.map(h=>h.value), currentValue, 1)
-  const labels = {day:'Hoy', week:'7 días', month:'30 días'}
-
-  return (
-    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
-        <div>
-          <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400}}>Valor del inventario</div>
-          <div style={{fontFamily:ffS,fontSize:'1.6rem',color:or,marginTop:'0.2rem'}}>${currentValue.toFixed(2)}</div>
-          <div style={{fontSize:'0.6rem',color:mu}}>valor actual en materiales</div>
-        </div>
-        <div style={{display:'flex',gap:'0.35rem'}}>
-          {['day','week','month'].map(r=>(
-            <button key={r} onClick={()=>setRange(r)}
-              style={{padding:'0.3rem 0.65rem',borderRadius:999,border:'1px solid rgba(31,20,14,0.12)',background:range===r?ink:'transparent',color:range===r?'white':mu,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer'}}>
-              {labels[r]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {history.length === 0 ? (
-        <div style={{height:80,position:'relative'}}>
-          <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:4}}>
-            <div style={{width:'100%',height:2,background:'rgba(31,20,14,0.06)',borderRadius:1}}/>
-            <div style={{fontSize:'0.65rem',color:mu,fontStyle:'italic'}}>Actualiza el stock de ingredientes para ver el historial</div>
-          </div>
-        </div>
-      ) : (
-        <div style={{position:'relative',height:100}}>
-          <svg width="100%" height="80" viewBox={"0 0 400 80"} preserveAspectRatio="none" style={{display:'block'}}>
-            <defs>
-              <linearGradient id="stockGrad2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#E35A1B" stopOpacity={0.25}/>
-                <stop offset="100%" stopColor="#E35A1B" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            {(()=>{
-              const pts = history.map((h,i)=>({
-                x: history.length>1 ? (i/(history.length-1))*380+10 : 200,
-                y: 10 + (1 - h.value/maxVal)*60
-              }))
-              if(pts.length===1) return <circle cx={pts[0].x} cy={pts[0].y} r="4" fill="#E35A1B"/>
-              const line = pts.map((p,i)=>`${i===0?'M':'L'}${p.x} ${p.y}`).join(' ')
-              const area = line + ` L${pts[pts.length-1].x} 80 L${pts[0].x} 80 Z`
-              return (
-                <>
-                  <path d={area} fill="url(#stockGrad2)"/>
-                  <path d={line} fill="none" stroke="#E35A1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  {pts.map((p,i)=>(
-                    <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#E35A1B" stroke="white" strokeWidth="1.5"/>
-                  ))}
-                </>
-              )
-            })()}
-          </svg>
-          {/* Labels row */}
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'0.2rem'}}>
-            <div>
-              <div style={{fontSize:'0.5rem',color:mu}}>{history[0]?.date}</div>
-              <div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[0]?.value?.toFixed(2)}</div>
-            </div>
-            <div style={{textAlign:'right'}}>
-              <div style={{fontSize:'0.5rem',color:mu}}>{history[history.length-1]?.date}</div>
-              <div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[history.length-1]?.value?.toFixed(2)}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Stats row */}
-      {history.length > 0 && (
-        <div style={{display:'flex',gap:'1rem',marginTop:'0.75rem',paddingTop:'0.75rem',borderTop:'1px solid rgba(31,20,14,0.06)'}}>
-          {[
-            ['Promedio', '$'+(history.reduce((a,h)=>a+h.value,0)/history.length).toFixed(2)],
-            ['Máximo', '$'+Math.max(...history.map(h=>h.value)).toFixed(2)],
-            ['Mínimo', '$'+Math.min(...history.map(h=>h.value)).toFixed(2)],
-          ].map(([label,val])=>(
-            <div key={label}>
-              <div style={{fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>{label}</div>
-              <div style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{val}</div>
-            </div>
-          ))}
-        </div>
-      )}
+      <button onClick={onClose} style={{padding:'0.7rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>Cancelar</button>
     </div>
   )
 }
@@ -2894,67 +2425,72 @@ function StockValueChart({ supplies }) {
 
 function BarcodeScanner({ onScan, onClose }) {
   const videoRef = React.useRef(null)
-  const [error, setError] = React.useState('')
-  const ff = '"DM Sans",sans-serif'
-  const or = '#E35A1B', ink = '#1F140E'
-
   const canvasRef = React.useRef(null)
+  const [status, setStatus] = React.useState('Iniciando...')
+  const ff = '"DM Sans",sans-serif'
+  const or = '#E35A1B'
 
   React.useEffect(() => {
-    let stream = null, interval = null, active = true
+    let stream = null, rafId = null, stopped = false
+    const FORMATS = ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e']
+
+    function tick() {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      if (stopped || !video || !canvas) return
+      if (video.readyState >= 2) {
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(video, 0, 0)
+        // Try BarcodeDetector (Chrome/Android)
+        if ('BarcodeDetector' in window) {
+          new window.BarcodeDetector({ formats: FORMATS }).detect(video)
+            .then(codes => { if (codes.length > 0 && !stopped) { stopped = true; onScan(codes[0].rawValue) } })
+            .catch(() => {})
+        }
+        // Try jsQR (iOS/Safari)
+        if (window.jsQR) {
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height)
+          const code = window.jsQR(img.data, img.width, img.height)
+          if (code?.data && !stopped) { stopped = true; onScan(code.data); return }
+        }
+      }
+      rafId = requestAnimationFrame(tick)
+    }
+
     async function start() {
+      if (!window.jsQR) {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script')
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
+          s.onload = res; s.onerror = rej; document.head.appendChild(s)
+        }).catch(() => {})
+      }
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width:{ideal:1280}, height:{ideal:720} } })
-        if (!active || !videoRef.current) return
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 } } })
+        if (stopped) { stream.getTracks().forEach(t => t.stop()); return }
         videoRef.current.srcObject = stream
-        videoRef.current.play()
-        interval = setInterval(async () => {
-          const video = videoRef.current
-          const canvas = canvasRef.current
-          if (!video || !canvas || video.readyState < 2) return
-          canvas.width = video.videoWidth; canvas.height = video.videoHeight
-          const ctx = canvas.getContext('2d')
-          ctx.drawImage(video, 0, 0)
-          if ('BarcodeDetector' in window) {
-            try {
-              const d = new window.BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e'] })
-              const codes = await d.detect(video)
-              if (codes.length > 0) { clearInterval(interval); onScan(codes[0].rawValue); return }
-            } catch(e) {}
-          }
-          // jsQR fallback for iOS
-          try {
-            if (window.jsQR) {
-              const id = ctx.getImageData(0,0,canvas.width,canvas.height)
-              const code = window.jsQR(id.data, id.width, id.height)
-              if (code) { clearInterval(interval); onScan(code.data) }
-            }
-          } catch(e) {}
-        }, 300)
+        await videoRef.current.play()
+        setStatus('Apunta al código de barras')
+        rafId = requestAnimationFrame(tick)
       } catch(e) {
-        setError('No se pudo acceder a la cámara. En iPhone: Configuración → Safari → Cámara → Permitir.')
+        setStatus('Error: ' + (e.name === 'NotAllowedError' ? 'Permite el acceso a la cámara' : e.message))
       }
     }
-    if (!window.jsQR) {
-      const s = document.createElement('script')
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js'
-      s.onload = start; document.head.appendChild(s)
-    } else { start() }
-    return () => { active=false; stream?.getTracks().forEach(t=>t.stop()); clearInterval(interval) }
+
+    start()
+    return () => { stopped = true; cancelAnimationFrame(rafId); stream?.getTracks().forEach(t => t.stop()) }
   }, [])
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',zIndex:9200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
-      <div style={{color:'white',fontFamily:ff,fontSize:'0.9rem'}}>Apunta al código de barras</div>
-      {error
-        ? <div style={{color:'#e74c3c',fontFamily:ff,fontSize:'0.78rem',textAlign:'center',padding:'0 2rem'}}>{error}</div>
-        : <div style={{position:'relative',width:280,height:200,borderRadius:12,overflow:'hidden'}}>
-            <video ref={videoRef} style={{width:280,height:200,objectFit:'cover'}} playsInline muted/>
-            <div style={{position:'absolute',top:0,left:0,right:0,bottom:0,border:'2px solid '+or,borderRadius:12}}/>
-            <div style={{position:'absolute',top:'50%',left:20,right:20,height:2,background:or,opacity:0.8,transform:'translateY(-50%)'}}/>
-          </div>
-      }
-      <button onClick={onClose} style={{padding:'0.65rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>Cancelar</button>
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',zIndex:9200,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+      <div style={{color:'white',fontFamily:ff,fontSize:'0.85rem',opacity:0.7}}>{status}</div>
+      <div style={{position:'relative',borderRadius:12,overflow:'hidden',width:280,height:200,background:'#111'}}>
+        <video ref={videoRef} style={{width:280,height:200,objectFit:'cover',display:'block'}} playsInline muted autoPlay/>
+        <canvas ref={canvasRef} style={{display:'none'}}/>
+        <div style={{position:'absolute',top:'50%',left:0,right:0,height:2,background:or,opacity:0.7,transform:'translateY(-50%)'}}/>
+      </div>
+      <button onClick={onClose} style={{padding:'0.7rem 2rem',background:'rgba(255,255,255,0.1)',color:'white',border:'1px solid rgba(255,255,255,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer'}}>Cancelar</button>
     </div>
   )
 }
