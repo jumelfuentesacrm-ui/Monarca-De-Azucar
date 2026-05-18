@@ -115,6 +115,7 @@ export default function Card({ session }) {
   const [loading, setLoading] = useState(true)
   const [profileEdit, setProfileEdit] = useState(false)
   const [chatMsg, setChatMsg] = useState('')
+  const [showQRFlip, setShowQRFlip] = useState(false)
   const [chatMessages, setChatMessages] = useState([])
   const [chatLoading, setChatLoading] = useState(false)
   const [profileForm, setProfileForm] = useState({full_name:'',phone:'',email:'',password:''})
@@ -296,7 +297,7 @@ export default function Card({ session }) {
 
                   {/* QR */}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
-                    <button onClick={()=>window.open(`/c/${card.card_number}`,'_blank')}
+                    <button onClick={()=>setShowQRFlip(true)}
                       className="tap-scale"
                       style={{padding:'12px',background:'transparent',border:'1.5px solid rgba(31,20,14,0.15)',borderRadius:999,fontFamily:ff,fontSize:'0.68rem',fontWeight:500,color:ink,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
@@ -687,6 +688,28 @@ export default function Card({ session }) {
           </button>
         </nav>
       </div>
+
+      {/* QR Flip Modal */}
+      {showQRFlip&&card&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(31,20,14,0.85)',zIndex:500,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20}} onClick={()=>setShowQRFlip(false)}>
+          <style>{'@keyframes spin-reveal{0%{transform:rotateY(0deg)}50%{transform:rotateY(90deg)}100%{transform:rotateY(180deg)}}.qr-card{animation:spin-reveal 0.6s ease forwards;transform-style:preserve-3d}'}</style>
+          <div style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.5)',letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:ff}}>Tu tarjeta de lealtad</div>
+          <div className="qr-card" style={{background:'#FBF7EE',borderRadius:20,padding:28,display:'flex',flexDirection:'column',alignItems:'center',gap:16,minWidth:240}}>
+            {/* QR Code using Google Charts API */}
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`https://monarca-de-azucar.vercel.app/c/${card.card_number}`)}&bgcolor=FBF7EE&color=1F140E&margin=2`}
+              alt="QR"
+              style={{width:180,height:180,borderRadius:8}}
+            />
+            <div style={{textAlign:'center'}}>
+              <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>{card.profiles?.full_name}</div>
+              <div style={{fontSize:'0.65rem',color:mu,marginTop:4}}>#{card.card_number}</div>
+            </div>
+            <MonarcaButterfly size={28} animate={true}/>
+          </div>
+          <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.35)',fontFamily:ff}}>Toca para cerrar</div>
+        </div>
+      )}
 
       {toast && <div style={{position:'fixed',bottom:'5.5rem',left:'50%',transform:'translateX(-50%)',background:ink,color:cr,padding:'10px 20px',borderRadius:999,fontSize:'0.72rem',fontWeight:500,zIndex:9999,whiteSpace:'nowrap',boxShadow:'0 4px 20px rgba(0,0,0,0.2)'}}>{toast}</div>}
     </>
