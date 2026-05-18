@@ -691,23 +691,22 @@ export default function Card({ session }) {
 
       {/* QR Flip Modal */}
       {showQRFlip&&card&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(31,20,14,0.85)',zIndex:500,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20}} onClick={()=>setShowQRFlip(false)}>
-          <style>{'@keyframes spin-reveal{0%{transform:rotateY(0deg)}50%{transform:rotateY(90deg)}100%{transform:rotateY(180deg)}}.qr-card{animation:spin-reveal 0.6s ease forwards;transform-style:preserve-3d}'}</style>
-          <div style={{fontSize:'0.65rem',color:'rgba(255,255,255,0.5)',letterSpacing:'0.1em',textTransform:'uppercase',fontFamily:ff}}>Tu tarjeta de lealtad</div>
-          <div className="qr-card" style={{background:'#FBF7EE',borderRadius:20,padding:28,display:'flex',flexDirection:'column',alignItems:'center',gap:16,minWidth:240}}>
-            {/* QR Code using Google Charts API */}
+        <div style={{position:'fixed',inset:0,background:'rgba(31,20,14,0.88)',zIndex:500,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,padding:'1rem'}} onClick={()=>setShowQRFlip(false)}>
+          <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.5)',letterSpacing:'0.12em',textTransform:'uppercase',fontFamily:ff}}>Tu tarjeta de lealtad</div>
+          <div style={{background:'#FBF7EE',borderRadius:20,padding:28,display:'flex',flexDirection:'column',alignItems:'center',gap:16,minWidth:240,animation:'fadeInUp 0.35s ease'}}>
+            <style>{'@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}'}</style>
             <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`https://monarca-de-azucar.vercel.app/c/${card.card_number}`)}&bgcolor=FBF7EE&color=1F140E&margin=2`}
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(card.card_number)}&bgcolor=FBF7EE&color=1F140E&margin=2`}
               alt="QR"
-              style={{width:180,height:180,borderRadius:8}}
+              style={{width:200,height:200,borderRadius:8}}
             />
             <div style={{textAlign:'center'}}>
-              <div style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>{card.profiles?.full_name}</div>
-              <div style={{fontSize:'0.65rem',color:mu,marginTop:4}}>#{card.card_number}</div>
+              <div style={{fontFamily:ffS,fontSize:'1rem',color:'#1F140E'}}>{card.profiles?.full_name}</div>
+              <div style={{fontSize:'0.65rem',color:'#7A6452',marginTop:4,letterSpacing:'0.05em'}}>{card.card_number}</div>
             </div>
             <MonarcaButterfly size={28} animate={true}/>
           </div>
-          <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.35)',fontFamily:ff}}>Toca para cerrar</div>
+          <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.3)',fontFamily:ff}}>Toca para cerrar</div>
         </div>
       )}
 
