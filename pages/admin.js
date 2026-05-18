@@ -2692,6 +2692,286 @@ function PurchaseHistory() {
   )
 }
 
+
+function InventoryDropdown({ supplies, recipeMap }) {
+  const [open, setOpen] = React.useState(false)
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or = '#E35A1B', ink = '#1F140E', mu = '#7A6452'
+
+  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+  const lowItems = (supplies||[]).filter(s => {
+    const stock = parseFloat(s.stock_qty||0)
+    if (!parseFloat(s.cost_total||0)) return false
+    if (stock <= 0) return true
+    const usages = (recipeMap||[]).filter(r => r.supply_id === s.id)
+    if (usages.length === 0) return false
+    return usages.some(u => {
+      const perUnit = parseFloat(u.quantity||0) * (CONV[u.unit]||1)
+      if (perUnit <= 0) return false
+      return (stock / perUnit) < 12
+    })
+  })
+
+  if (!open) return (
+    <button onClick={()=>setOpen(true)} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.5rem 0.9rem',background:lowItems.length>0?'rgba(227,90,27,0.1)':'#FBF7EE',border:'1px solid '+(lowItems.length>0?'rgba(227,90,27,0.3)':'rgba(31,20,14,0.12)'),borderRadius:8,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer',color:lowItems.length>0?or:ink}}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      {lowItems.length>0 ? `${lowItems.length} bajo stock` : 'Inventario OK'}
+    </button>
+  )
+
+  return (
+    <div style={{position:'relative'}}>
+      <button onClick={()=>setOpen(false)} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.5rem 0.9rem',background:lowItems.length>0?'rgba(227,90,27,0.1)':'#FBF7EE',border:'1px solid '+(lowItems.length>0?'rgba(227,90,27,0.3)':'rgba(31,20,14,0.12)'),borderRadius:8,fontFamily:ff,fontSize:'0.72rem',cursor:'pointer',color:lowItems.length>0?or:ink}}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        {lowItems.length>0 ? `${lowItems.length} bajo stock` : 'Inventario OK'} ▾
+      </button>
+      <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,width:380,background:'white',borderRadius:12,border:'1px solid rgba(31,20,14,0.1)',boxShadow:'0 8px 32px rgba(0,0,0,0.12)',zIndex:300,overflow:'hidden'}}>
+        <div style={{padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <div>
+            <div style={{fontFamily:ffS,fontSize:'0.95rem',fontWeight:400}}>Stock bajo</div>
+            <div style={{fontSize:'0.6rem',color:mu,marginTop:2}}>Menos de 12 unidades producibles</div>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:'0.52rem',letterSpacing:'0.08em',textTransform:'uppercase',color:mu}}>Ingredientes</div>
+            <div style={{fontFamily:ffS,fontSize:'1.1rem',color:or}}>{(supplies||[]).filter(s=>parseFloat(s.cost_total||0)>0).length}</div>
+          </div>
+        </div>
+        {lowItems.length===0
+          ? <div style={{padding:'1.25rem',textAlign:'center',color:mu,fontSize:'0.75rem'}}>Todo el inventario está bien ✓</div>
+          : <div style={{maxHeight:280,overflowY:'auto'}}>
+              {lowItems.map(s=>(
+                <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.65rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
+                  <div>
+                    <div style={{fontSize:'0.72rem',color:ink,fontWeight:500}}>{s.name}</div>
+                    <div style={{fontSize:'0.58rem',color:mu}}>{s.category}</div>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontSize:'0.68rem',color:parseFloat(s.stock_qty||0)<=0?'#c0392b':'#e67e22',fontWeight:700}}>{parseFloat(s.stock_qty||0).toFixed(0)} {s.base_unit}</div>
+                    <div style={{fontSize:'0.55rem',color:'#e67e22'}}>bajo</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+        }
+        <div style={{padding:'0.65rem 1.25rem',borderTop:'1px solid rgba(31,20,14,0.06)',fontSize:'0.6rem',color:or,textAlign:'center',cursor:'pointer'}} onClick={()=>setOpen(false)}>Ver más →</div>
+      </div>
+    </div>
+  )
+}
+
+function StockValueChart({ supplies }) {
+  const [range, setRange] = React.useState('week')
+  const [history, setHistory] = React.useState([])
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE'
+
+  React.useEffect(() => {
+    fetch('/api/admin/supplies?stockHistory=1&range='+range)
+      .then(r=>r.json()).then(d=>setHistory(d.history||[])).catch(()=>{})
+  }, [range])
+
+  const currentValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.stock_qty||0)*parseFloat(s.cost_per_unit||0),0)
+  const maxVal = Math.max(...history.map(h=>h.value), currentValue, 1)
+  const labels = {day:'Hoy', week:'7 días', month:'30 días'}
+
+  return (
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
+        <div>
+          <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400}}>Valor del inventario</div>
+          <div style={{fontFamily:ffS,fontSize:'1.6rem',color:or,marginTop:'0.2rem'}}>${currentValue.toFixed(2)}</div>
+          <div style={{fontSize:'0.6rem',color:mu}}>valor actual en materiales</div>
+        </div>
+        <div style={{display:'flex',gap:'0.35rem'}}>
+          {['day','week','month'].map(r=>(
+            <button key={r} onClick={()=>setRange(r)} style={{padding:'0.3rem 0.65rem',borderRadius:999,border:'1px solid rgba(31,20,14,0.12)',background:range===r?ink:'transparent',color:range===r?'white':mu,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer'}}>
+              {labels[r]}
+            </button>
+          ))}
+        </div>
+      </div>
+      {history.length===0
+        ? <div style={{height:60,display:'flex',alignItems:'center',justifyContent:'center',color:mu,fontSize:'0.7rem',fontStyle:'italic'}}>Actualiza el stock para ver el historial</div>
+        : <div style={{position:'relative'}}>
+            <svg width="100%" height="80" viewBox="0 0 400 80" preserveAspectRatio="none" style={{display:'block'}}>
+              <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={or} stopOpacity={0.25}/><stop offset="100%" stopColor={or} stopOpacity={0}/></linearGradient></defs>
+              {(()=>{
+                const pts=history.map((h,i)=>({x:history.length>1?(i/(history.length-1))*380+10:200,y:10+(1-h.value/maxVal)*60}))
+                if(pts.length===1) return <circle cx={pts[0].x} cy={pts[0].y} r="4" fill={or}/>
+                const line=pts.map((p,i)=>`${i===0?'M':'L'}${p.x} ${p.y}`).join(' ')
+                return(<><path d={line+` L${pts[pts.length-1].x} 80 L${pts[0].x} 80 Z`} fill="url(#sg)"/><path d={line} fill="none" stroke={or} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>{pts.map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="3.5" fill={or} stroke="white" strokeWidth="1.5"/>)}</>)
+              })()}
+            </svg>
+            <div style={{display:'flex',justifyContent:'space-between',marginTop:'0.25rem'}}>
+              <div><div style={{fontSize:'0.5rem',color:mu}}>{history[0]?.date}</div><div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[0]?.value?.toFixed(2)}</div></div>
+              <div style={{textAlign:'right'}}><div style={{fontSize:'0.5rem',color:mu}}>{history[history.length-1]?.date}</div><div style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>${history[history.length-1]?.value?.toFixed(2)}</div></div>
+            </div>
+            {history.length>1&&<div style={{display:'flex',gap:'1rem',marginTop:'0.5rem',paddingTop:'0.5rem',borderTop:'1px solid rgba(31,20,14,0.06)'}}>
+              {[['Promedio','$'+(history.reduce((a,h)=>a+h.value,0)/history.length).toFixed(2)],['Máximo','$'+Math.max(...history.map(h=>h.value)).toFixed(2)],['Mínimo','$'+Math.min(...history.map(h=>h.value)).toFixed(2)]].map(([l,v])=>(
+                <div key={l}><div style={{fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu}}>{l}</div><div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{v}</div></div>
+              ))}
+            </div>}
+          </div>
+      }
+    </div>
+  )
+}
+
+function AlcanzaPara({ catalog, supplies }) {
+  const [expanded, setExpanded] = React.useState(null)
+  const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
+  const or='#E35A1B', ink='#1F140E', mu='#7A6452', cr='#FBF7EE', white='white'
+  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+
+  const supplyMap = {}
+  ;(supplies||[]).forEach(s=>{ supplyMap[s.id]=s })
+
+  const results = (catalog||[]).filter(c=>c.active!==false).map(item=>{
+    const recipe = item.recipe_ingredients||[]
+    if(recipe.length===0) return {item,units:null,missing:[],ingredients:[]}
+    let minUnits = Infinity
+    const ingredientStatus = recipe.map(r=>{
+      const supply = supplyMap[r.supply_id]
+      if(!supply) return {name:r.supply_name||'?',needed:r.quantity,unit:r.unit,have:0,haveUnit:'',canMake:0,missing:true}
+      const stockBase = parseFloat(supply.stock_qty||0)*(CONV[supply.base_unit||'g']||1)
+      const neededBase = parseFloat(r.quantity||0)*(CONV[r.unit||'g']||1)
+      const canMake = neededBase>0?Math.floor(stockBase/neededBase):Infinity
+      if(canMake<minUnits) minUnits=canMake
+      return {name:supply.name,needed:r.quantity,unit:r.unit,have:parseFloat(supply.stock_qty||0),haveUnit:supply.base_unit||'g',canMake,missing:canMake===0}
+    })
+    return {item,units:minUnits===Infinity?null:minUnits,missing:ingredientStatus.filter(i=>i.missing),ingredients:ingredientStatus}
+  })
+
+  const withRecipes = results.filter(r=>r.units!==null)
+  if(withRecipes.length===0) return(
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1.25rem'}}>
+      <div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.5rem'}}>Alcanza para</div>
+      <div style={{fontSize:'0.72rem',color:mu,fontStyle:'italic'}}>Vincula ingredientes a los productos en Catálogo para ver cuánto puedes producir.</div>
+    </div>
+  )
+
+  return(
+    <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.08)',overflow:'hidden',marginBottom:'1.25rem'}}>
+      <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+        <div style={{fontFamily:ffS,fontSize:'1rem'}}>Alcanza para</div>
+        <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>Con el stock actual</div>
+      </div>
+      {withRecipes.map(({item,units,missing,ingredients})=>(
+        <div key={item.id} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
+          <div onClick={()=>setExpanded(e=>e===item.id?null:item.id)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.85rem 1.25rem',cursor:'pointer',background:expanded===item.id?'rgba(227,90,27,0.04)':'transparent'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+              <span style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{item.name}</span>
+              {missing.length>0&&<span style={{fontSize:'0.56rem',padding:'0.15rem 0.5rem',borderRadius:999,background:'rgba(192,57,43,0.1)',color:'#c0392b'}}>Faltan ingredientes</span>}
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+              <span style={{fontFamily:ffS,fontSize:'1.1rem',color:units===0?'#c0392b':units<12?'#e67e22':'#27ae60'}}>{units} <span style={{fontSize:'0.65rem',color:mu,fontFamily:ff}}>und.</span></span>
+              <span style={{fontSize:'0.65rem',color:mu,transform:expanded===item.id?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
+            </div>
+          </div>
+          {expanded===item.id&&(
+            <div style={{background:'white',borderTop:'1px solid rgba(31,20,14,0.05)',padding:'0.75rem 1.25rem'}}>
+              {missing.length>0&&<div style={{marginBottom:'0.75rem',padding:'0.6rem 0.85rem',background:'rgba(192,57,43,0.06)',borderRadius:6,border:'1px solid rgba(192,57,43,0.15)'}}>
+                <div style={{fontSize:'0.56rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'#c0392b',marginBottom:'0.35rem'}}>Falta:</div>
+                {missing.map(m=><div key={m.name} style={{fontSize:'0.72rem',color:'#c0392b',marginBottom:2}}>• {m.name} — necesitas {m.needed} {m.unit}, tienes {m.have.toFixed(0)} {m.haveUnit}</div>)}
+              </div>}
+              {ingredients.map((ing,i)=>(
+                <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.35rem 0',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
+                  <span style={{fontSize:'0.72rem',color:ing.missing?'#c0392b':ink}}>{ing.name}</span>
+                  <div style={{textAlign:'right'}}>
+                    <span style={{fontSize:'0.65rem',color:mu}}>{ing.needed} {ing.unit}</span>
+                    <span style={{fontSize:'0.65rem',color:ing.missing?'#c0392b':'#27ae60',marginLeft:8,fontWeight:600}}>{ing.missing?'✕':'✓'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold, gray }) {
+  const [openCats, setOpenCats] = React.useState({})
+  const [unitSel, setUnitSel] = React.useState({})
+  const CATS = ['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
+  const UNITS = ['g','kg','oz','lb','ml','l','fl oz','tsp','tbsp','cup','unit']
+  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+  const [search, setSearch] = React.useState('')
+
+  function calcCost(qty, selUnit, supplyUnit, cpu) {
+    if(!qty||!cpu) return 0
+    return qty*(CONV[selUnit]||1)/(CONV[supplyUnit]||1)*cpu
+  }
+
+  return(
+    <div style={{marginBottom:'1.25rem'}}>
+      <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gold,marginBottom:'0.5rem'}}>Calcular desde ingredientes</div>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar ingrediente..."
+        style={{width:'100%',padding:'0.55rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',marginBottom:'0.75rem',boxSizing:'border-box'}}/>
+      {CATS.map(cat=>{
+        const items=(supplies||[]).filter(s=>(s.category||'Otros')===cat&&(!search||s.name.toLowerCase().includes(search.toLowerCase())))
+        if(items.length===0) return null
+        const isOpen=openCats[cat]
+        return(
+          <div key={cat} style={{borderRadius:8,border:'1px solid rgba(31,20,14,0.08)',marginBottom:'0.5rem',overflow:'hidden'}}>
+            <button onClick={()=>setOpenCats(o=>({...o,[cat]:!o[cat]}))} style={{width:'100%',padding:'0.65rem 1rem',display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(31,20,14,0.03)',border:'none',cursor:'pointer',fontFamily:ff}}>
+              <span style={{fontSize:'0.72rem',fontWeight:500,color:black}}>{cat}</span>
+              <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                <span style={{fontSize:'0.58rem',color:gray}}>{items.length}</span>
+                <span style={{fontSize:'0.65rem',color:gray,transform:isOpen?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
+              </div>
+            </button>
+            {isOpen&&items.map(s=>{
+              const selUnit=unitSel[s.id]||s.base_unit||'g'
+              const qtyKey='cost_qty_'+s.id, unitKey='cost_unit_'+s.id
+              const qty=parseFloat(costForm[qtyKey]||0)
+              const cpu=parseFloat(s.cost_per_unit||0)
+              const lineTotal=calcCost(qty,selUnit,s.base_unit||'g',cpu)
+              return(
+                <div key={s.id} style={{padding:'0.65rem 1rem',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.4rem'}}>
+                    <div>
+                      <div style={{fontSize:'0.72rem',color:black,fontWeight:500}}>{s.name}</div>
+                      <div style={{fontSize:'0.56rem',color:gray}}>${cpu.toFixed(4)}/{s.base_unit||'g'}</div>
+                    </div>
+                    {lineTotal>0&&<span style={{fontSize:'0.65rem',color:gold,fontWeight:600}}>${lineTotal.toFixed(3)}</span>}
+                  </div>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem',marginBottom:'0.4rem'}}>
+                    {UNITS.map(u=>(
+                      <button key={u} onClick={()=>{setUnitSel(p=>({...p,[s.id]:u}));setCostForm(f=>({...f,[unitKey]:u}))}}
+                        style={{padding:'0.2rem 0.55rem',borderRadius:999,border:'1px solid '+(selUnit===u?gold:'rgba(31,20,14,0.12)'),background:selUnit===u?'rgba(227,90,27,0.1)':'transparent',color:selUnit===u?gold:'rgba(31,20,14,0.5)',fontSize:'0.56rem',cursor:'pointer',fontFamily:ff}}>
+                        {u}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                    <input type="number" min="0" step="0.1" placeholder="0" value={costForm[qtyKey]||''}
+                      onChange={e=>{
+                        const val=e.target.value
+                        setCostForm(f=>{
+                          const updated={...f,[qtyKey]:val,[unitKey]:selUnit}
+                          const total=supplies.reduce((acc,sup)=>{
+                            const q=parseFloat(updated['cost_qty_'+sup.id]||0)
+                            const u=updated['cost_unit_'+sup.id]||sup.base_unit||'g'
+                            return acc+calcCost(q,u,sup.base_unit||'g',parseFloat(sup.cost_per_unit||0))
+                          },0)
+                          return {...updated,cost:total.toFixed(4)}
+                        })
+                      }}
+                      style={{width:80,padding:'0.4rem 0.6rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',textAlign:'center'}}/>
+                    <span style={{fontSize:'0.65rem',color:gray}}>{selUnit}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Admin({session}){
   const [panel,setPanel]=useState('dashboard')
   const [hamburgerOpen,setHamburgerOpen]=useState(false)
