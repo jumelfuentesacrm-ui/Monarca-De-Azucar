@@ -3076,40 +3076,48 @@ export default function Admin({session}){
 
   async function handleQRScan(value) {
     setShowQRScanner(false)
-    const raw=(value||'').trim()
-    // Extract card number from raw value (could be "MA-123456" or full URL)
-    const cardNum=raw.startsWith('MA-')?raw:raw.includes('MA-')?'MA-'+raw.split('MA-').pop().replace(/[^0-9]/g,''):raw
-    // Try local cards first
-    let found=cards.find(c=>c.card_number===cardNum)
-    // If not found locally, fetch from API
-    if(!found){
-      try{
-        const res=await fetch('/api/admin/cards?card_number='+encodeURIComponent(cardNum))
-        const data=await res.json()
-        found=(data.cards||[])[0]
-      }catch(e){}
+    const raw = (value||'').trim()
+    const cardNum = raw.startsWith('MA-') ? raw
+      : raw.includes('MA-') ? 'MA-' + raw.split('MA-').pop().replace(/[^0-9]/g,'')
+      : raw
+    let found = cards.find(c => c.card_number === cardNum)
+    if (!found) {
+      try {
+        const res = await fetch('/api/admin/cards?card_number=' + encodeURIComponent(cardNum))
+        const data = await res.json()
+        found = (data.cards||[])[0]
+      } catch(e) {}
     }
-    if(found){setSelectedClient(found);setPanel('client');showToast('✓ '+(found.profiles?.full_name||cardNum))}
-    else showToast('No se encontró tarjeta: '+cardNum)
+    if (found) {
+      setSelectedClient(found)
+      setPanel('client')
+      showToast('✓ ' + (found.profiles?.full_name || cardNum))
+    } else {
+      showToast('Tarjeta no encontrada: ' + cardNum)
+    }
   }
 
   async function handleQRScan(value) {
     setShowQRScanner(false)
-    const raw=(value||'').trim()
-    // Extract card number from raw value (could be "MA-123456" or full URL)
-    const cardNum=raw.startsWith('MA-')?raw:raw.includes('MA-')?'MA-'+raw.split('MA-').pop().replace(/[^0-9]/g,''):raw
-    // Try local cards first
-    let found=cards.find(c=>c.card_number===cardNum)
-    // If not found locally, fetch from API
-    if(!found){
-      try{
-        const res=await fetch('/api/admin/cards?card_number='+encodeURIComponent(cardNum))
-        const data=await res.json()
-        found=(data.cards||[])[0]
-      }catch(e){}
+    const raw = (value||'').trim()
+    const cardNum = raw.startsWith('MA-') ? raw
+      : raw.includes('MA-') ? 'MA-' + raw.split('MA-').pop().replace(/[^0-9]/g,'')
+      : raw
+    let found = cards.find(c => c.card_number === cardNum)
+    if (!found) {
+      try {
+        const res = await fetch('/api/admin/cards?card_number=' + encodeURIComponent(cardNum))
+        const data = await res.json()
+        found = (data.cards||[])[0]
+      } catch(e) {}
     }
-    if(found){setSelectedClient(found);setPanel('client');showToast('✓ '+(found.profiles?.full_name||cardNum))}
-    else showToast('No se encontró tarjeta: '+cardNum)
+    if (found) {
+      setSelectedClient(found)
+      setPanel('client')
+      showToast('✓ ' + (found.profiles?.full_name || cardNum))
+    } else {
+      showToast('Tarjeta no encontrada: ' + cardNum)
+    }
   }
 
   const signOut=async()=>{await supabase.auth.signOut();window.location.href='/login'}
@@ -3258,54 +3266,82 @@ export default function Admin({session}){
             />}
             {panel==='cards'&&<>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1rem'}}>
-                <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Tarjetas</h2>
-                <button onClick={()=>setModal('card')} style={{background:black,color:white,border:'none',padding:'0.6rem 1.1rem',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>+ Nuevo</button>
+                <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400,color:ink}}>Tarjetas</h2>
+                <button onClick={()=>setModal('card')} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',fontFamily:ff,fontSize:'0.6rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:999,cursor:'pointer'}}>+ Nueva</button>
               </div>
-              <input type="text" placeholder="Buscar cliente..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'0.7rem 1rem',border:'1px solid '+gl,borderRadius:3,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box',background:white}}/>
-              <div style={{display:'flex',flexDirection:'column',gap:'0.75rem'}}>
+              <input type="text" placeholder="Buscar cliente..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:'100%',padding:'0.65rem 1rem',border:'1px solid rgba(31,20,14,0.1)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box',background:white}}/>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'1rem'}}>
                 {cards.filter(c=>(c.profiles?.full_name||'').toLowerCase().includes(search.toLowerCase())||(c.profiles?.business_name||'').toLowerCase().includes(search.toLowerCase())).map(card=>{
-                  const cur=card.stamps%5===0&&card.stamps>0?5:card.stamps%5
-                  const cycle=Math.ceil((card.stamps||1)/5)||1
-                  const hasR=card.stamps>0&&card.stamps%5===0
-                  return(<div key={card.id} style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
-                    <div style={{background:'linear-gradient(135deg,#1a1917,#252320)',padding:'1rem 1.25rem',color:white,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <div>
-                        <div style={{fontFamily:ffS,fontSize:'0.9rem',marginBottom:'0.15rem'}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM</div>
-                        <div style={{fontSize:'0.72rem',color:'rgba(255,255,255,0.8)',marginBottom:'0.5rem'}}>{card.profiles?.business_name||card.profiles?.full_name}</div>
-                        <div style={{display:'flex',gap:3}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:10,height:10,borderRadius:'50%',border:'1px solid rgba(227,90,27,0.22)',background:i<cur?gold:'transparent'}}/>)}</div>
+                  const stampsInCycle = card.stamps%5===0&&card.stamps>0?5:card.stamps%5
+                  const cycle = Math.ceil((card.stamps||1)/5)||1
+                  const hasReward = card.stamps>0&&card.stamps%5===0
+                  const STAMP_POSITIONS=[
+                    {cx:'20%',cy:'35%'},{cx:'50%',cy:'20%'},{cx:'80%',cy:'35%'},
+                    {cx:'35%',cy:'65%'},{cx:'65%',cy:'65%'}
+                  ]
+                  return(
+                    <div key={card.id} onClick={()=>{setSelectedClient(card);setPanel('client')}} style={{background:ink,borderRadius:14,overflow:'hidden',cursor:'pointer',aspectRatio:'1/1',position:'relative',display:'flex',flexDirection:'column',padding:'1.25rem',transition:'transform 0.15s',boxShadow:'0 4px 20px rgba(0,0,0,0.15)'}}>
+                      {/* Header */}
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'auto'}}>
+                        <div>
+                          <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.2rem'}}>
+                            <svg viewBox="0 0 1867 1217" width="18" height="12" style={{flexShrink:0}}>
+                              <path d="${orange_path}" fill="#E35A1B" opacity="0.9"/>
+                              <path d="${dark_path}" fill="rgba(255,255,255,0.15)"/>
+                            </svg>
+                            <span style={{fontFamily:ffS,fontSize:'0.7rem',color:'rgba(255,255,255,0.5)',fontStyle:'italic'}}>Monarca de Azúcar</span>
+                          </div>
+                          <div style={{fontFamily:ffS,fontSize:'1rem',color:white,fontWeight:400}}>{card.profiles?.full_name||'—'}</div>
+                          <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.35)',marginTop:2,letterSpacing:'0.08em'}}>{card.card_number}</div>
+                        </div>
+                        <div style={{textAlign:'right'}}>
+                          <div style={{fontSize:'0.5rem',color:'rgba(255,255,255,0.3)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Ciclo</div>
+                          <div style={{fontFamily:ffS,fontSize:'1.2rem',color:gold}}>{cycle}</div>
+                          {hasReward&&<div style={{fontSize:'0.5rem',color:'#f1c40f',marginTop:2}}>★ Premio</div>}
+                        </div>
                       </div>
-                      <div style={{textAlign:'right'}}>
-                        <div style={{fontSize:'0.6rem',color:'rgba(255,255,255,0.4)',marginBottom:'0.2rem'}}>#{card.card_number}</div>
-                        <div style={{fontSize:'0.68rem',color:hasR?gold:'rgba(255,255,255,0.5)'}}>{cur}/5 · Cycle {cycle}</div>
+
+                      {/* Butterfly with stamps */}
+                      <div style={{position:'relative',height:80,margin:'0.5rem 0'}}>
+                        <svg viewBox="0 0 1867 1217" style={{width:'100%',height:'100%',opacity:0.08,position:'absolute',inset:0}}>
+                          <path d="${orange_path}" fill="white"/>
+                          <path d="${dark_path}" fill="white"/>
+                        </svg>
+                        {/* Stamp dots */}
+                        <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',gap:'0.5rem'}}>
+                          {[0,1,2,3,4].map(i=>(
+                            <div key={i} style={{
+                              width:i<stampsInCycle?12:10,
+                              height:i<stampsInCycle?12:10,
+                              borderRadius:'50%',
+                              background:i<stampsInCycle?gold:'rgba(255,255,255,0.15)',
+                              border:i<stampsInCycle?'none':'1px solid rgba(255,255,255,0.2)',
+                              transition:'all 0.2s',
+                              boxShadow:i<stampsInCycle?'0 0 6px rgba(227,90,27,0.6)':'none'
+                            }}/>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <div style={{fontSize:'0.58rem',color:'rgba(255,255,255,0.3)'}}>
+                          {card.stamp_history?.length||0} visitas totales
+                        </div>
+                        <div style={{display:'flex',gap:'0.4rem'}} onClick={e=>e.stopPropagation()}>
+                          <button onClick={e=>{e.stopPropagation();setPunchId(card.id);setPanel('punch')}} style={{padding:'0.3rem 0.7rem',background:'rgba(227,90,27,0.15)',color:gold,border:'1px solid rgba(227,90,27,0.3)',borderRadius:999,fontFamily:ff,fontSize:'0.55rem',fontWeight:600,cursor:'pointer',letterSpacing:'0.06em'}}>+ Sello</button>
+                          <button onClick={e=>{e.stopPropagation();setQrCard(card);setModal('qr')}} style={{padding:'0.3rem 0.7rem',background:'rgba(255,255,255,0.06)',color:'rgba(255,255,255,0.5)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:999,fontFamily:ff,fontSize:'0.55rem',cursor:'pointer'}}>QR</button>
+                        </div>
                       </div>
                     </div>
-                    <div style={{padding:'0.75rem 1.25rem',display:'flex',gap:'0.4rem'}}>
-                      <button onClick={()=>{setPunchId(card.id);setPanel('punch')}} style={{flex:1,padding:'0.45rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Sello</button>
-                      <button onClick={()=>setPremioCard(card)} style={{flex:1,padding:'0.45rem',background:'rgba(45,138,96,0.1)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Premio</button>
-                      <button onClick={()=>{setQrCard(card);setModal('qr')}} style={{flex:1,padding:'0.45rem',background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>QR</button>
-                      <button onClick={()=>deleteCard(card.id)} style={{flex:1,padding:'0.45rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Eliminar</button>
-                    </div>
-                    {/* Next Premio editable */}
-                    <div style={{padding:'0 1.25rem 0.85rem',display:'flex',gap:'0.5rem',alignItems:'center'}}>
-                      <span style={{fontSize:'0.52rem',color:gray,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap'}}>Próximo Premio:</span>
-                      <input
-                        type="text"
-                        defaultValue={card.notes||''}
-                        placeholder="ej. 1 galleta gratis"
-                        onBlur={async(e)=>{
-                          await fetch('/api/admin/cards',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:card.id,notes:e.target.value})})
-                          showToast('Next reward updated')
-                        }}
-                        style={{flex:1,padding:'0.3rem 0.6rem',border:'1px solid rgba(227,90,27,0.2)',borderRadius:3,fontFamily:ff,fontSize:'0.62rem',outline:'none',background:'rgba(227,90,27,0.04)',color:black}}
-                      />
-                    </div>
-                  </div>)
+                  )
                 })}
-                {cards.length===0&&<p style={{color:gray,fontSize:'0.85rem'}}>No hay tarjetas aún.</p>}
               </div>
             </>}
+
+
             {panel==='punch'&&<>
-              <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300,marginBottom:'1.25rem'}}>Punch Card</h2>
+              <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400,color:ink,marginBottom:'1.25rem'}}>Sellar visita</h2>
               <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)'}}>
                 <div className="punch-row" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1rem'}}>
                   <div><label style={lbl}>Client</label><select value={punchId} onChange={e=>setPunchId(e.target.value)} style={{...inp,marginBottom:0}}><option value="">Select</option>{cards.map(c=><option key={c.id} value={c.id}>{c.profiles?.business_name||c.profiles?.full_name} · {c.stamps%5===0&&c.stamps>0?5:c.stamps%5}/5</option>)}</select></div>
