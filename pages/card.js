@@ -143,6 +143,34 @@ export default function Card({ session }) {
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
+  // Poll messages every 5s when on escribenos tab
+  React.useEffect(() => {
+    if (!session || tab !== 'escribenos') return
+    function loadMsgs() {
+      fetch('/api/card/messages', { headers: { Authorization: 'Bearer ' + session.access_token } })
+        .then(r => r.json())
+        .then(data => setChatMessages(data.messages || []))
+        .catch(() => {})
+    }
+    loadMsgs()
+    const interval = setInterval(loadMsgs, 5000)
+    return () => clearInterval(interval)
+  }, [session, tab])
+
+  // Poll messages every 5s when on escribenos tab
+  React.useEffect(() => {
+    if (!session || tab !== 'escribenos') return
+    function loadMsgs() {
+      fetch('/api/card/messages', { headers: { Authorization: 'Bearer ' + session.access_token } })
+        .then(r => r.json())
+        .then(data => setChatMessages(data.messages || []))
+        .catch(() => {})
+    }
+    loadMsgs()
+    const iv = setInterval(loadMsgs, 5000)
+    return () => clearInterval(iv)
+  }, [session, tab])
+
   function sendChatMsg() {
     if(!chatMsg.trim()) return
     setChatLoading(true)
