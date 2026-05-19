@@ -123,23 +123,22 @@ export default function Card({ session }) {
 
   useEffect(() => {
     if (session === undefined) return
-    if (!session) { window.location.href = '/login'; return }
-    // Load card data
-    // Load chat messages
-    fetch('/api/card/messages', { headers: { Authorization: 'Bearer ' + session.access_token } })
-      .then(r => r.json())
-      .then(data => setChatMessages(data.messages || []))
-      .catch(() => {})
-
-    fetch('/api/card/me', { headers: { Authorization: 'Bearer ' + session.access_token } })
-      .then(r => r.json())
-      .then(data => { setCard(data.card); setLoading(false) })
-      .catch(() => setLoading(false))
-    // Load active catalog
+    // Always load catalog publicly
     fetch('/api/public/menu')
       .then(r => r.json())
-      .then(data => setCatalog(data.items || []))
-      .catch(() => {})
+      .then(data => { setCatalog(data.items || []); setLoading(false) })
+      .catch(() => setLoading(false))
+    // Only load user data if logged in
+    if (session) {
+      fetch('/api/card/messages', { headers: { Authorization: 'Bearer ' + session.access_token } })
+        .then(r => r.json())
+        .then(data => setChatMessages(data.messages || []))
+        .catch(() => {})
+      fetch('/api/card/me', { headers: { Authorization: 'Bearer ' + session.access_token } })
+        .then(r => r.json())
+        .then(data => setCard(data.card))
+        .catch(() => {})
+    }
   }, [session])
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3000) }
@@ -230,6 +229,16 @@ export default function Card({ session }) {
 
           {/* ── TAB: TARJETA ── */}
           {tab === 'tarjeta' && (
+            !session ? (
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'60vh',gap:'1.5rem',padding:'2rem',textAlign:'center'}}>
+              <MonarcaButterfly size={48} animate={true}/>
+              <div>
+                <div style={{fontFamily:ffS,fontSize:'1.5rem',color:ink,marginBottom:'0.5rem'}}>Tu tarjeta de lealtad</div>
+                <div style={{fontSize:'0.82rem',color:mu,lineHeight:1.5}}>Inicia sesión o crea una cuenta para acumular sellos y canjear premios.</div>
+              </div>
+              <a href="/login" style={{display:'block',padding:'0.9rem 2rem',background:or,color:'white',borderRadius:999,fontFamily:ff,fontSize:'0.78rem',fontWeight:600,textDecoration:'none'}}>Iniciar sesión →</a>
+            </div>
+            ) : (
             <div className="fade-up">
               <div style={{textAlign:'center',padding:'28px 0 20px'}}>
                 <div style={{fontSize:'0.56rem',letterSpacing:'0.2em',textTransform:'uppercase',color:or,marginBottom:8}}>Club Monarca · Tarjeta de Lealtad</div>
@@ -333,6 +342,7 @@ export default function Card({ session }) {
                 </>
               )}
             </div>
+            )
           )}
 
           {/* ── TAB: MENÚ (editorial style matching landing) ── */}
@@ -465,6 +475,13 @@ export default function Card({ session }) {
 
           {/* ── TAB: ESCRIBENOS (chat interno) ── */}
           {tab === 'escribenos' && (
+            !session ? (
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'60vh',gap:'1.5rem',padding:'2rem',textAlign:'center'}}>
+              <MonarcaButterfly size={48} animate={true}/>
+              <div style={{fontFamily:ffS,fontSize:'1.5rem',color:ink,marginBottom:'0.5rem'}}>Inicia sesión</div>
+              <a href="/login" style={{display:'block',padding:'0.9rem 2rem',background:or,color:'white',borderRadius:999,fontFamily:ff,fontSize:'0.78rem',fontWeight:600,textDecoration:'none'}}>Iniciar sesión →</a>
+            </div>
+            ) : (
             <div className="fade-up" style={{display:'flex',flexDirection:'column',height:'calc(100vh - calc(52px + env(safe-area-inset-top,0px)) - calc(64px + env(safe-area-inset-bottom,0px)))',overflow:'hidden'}}>
               <div style={{padding:'24px 0 12px',flexShrink:0}}>
                 <div style={{fontFamily:ffS,fontSize:'1.8rem',fontWeight:400,color:ink}}>Escribenos</div>
@@ -527,10 +544,18 @@ export default function Card({ session }) {
                 </button>
               </div>
             </div>
+            )
           )}
 
           {/* ── /* ── TAB: CUENTA ── */}
           {tab === 'cuenta' && (
+            !session ? (
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'60vh',gap:'1.5rem',padding:'2rem',textAlign:'center'}}>
+              <MonarcaButterfly size={48} animate={true}/>
+              <div style={{fontFamily:ffS,fontSize:'1.5rem',color:ink,marginBottom:'0.5rem'}}>Inicia sesión</div>
+              <a href="/login" style={{display:'block',padding:'0.9rem 2rem',background:or,color:'white',borderRadius:999,fontFamily:ff,fontSize:'0.78rem',fontWeight:600,textDecoration:'none'}}>Iniciar sesión →</a>
+            </div>
+            ) : (
             <div className="fade-up">
               <div style={{paddingTop:28,marginBottom:24}}>
                 <div style={{fontFamily:ffS,fontSize:'1.8rem',fontWeight:400,color:ink}}>Mi cuenta</div>
@@ -635,6 +660,7 @@ export default function Card({ session }) {
               </button>
               <div style={{height:32}}/>
             </div>
+            )
           )}
         </div>
 
