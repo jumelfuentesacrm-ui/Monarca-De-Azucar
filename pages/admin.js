@@ -1469,8 +1469,6 @@ function SupplyCostHistorial({ supplyId }) {
 }
 
 function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onEliminar, showToast, loadAll, onCompra, onCompraItem }) {
-  const [stockEdits, setStockEdits] = React.useState({})
-  const [savingStock, setSavingStock] = React.useState(null)
   const [openCats, setOpenCats] = React.useState({})
   const [search, setSearch] = React.useState('')
   const [showSearch, setShowSearch] = React.useState(false)
@@ -1479,7 +1477,6 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
 
   const CATEGORY_ORDER = ['Aceites','Chocolates','Empaque','Frutas y Frescos','Huevos','Lácteos','Otros','Saborizantes','Secos']
 
-  // Include custom categories not in CATEGORY_ORDER
   const filteredSupplies = search
     ? (supplies||[]).filter(s=>s.name.toLowerCase().includes(search.toLowerCase()))
     : (supplies||[])
@@ -1496,33 +1493,12 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
     return acc
   }, {})
 
-  async function saveStock(supplyId) {
-    const rawVal = stockEdits[supplyId]
-    const qty = parseFloat(rawVal)
-    if (rawVal === undefined || isNaN(qty)) return
-    setSavingStock(supplyId)
-    const res = await fetch('/api/admin/supplies', {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ id: supplyId, stock_qty: qty })
-    })
-    const data = await res.json().catch(()=>({}))
-    setSavingStock(null)
-    if (res.ok) {
-      // Update local state immediately so UI reflects change without waiting
-      setSupplies && setSupplies(prev => prev.map(s => s.id===supplyId ? {...s, stock_qty: qty} : s))
-      setStockEdits(e => {const next={...e}; delete next[supplyId]; return next})
-      showToast('Stock actualizado ✓')
-    } else {
-      showToast('Error: ' + (data.error||'no se pudo guardar'))
-    }
-  }
-
-  // Calculate donut data
-  const totalValue = (supplies||[]).reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+  // Current inventory VALUE = stock_qty × cost_per_unit (what's on the shelf right now)
+  function supplyCurrentValue(s) { return parseFloat(s.stock_qty||0) * parseFloat(s.cost_per_unit||0) }
+  const totalValue = (supplies||[]).reduce((a,s)=>a+supplyCurrentValue(s),0)
   const CATS_COLORS = {Secos:'#E35A1B',Lácteos:'#3498db',Huevos:'#f1c40f',Saborizantes:'#9b59b6',Chocolates:'#795548',Aceites:'#2ecc71',Frutas:'#e91e63',Empaque:'#607d8b',Otros:'#7A6452'}
   const donutData = Object.entries(CATS_COLORS).map(([cat,color])=>{
-    const val = (supplies||[]).filter(s=>(s.category||'Otros')===cat).reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+    const val = (supplies||[]).filter(s=>(s.category||'Otros')===cat).reduce((a,s)=>a+supplyCurrentValue(s),0)
     return {cat,color,val,pct:totalValue>0?val/totalValue:0}
   }).filter(d=>d.val>0)
 
@@ -1606,11 +1582,12 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
         <div style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,marginBottom:'1rem'}}>Resumen de inventario</div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'0.75rem'}}>
           {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>{
-            const items = (supplies||[]).filter(s=>s.category===cat&&parseFloat(s.cost_total||0)>0)
+            const items = (supplies||[]).filter(s=>s.category===cat)
             if(items.length===0) return null
-            const low = items.filter(s=>parseFloat(s.stock_qty||0)<50)
-            const ok = items.filter(s=>parseFloat(s.stock_qty||0)>=50)
-            const catVal = items.reduce((a,s)=>a+parseFloat(s.cost_total||0),0)
+            const _CL={g:1,kg:1000,oz:28.3495,lb:453.592,ml:1,l:1000,tsp:5,tbsp:15,cup:240,'fl oz':30,pinch:0.625,dash:0.3125,unit:1}
+            const low = items.filter(s=>{const st=parseFloat(s.stock_qty||0);if(st<=0)return false;const bu=s.base_unit||'g';if(bu==='unit')return st<5;return st*(_CL[bu]||1)<100})
+            const ok = items.filter(s=>parseFloat(s.stock_qty||0)>0&&!low.includes(s))
+            const catVal = items.reduce((a,s)=>a+supplyCurrentValue(s),0)
             return (
               <div key={cat} onClick={()=>{const el=document.getElementById('cat-'+cat.replace(/\s/g,'-'));if(el)el.scrollIntoView({behavior:'smooth',block:'start'});setOpenCats(o=>({...o,[cat]:true}))}} style={{background:'white',borderRadius:8,padding:'0.75rem',border:'1px solid rgba(31,20,14,0.06)',cursor:'pointer'}}>
                 <div style={{fontSize:'0.58rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.35rem'}}>{cat}</div>
@@ -1643,33 +1620,42 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
           </button>
           {/* Items — only show when open */}
           {openCats[cat]&&items.map((s, i) => {
-            const isEditing = stockEdits[s.id] !== undefined
+            const cv = supplyCurrentValue(s)
+            const stockQty = parseFloat(s.stock_qty||0)
+            const hasCost = parseFloat(s.cost_per_unit||0) > 0
             return (
-              <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:i<items.length-1?'1px solid rgba(31,20,14,0.05)':'none',flexWrap:'wrap',gap:'0.5rem'}}>
-                {/* Name + cost */}
-                <div style={{flex:1,minWidth:120}}>
-                  <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{s.name}</div>
-                  <div style={{fontSize:'0.6rem',color:mu,marginTop:2}}>
-                    ${parseFloat(s.cost_total||0).toFixed(2)} · ${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit||'g'}
+              <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:i<items.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
+                {/* Name + current $ value */}
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:'0.78rem',color:ink,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</div>
+                  <div style={{fontSize:'0.6rem',marginTop:2}}>
+                    {hasCost
+                      ? <><strong style={{color:cv>0?or:'rgba(31,20,14,0.4)'}}>${cv.toFixed(2)}</strong><span style={{color:mu}}> en inventario · ${parseFloat(s.cost_per_unit).toFixed(4)}/{s.base_unit||'g'}</span></>
+                      : <span style={{color:'rgba(31,20,14,0.28)',fontStyle:'italic'}}>Sin compras — registra la primera compra</span>
+                    }
                   </div>
                 </div>
-                {/* Stock qty editable */}
-                <div style={{display:'flex',alignItems:'center',gap:'0.4rem',flexShrink:0}}>
-                  <input
-                    type="number" min="0" step="0.1"
-                    value={isEditing ? stockEdits[s.id] : (s.stock_qty||0)}
-                    onChange={e => setStockEdits(prev=>({...prev,[s.id]:e.target.value}))}
-                    onBlur={() => { if(isEditing) saveStock(s.id) }}
-                    onKeyDown={e => { if(e.key==='Enter') saveStock(s.id) }}
-                    style={{width:70,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.75rem',outline:'none',textAlign:'center',background:isEditing?'#fff8f0':'white'}}
-                  />
-                  <span style={{fontSize:'0.6rem',color:mu,flexShrink:0}}>{s.base_unit||'g'}</span>
+                {/* Qty read-only — driven by purchases */}
+                <div style={{textAlign:'right',flexShrink:0,minWidth:52}}>
+                  <div style={{fontSize:'0.85rem',fontWeight:600,color:stockQty<=0?'#c0392b':stockQty>0?ink:mu,letterSpacing:'-0.01em'}}>
+                    {stockQty <= 0 ? '0' : stockQty < 1 ? stockQty.toFixed(3) : stockQty.toFixed(2)}
+                  </div>
+                  <div style={{fontSize:'0.55rem',color:mu}}>{s.base_unit||'g'}</div>
                 </div>
-
-                {/* Edit/delete */}
+                {/* Actions */}
                 <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
-                  <button onClick={()=>onEditar(s)} style={{fontSize:'0.58rem',padding:'0.3rem 0.65rem',background:'rgba(31,20,14,0.06)',color:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>Editar</button>
-                  <button onClick={()=>onEliminar(s.id)} style={{fontSize:'0.58rem',padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.08)',color:'#c0392b',border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>✕</button>
+                  <button onClick={()=>onCompraItem(s.id)}
+                    style={{fontSize:'0.6rem',padding:'0.35rem 0.7rem',background:'rgba(227,90,27,0.1)',color:or,border:'1px solid rgba(227,90,27,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff,fontWeight:600,whiteSpace:'nowrap'}}>
+                    + Compra
+                  </button>
+                  <button onClick={()=>onEditar(s)}
+                    style={{fontSize:'0.6rem',padding:'0.35rem 0.6rem',background:'rgba(31,20,14,0.06)',color:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                    Editar
+                  </button>
+                  <button onClick={()=>onEliminar(s.id)}
+                    style={{fontSize:'0.6rem',padding:'0.35rem 0.5rem',background:'rgba(192,57,43,0.07)',color:'#c0392b',border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                    ✕
+                  </button>
                 </div>
               </div>
             )
@@ -2964,7 +2950,7 @@ export default function Admin({session}){
   const [allUsers,setAllUsers]=useState([])
   const [supplies,setSupplies]=useState([])
   const [supplyModal,setSupplyModal]=useState(null) // null | 'add' | supply object
-  const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:''})
+  const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:'',stock_qty:''})
   const [rewardCard,setPremioCard]=useState(null) // card for inline reward modal
   const [expenseForm,setGastoForm]=useState({amount:'',description:'',date:new Date().toISOString().split('T')[0]})
 
@@ -3249,8 +3235,8 @@ export default function Admin({session}){
             {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog} onCompra={()=>setShowPurchase(true)} onCompraItem={(id)=>{setPurchaseSupplyId(id);setShowPurchase(true)}}
-              onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
-              onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,base_unit:s.base_unit||'g',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
+              onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:'',stock_qty:''});setSupplyModal('add')}}
+              onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,base_unit:s.base_unit||'g',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||'',stock_qty:''});setSupplyModal(s)}}
               onEliminar={async(id)=>{if(!confirm('Eliminar this supply?'))return;await fetch('/api/admin/supplies',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});showToast('Supply deleted');loadAll()}}
               showToast={showToast}
             />}
@@ -3740,14 +3726,32 @@ export default function Admin({session}){
               </div>
               <label style={lbl}>Notas (opcional)</label>
               <input style={inp} type="text" placeholder="Marca, notas de compra..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
-              <div style={{display:'flex',gap:'0.75rem'}}>
+              {supplyModal!=='add'&&(
+                <div style={{marginTop:'0.75rem',padding:'0.85rem',background:'rgba(31,20,14,0.03)',borderRadius:8,border:'1px solid rgba(31,20,14,0.08)'}}>
+                  <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.4rem'}}>Ajuste manual de stock</div>
+                  <div style={{fontSize:'0.62rem',color:mu,marginBottom:'0.5rem'}}>Stock actual: <strong style={{color:ink}}>{parseFloat(supplyModal?.stock_qty||0).toFixed(2)} {supplyModal?.base_unit||'g'}</strong></div>
+                  <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+                    <input style={{...inp,marginBottom:0,flex:1}} type="number" min="0" step="0.01"
+                      placeholder={`Nuevo valor en ${supplyForm.base_unit||'g'} (ej: 0 para resetear)`}
+                      value={supplyForm.stock_qty}
+                      onChange={e=>setSupplyForm(f=>({...f,stock_qty:e.target.value}))}/>
+                    <button type="button" onClick={()=>setSupplyForm(f=>({...f,stock_qty:'0'}))}
+                      style={{padding:'0.6rem 0.85rem',background:'rgba(192,57,43,0.08)',color:'#c0392b',border:'1px solid rgba(192,57,43,0.15)',borderRadius:6,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
+                      Poner a 0
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div style={{display:'flex',gap:'0.75rem',marginTop:'0.75rem'}}>
                 <button onClick={async()=>{
                   if(!supplyForm.name||!supplyForm.cost){showToast('Nombre y costo requeridos');return}
                   if(supplyModal==='add'){
                     await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(supplyForm)})
                     showToast('Ingrediente añadido ✓')
                   } else {
-                    await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:supplyModal.id,...supplyForm})})
+                    const payload={id:supplyModal.id,name:supplyForm.name,category:supplyForm.category,cost:supplyForm.cost,base_unit:supplyForm.base_unit,provider:supplyForm.provider,renewal_date:supplyForm.renewal_date,notes:supplyForm.notes}
+                    if(supplyForm.stock_qty!==''&&supplyForm.stock_qty!==undefined)payload.stock_qty=supplyForm.stock_qty
+                    await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
                     showToast('Ingrediente actualizado ✓')
                   }
                   setSupplyModal(null);loadAll()
