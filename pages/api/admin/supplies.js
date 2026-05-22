@@ -7,23 +7,6 @@ const supabaseAdmin = createClient(
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
-  if (req.method === 'GET' && req.query.stockHistory) {
-    const range = req.query.range || 'week'
-    const days = range === 'month' ? 30 : range === 'day' ? 1 : 7
-    const since = new Date(); since.setDate(since.getDate() - days)
-    const { data: history } = await supabaseAdmin
-      .from('supply_stock_history')
-      .select('stock_qty, cost_per_unit, recorded_at')
-      .gte('recorded_at', since.toISOString())
-      .order('recorded_at', { ascending: true })
-    const byDate = {}
-    ;(history||[]).forEach(h => {
-      const date = h.recorded_at.split('T')[0]
-      if (!byDate[date]) byDate[date] = 0
-      byDate[date] += parseFloat(h.stock_qty||0) * parseFloat(h.cost_per_unit||0)
-    })
-    return res.status(200).json({ history: Object.entries(byDate).map(([date,value])=>({date,value:parseFloat(value.toFixed(2))})) })
-  }
 
   if (req.method === 'GET' && req.query.stockHistory) {
     const range = req.query.range || 'week'
@@ -35,16 +18,15 @@ export default async function handler(req, res) {
       .gte('recorded_at', since.toISOString())
       .order('recorded_at', { ascending: true })
     const byDate = {}
-    ;(history||[]).forEach(h => {
+    ;(history || []).forEach(h => {
       const date = h.recorded_at.split('T')[0]
       if (!byDate[date]) byDate[date] = 0
-      byDate[date] += parseFloat(h.stock_qty||0) * parseFloat(h.cost_per_unit||0)
+      byDate[date] += parseFloat(h.stock_qty || 0) * parseFloat(h.cost_per_unit || 0)
     })
-    return res.status(200).json({ history: Object.entries(byDate).map(([date,value])=>({date,value:parseFloat(value.toFixed(2))})) })
+    return res.status(200).json({ history: Object.entries(byDate).map(([date, value]) => ({ date, value: parseFloat(value.toFixed(2)) })) })
   }
 
   if (req.method === 'GET') {
-    // If history param, return cost history for a supply
     if (req.query.history) {
       const { data, error } = await supabaseAdmin
         .from('supply_cost_history')
@@ -64,14 +46,19 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { name, category, cost, unit, provider, renewal_date, notes } = req.body
+    const { name, category, cost, base_unit, provider, renewal_date, notes } = req.body
     if (!name || cost === undefined) return res.status(400).json({ error: 'name and cost required' })
     const { data, error } = await supabaseAdmin.from('supplies').insert({
-      name, category: category||null, cost: parseFloat(cost), unit: unit||'month',
-      provider: provider||null, renewal_date: renewal_date||null, notes: notes||null, active: true
+      name,
+      category: category || null,
+      cost: parseFloat(cost),
+      base_unit: base_unit || 'g',
+      provider: provider || null,
+      renewal_date: renewal_date || null,
+      notes: notes || null,
+      active: true,
     }).select().single()
     if (error) return res.status(500).json({ error: error.message })
-    // Save initial cost history
     await supabaseAdmin.from('supply_cost_history').insert({ supply_id: data.id, cost: parseFloat(cost) })
     return res.status(200).json({ supply: data })
   }
@@ -89,11 +76,9 @@ export default async function handler(req, res) {
     if (active !== undefined) updateData.active = active
     if (skus !== undefined) updateData.skus = skus
 
-    // Get current cost to compare
     if (cost !== undefined) {
       const { data: current } = await supabaseAdmin.from('supplies').select('cost').eq('id', id).single()
       if (current && parseFloat(current.cost) !== parseFloat(cost)) {
-        // Save to history only if cost changed
         await supabaseAdmin.from('supply_cost_history').insert({ supply_id: id, cost: parseFloat(cost) })
       }
     }

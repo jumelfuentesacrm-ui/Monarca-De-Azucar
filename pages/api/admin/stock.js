@@ -1,24 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
+import { CONV, toBase } from '../../../lib/units'
+
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-
-// Unit conversion to base unit (g or ml)
-const CONVERSIONS = {
-  g: 1, kg: 1000,
-  ml: 1, l: 1000,
-  tsp: 4.929, tbsp: 14.787, cup: 236.588,
-  'fl oz': 29.574, oz: 28.3495, lb: 453.592,
-  unit: 1
-}
-
-function toBase(qty, unit) {
-  return qty * (CONVERSIONS[unit] || 1)
-}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
 
   if (req.method === 'GET') {
-    // Get all recipe_ingredients with supply info
     const { data: ri } = await supabase
       .from('recipe_ingredients')
       .select('*, supplies(id, name, base_unit, stock_qty, cost_per_unit)')
@@ -37,9 +25,7 @@ export default async function handler(req, res) {
       })
     })
 
-    // Get current stock
     const { data: stock } = await supabase.from('product_stock').select('*')
-
     return res.status(200).json({ recipes, stock: stock || [] })
   }
 
@@ -47,10 +33,8 @@ export default async function handler(req, res) {
     const { catalog_item_id, qty_added, note } = req.body
     if (!catalog_item_id || !qty_added) return res.status(400).json({ error: 'missing fields' })
 
-    // 1. Add to stock entry log
     await supabase.from('stock_entries').insert({ catalog_item_id, qty_added, note })
 
-    // 2. Upsert product_stock
     const { data: existing } = await supabase.from('product_stock').select('*').eq('catalog_item_id', catalog_item_id).single()
     if (existing) {
       await supabase.from('product_stock').update({ qty_available: existing.qty_available + qty_added, updated_at: new Date() }).eq('catalog_item_id', catalog_item_id)
@@ -58,14 +42,15 @@ export default async function handler(req, res) {
       await supabase.from('product_stock').insert({ catalog_item_id, qty_available: qty_added })
     }
 
-    // 3. Deduct ingredients from supplies based on recipe
+    // Deduct ingredients from supplies using chart-consistent conversions
     const { data: ingredients } = await supabase.from('recipe_ingredients').select('*, supplies(base_unit, stock_qty)').eq('catalog_item_id', catalog_item_id)
 
     for (const ing of (ingredients || [])) {
-      const deductBase = toBase(ing.quantity * qty_added, ing.unit)
-      const supplyBase = ing.supplies?.base_unit || 'g'
+      const supplyBaseUnit = ing.supplies?.base_unit || 'g'
+      // Convert recipe qty (in ing.unit) to supply's base unit
+      const deductInBase = toBase(ing.quantity * qty_added, ing.unit) / (CONV[supplyBaseUnit] || 1)
       const currentStock = parseFloat(ing.supplies?.stock_qty || 0)
-      const newStock = Math.max(0, currentStock - deductBase)
+      const newStock = Math.max(0, currentStock - deductInBase)
       await supabase.from('supplies').update({ stock_qty: newStock }).eq('id', ing.supply_id)
     }
 
@@ -73,7 +58,6 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PATCH') {
-    // Update stock qty directly (sale deduction)
     const { catalog_item_id, qty_sold } = req.body
     const { data: existing } = await supabase.from('product_stock').select('*').eq('catalog_item_id', catalog_item_id).single()
     if (existing) {

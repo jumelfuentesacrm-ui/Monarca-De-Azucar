@@ -543,7 +543,7 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', mu='#7A6452', white='white'
 
-  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit','custom']
+  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','pinch','dash','unit']
 
   React.useEffect(() => {
     if (!itemId) return
@@ -579,7 +579,7 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
     const cpu = parseFloat(ing.supplies?.cost_per_unit || 0)
     const qty = parseFloat(ing.quantity || 0)
     // Convert to base unit cost
-    const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+    const CONV = {g:1,kg:1000,oz:28.3495,lb:453.592,ml:1,l:1000,tsp:5,tbsp:15,cup:240,'fl oz':30,pinch:0.625,dash:0.3125,unit:1}
     const baseQty = qty * (CONV[ing.unit] || 1)
     return a + (cpu * baseQty)
   }, 0)
@@ -625,7 +625,7 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
             style={{width:70,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}/>
           <select value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))}
             style={{width:80,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}>
-            {['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit'].map(u=><option key={u} value={u}>{u}</option>)}
+            {['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','pinch','dash','unit'].map(u=><option key={u} value={u}>{u}</option>)}
           </select>
           <button onClick={addIngredient} style={{padding:'0.4rem 0.75rem',background:ink,color:white,border:'none',borderRadius:4,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>OK</button>
         </div>
@@ -2378,7 +2378,8 @@ function InventoryDropdown({ catalog, supplies, cards }) {
   const monthSpend = (supplies||[]).reduce((a,s) => a + parseFloat(s.cost_total||0), 0)
 
   // Stock summary
-  const lowStock = (supplies||[]).filter(s => parseFloat(s.stock_qty||0) < 100 && s.base_unit === 'g')
+  const _CONV_LS={g:1,kg:1000,oz:28.3495,lb:453.592,ml:1,l:1000,tsp:5,tbsp:15,cup:240,'fl oz':30,pinch:0.625,dash:0.3125,unit:1}
+  const lowStock = (supplies||[]).filter(s=>{const stock=parseFloat(s.stock_qty||0);if(stock<=0)return false;const bu=s.base_unit||'g';if(bu==='unit')return stock<5;return stock*(_CONV_LS[bu]||1)<100})
   const outOfStock = (supplies||[]).filter(s => parseFloat(s.stock_qty||0) <= 0)
 
   return (
@@ -2433,7 +2434,7 @@ function InventoryDropdown({ catalog, supplies, cards }) {
                     <div key={s.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.5rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.03)'}}>
                       <span style={{fontSize:'0.72rem',color:ink}}>{s.name}</span>
                       <div style={{textAlign:'right'}}>
-                        <div style={{fontSize:'0.65rem',color:parseFloat(s.stock_qty||0)<=0?'#c0392b':parseFloat(s.stock_qty||0)<100?'#e67e22':'#2d8a60',fontWeight:600}}>{parseFloat(s.stock_qty||0).toFixed(0)} {s.base_unit}</div>
+                        <div style={{fontSize:'0.65rem',color:parseFloat(s.stock_qty||0)<=0?'#c0392b':(_CONV_LS[s.base_unit||'g']||1)*parseFloat(s.stock_qty||0)<(s.base_unit==='unit'?5:100)?'#e67e22':'#2d8a60',fontWeight:600}}>{parseFloat(s.stock_qty||0).toFixed(2)} {s.base_unit}</div>
                         <div style={{fontSize:'0.55rem',color:mu}}>${parseFloat(s.cost_per_unit||0).toFixed(4)}/{s.base_unit}</div>
                       </div>
                     </div>
@@ -2533,8 +2534,8 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
   const [openCats, setOpenCats] = React.useState({})
   const [unitSel, setUnitSel] = React.useState({})
   const CATS = ['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
-  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','unit']
-  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+  const UNITS = ['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','pinch','dash','unit']
+  const CONV = {g:1,kg:1000,oz:28.3495,lb:453.592,ml:1,l:1000,tsp:5,tbsp:15,cup:240,'fl oz':30,pinch:0.625,dash:0.3125,unit:1}
 
   const [search, setSearch] = React.useState('')
 
@@ -2619,7 +2620,7 @@ function AlcanzaPara({ catalog, supplies }) {
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
 
-  const CONV = {g:1,kg:1000,oz:28.35,lb:453.6,ml:1,l:1000,tsp:4.929,tbsp:14.787,cup:236.6,'fl oz':29.574,unit:1}
+  const CONV = {g:1,kg:1000,oz:28.3495,lb:453.592,ml:1,l:1000,tsp:5,tbsp:15,cup:240,'fl oz':30,pinch:0.625,dash:0.3125,unit:1}
 
   // For each catalog item, calculate how many units can be made
   const supplyMap = {}
@@ -2824,7 +2825,8 @@ function PurchaseModal({ supplies, onClose, onSuccess, showToast, initialSupplyI
   const or='#E35A1B', ink='#1F140E', mu='#7A6452', white='white'
   const inp={width:'100%',padding:'0.7rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}
   const lbl={fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,display:'block',marginBottom:'0.3rem'}
-  const UNITS=['g','kg','oz','lb','ml','l','fl oz','tsp','tbsp','cup','unit']
+  const UNITS=['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','pinch','dash','unit']
+  const CONV={g:1,kg:1000,oz:28.3495,lb:453.592,ml:1,l:1000,tsp:5,tbsp:15,cup:240,'fl oz':30,pinch:0.625,dash:0.3125,unit:1}
   React.useEffect(()=>{ const s=(supplies||[]).find(s=>s.id===supplyId); if(s?.base_unit) setUnit(s.base_unit) },[supplyId])
   function handleScan(sku){setShowScanner(false);const found=(supplies||[]).find(s=>(s.skus||[]).includes(sku));if(found){setSupplyId(found.id);showToast('Ingrediente: '+found.name)}else showToast('SKU no reconocido: '+sku)}
   async function save(){
@@ -2869,7 +2871,7 @@ function PurchaseModal({ supplies, onClose, onSuccess, showToast, initialSupplyI
           <label style={lbl}>Precio total pagado ($)</label>
           <input type="number" min="0" step="0.01" placeholder="0.00" value={priceTotal} onChange={e=>setPriceTotal(e.target.value)} style={{...inp,marginBottom:pricePerUnit?'0.25rem':'1rem'}}/>
           {pricePerUnit&&<div style={{fontSize:'0.6rem',color:mu,marginBottom:'1rem'}}>= ${pricePerUnit}/{unit}</div>}
-          {selected&&<div style={{background:'rgba(227,90,27,0.05)',borderRadius:8,padding:'0.75rem',marginBottom:'1rem',fontSize:'0.72rem',color:mu}}>Stock actual: <strong style={{color:ink}}>{parseFloat(selected.stock_qty||0).toFixed(1)} {selected.base_unit}</strong>{qty&&<span> → <strong style={{color:or}}>{(parseFloat(selected.stock_qty||0)+parseFloat(qty||0)).toFixed(1)} {unit}</strong></span>}</div>}
+          {selected&&(()=>{const bu=selected.base_unit||'g';const qtyInBase=qty?parseFloat(qty)*((CONV[unit]||1)/(CONV[bu]||1)):0;const afterStock=parseFloat(selected.stock_qty||0)+qtyInBase;return(<div style={{background:'rgba(227,90,27,0.05)',borderRadius:8,padding:'0.75rem',marginBottom:'1rem',fontSize:'0.72rem',color:mu}}>Stock actual: <strong style={{color:ink}}>{parseFloat(selected.stock_qty||0).toFixed(2)} {bu}</strong>{qty&&<span> → <strong style={{color:or}}>{afterStock.toFixed(2)} {bu}</strong></span>}</div>)})()}
           <label style={lbl}>Notas (opcional)</label>
           <input type="text" placeholder="Costco, oferta..." value={notes} onChange={e=>setNotes(e.target.value)} style={{...inp,marginBottom:'1.25rem'}}/>
           <button onClick={save} disabled={saving} style={{width:'100%',padding:'0.9rem',background:or,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',fontWeight:600,cursor:'pointer',opacity:saving?0.6:1}}>{saving?'Guardando...':'Registrar compra →'}</button>
@@ -2962,7 +2964,7 @@ export default function Admin({session}){
   const [allUsers,setAllUsers]=useState([])
   const [supplies,setSupplies]=useState([])
   const [supplyModal,setSupplyModal]=useState(null) // null | 'add' | supply object
-  const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''})
+  const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:''})
   const [rewardCard,setPremioCard]=useState(null) // card for inline reward modal
   const [expenseForm,setGastoForm]=useState({amount:'',description:'',date:new Date().toISOString().split('T')[0]})
 
@@ -3247,8 +3249,8 @@ export default function Admin({session}){
             {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog} onCompra={()=>setShowPurchase(true)} onCompraItem={(id)=>{setPurchaseSupplyId(id);setShowPurchase(true)}}
-              onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',unit:'month',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
-              onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,unit:s.unit||'month',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
+              onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:''});setSupplyModal('add')}}
+              onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,base_unit:s.base_unit||'g',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||''});setSupplyModal(s)}}
               onEliminar={async(id)=>{if(!confirm('Eliminar this supply?'))return;await fetch('/api/admin/supplies',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});showToast('Supply deleted');loadAll()}}
               showToast={showToast}
             />}
@@ -3690,7 +3692,7 @@ export default function Admin({session}){
                 ))}
               </div>
 <label style={lbl}>Nombre</label>
-              <input style={inp} type="text" placeholder="e.g. Vercel Pro" value={supplyForm.name} onChange={e=>setSupplyForm(f=>({...f,name:e.target.value}))}/>
+              <input style={inp} type="text" placeholder="Harina de trigo, Mantequilla, Leche..." value={supplyForm.name} onChange={e=>setSupplyForm(f=>({...f,name:e.target.value}))}/>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
                 <div>
                   <label style={lbl}>Categoría</label>
@@ -3701,7 +3703,7 @@ export default function Admin({session}){
                 </div>
                 <div>
                   <label style={lbl}>Proveedor</label>
-                  <input style={{...inp,marginBottom:0}} type="text" placeholder="Vercel, GoDaddy..." value={supplyForm.provider} onChange={e=>setSupplyForm(f=>({...f,provider:e.target.value}))}/>
+                  <input style={{...inp,marginBottom:0}} type="text" placeholder="Costco, Sam's, Colmado..." value={supplyForm.provider} onChange={e=>setSupplyForm(f=>({...f,provider:e.target.value}))}/>
                 </div>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginTop:'1rem'}}>
@@ -3710,29 +3712,43 @@ export default function Admin({session}){
                   <input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={supplyForm.cost} onChange={e=>setSupplyForm(f=>({...f,cost:e.target.value}))}/>
                 </div>
                 <div>
-                  <label style={lbl}>Medida base</label>
-                  <select style={{...inp,marginBottom:0}} value={supplyForm.unit} onChange={e=>setSupplyForm(f=>({...f,unit:e.target.value}))}>
-                    <option value="month">Monthly</option>
-                    <option value="year">Yearly</option>
-                    <option value="one-time">One-time</option>
+                  <label style={lbl}>Unidad de medida</label>
+                  <select style={{...inp,marginBottom:0}} value={supplyForm.base_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,base_unit:e.target.value}))}>
+                    <optgroup label="Peso">
+                      <option value="g">g — gramo</option>
+                      <option value="kg">kg — kilogramo</option>
+                      <option value="oz">oz — onza</option>
+                      <option value="lb">lb — libra</option>
+                    </optgroup>
+                    <optgroup label="Volumen">
+                      <option value="ml">ml — mililitro</option>
+                      <option value="l">l — litro</option>
+                      <option value="tsp">tsp — cucharadita</option>
+                      <option value="tbsp">tbsp — cucharada</option>
+                      <option value="cup">cup — taza (240 ml)</option>
+                      <option value="fl oz">fl oz — onza líquida</option>
+                    </optgroup>
+                    <optgroup label="Otros">
+                      <option value="unit">unit — unidad</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>
               <div style={{marginTop:'1rem'}}>
-                <label style={lbl}>Renewal Fecha (optional)</label>
+                <label style={lbl}>Fecha de vencimiento (opcional)</label>
                 <input style={inp} type="date" value={supplyForm.renewal_date} onChange={e=>setSupplyForm(f=>({...f,renewal_date:e.target.value}))}/>
               </div>
               <label style={lbl}>Notas (opcional)</label>
-              <input style={inp} type="text" placeholder="Any additional info..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
+              <input style={inp} type="text" placeholder="Marca, notas de compra..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
               <div style={{display:'flex',gap:'0.75rem'}}>
                 <button onClick={async()=>{
-                  if(!supplyForm.name||!supplyForm.cost){showToast('Nombre and cost required');return}
+                  if(!supplyForm.name||!supplyForm.cost){showToast('Nombre y costo requeridos');return}
                   if(supplyModal==='add'){
                     await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(supplyForm)})
-                    showToast('Supply added')
+                    showToast('Ingrediente añadido ✓')
                   } else {
                     await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:supplyModal.id,...supplyForm})})
-                    showToast('Supply updated')
+                    showToast('Ingrediente actualizado ✓')
                   }
                   setSupplyModal(null);loadAll()
                 }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar</button>
