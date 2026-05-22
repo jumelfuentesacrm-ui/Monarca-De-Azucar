@@ -810,7 +810,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                     </div>
                     <div><div style={flbl}>Descripción</div><input value={editForm.description} onChange={e=>setEditForm(f=>({...f,description:e.target.value}))} placeholder="Opcional..." style={{...finp,marginBottom:0}}/></div>
                   </div>
-                  <RecipeIngredientsSection itemId={item.id} itemName={item.name} supplies={supplies} showToast={showToast}/>
+                  <RecipeEditor itemId={item.id} itemName={item.name} supplies={supplies} showToast={showToast}/>
                   <div style={{display:'flex',gap:'0.5rem',marginTop:'0.5rem'}}>
                     <button onClick={()=>saveEdit(item.id)} style={{flex:1,padding:'0.55rem',background:ink,color:'#FBF7EE',border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer'}}>Guardar cambios</button>
                     <button onClick={()=>setEditingId(null)} style={{padding:'0.55rem 0.85rem',background:'rgba(31,20,14,0.06)',color:ink,border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>Cancelar</button>
