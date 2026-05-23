@@ -670,6 +670,8 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const [savingEst, setSavingEst] = useState(false)
   const [addingCat, setAddingCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
+  const [catDropAdd, setCatDropAdd] = useState(false)
+  const [catDropEdit, setCatDropEdit] = useState(false)
   const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
   const finp={width:'100%',padding:'0.5rem 0.75rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}
@@ -773,10 +775,23 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
             <div><div style={flbl}>Precio ($)</div><input type="number" step="0.01" value={addForm.price} onChange={e=>setAddForm(f=>({...f,price:e.target.value}))} placeholder="3.50" style={{...finp,marginBottom:0}}/></div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.85rem'}}>
-            <div>
+            <div style={{position:'relative'}}>
               <div style={flbl}>Categoría</div>
-              <input list="cat-add-list" value={addForm.category} onChange={e=>setAddForm(f=>({...f,category:e.target.value}))} placeholder="Galleta, Pan dulce..." style={{...finp,marginBottom:0}}/>
-              <datalist id="cat-add-list">{allCats.filter(c=>c!=='Todos').map(c=><option key={c} value={c}/>)}</datalist>
+              <input value={addForm.category}
+                onFocus={()=>setCatDropAdd(true)}
+                onBlur={()=>setTimeout(()=>setCatDropAdd(false),150)}
+                onChange={e=>{setAddForm(f=>({...f,category:e.target.value}));setCatDropAdd(true)}}
+                placeholder="Galleta, Pan dulce..." style={{...finp,marginBottom:0}}/>
+              {catDropAdd&&(
+                <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
+                  {allCats.filter(c=>c!=='Todos'&&c.toLowerCase().includes((addForm.category||'').toLowerCase())).map(c=>(
+                    <button key={c} type="button" onMouseDown={()=>{setAddForm(f=>({...f,category:c}));setCatDropAdd(false)}}
+                      style={{display:'block',width:'100%',padding:'0.5rem 0.75rem',background:addForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.75rem',color:ink}}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div><div style={flbl}>Descripción (opcional)</div><input value={addForm.description} onChange={e=>setAddForm(f=>({...f,description:e.target.value}))} placeholder="Rellena de mermelada..." style={{...finp,marginBottom:0}}/></div>
           </div>
@@ -944,10 +959,23 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                     <div><div style={flbl}>Precio ($)</div><input type="number" step="0.01" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.5rem',marginBottom:'0.75rem'}}>
-                    <div>
+                    <div style={{position:'relative'}}>
                       <div style={flbl}>Categoría</div>
-                      <input list="cat-edit-list" value={editForm.category} onChange={e=>setEditForm(f=>({...f,category:e.target.value}))} style={{...finp,marginBottom:0}}/>
-                      <datalist id="cat-edit-list">{allCats.filter(c=>c!=='Todos').map(c=><option key={c} value={c}/>)}</datalist>
+                      <input value={editForm.category}
+                        onFocus={()=>setCatDropEdit(true)}
+                        onBlur={()=>setTimeout(()=>setCatDropEdit(false),150)}
+                        onChange={e=>{setEditForm(f=>({...f,category:e.target.value}));setCatDropEdit(true)}}
+                        style={{...finp,marginBottom:0}}/>
+                      {catDropEdit&&(
+                        <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
+                          {allCats.filter(c=>c!=='Todos'&&c.toLowerCase().includes((editForm.category||'').toLowerCase())).map(c=>(
+                            <button key={c} type="button" onMouseDown={()=>{setEditForm(f=>({...f,category:c}));setCatDropEdit(false)}}
+                              style={{display:'block',width:'100%',padding:'0.5rem 0.75rem',background:editForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.75rem',color:ink}}>
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div><div style={flbl}>Descripción</div><input value={editForm.description} onChange={e=>setEditForm(f=>({...f,description:e.target.value}))} placeholder="Opcional..." style={{...finp,marginBottom:0}}/></div>
                   </div>
