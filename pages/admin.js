@@ -1641,14 +1641,35 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
   const [openCats, setOpenCats] = React.useState({})
   const [search, setSearch] = React.useState('')
   const [showSearch, setShowSearch] = React.useState(false)
+  const [highlightId, setHighlightId] = React.useState(null)
   const ffS = '"Instrument Serif",serif', ff = '"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
 
   const CATEGORY_ORDER = ['Aceites','Chocolates','Empaque','Frutas y Frescos','Huevos','Lácteos','Otros','Saborizantes','Secos']
 
-  const filteredSupplies = search
-    ? (supplies||[]).filter(s=>s.name.toLowerCase().includes(search.toLowerCase()))
-    : (supplies||[])
+  // Word-matching: every query word must appear in the name
+  const queryWords = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const searchResults = queryWords.length
+    ? (supplies||[]).filter(s => queryWords.every(w => s.name.toLowerCase().includes(w))).sort((a,b)=>a.name.localeCompare(b.name,'es'))
+    : []
+  const exactMatch = (supplies||[]).some(s => s.name.toLowerCase() === search.trim().toLowerCase())
+
+  function goToSupply(s) {
+    const cat = s.category || 'Otros'
+    setOpenCats(o => ({ ...o, [cat]: true }))
+    setSearch('')
+    setShowSearch(false)
+    setTimeout(() => {
+      const el = document.getElementById('supply-' + s.id)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setHighlightId(s.id)
+        setTimeout(() => setHighlightId(null), 2000)
+      }
+    }, 80)
+  }
+
+  const filteredSupplies = (supplies||[])
   const allCategories = [...new Set([
     ...CATEGORY_ORDER,
     ...filteredSupplies.map(s=>s.category||'Otros')
@@ -1685,19 +1706,43 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
 
   return (
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:showSearch?'0.5rem':'1.25rem'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem'}}>
         <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Inventario</div>
         <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
-          <button onClick={()=>{setShowSearch(s=>!s);if(showSearch)setSearch('')}} style={{width:36,height:36,borderRadius:'50%',background:'rgba(31,20,14,0.06)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ink} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <button onClick={()=>{setShowSearch(s=>!s);if(showSearch)setSearch('')}} style={{width:36,height:36,borderRadius:'50%',background:showSearch?ink:'rgba(31,20,14,0.06)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={showSearch?white:ink} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
           <button onClick={onAdd} style={{background:ink,color:white,border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,letterSpacing:'0.08em',cursor:'pointer'}}>+ Añadir</button>
         </div>
       </div>
       {showSearch&&(
-        <input autoFocus value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="Buscar ingrediente..."
-          style={{width:'100%',padding:'0.65rem 1rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1.25rem',boxSizing:'border-box'}}/>
+        <div style={{position:'relative',marginBottom:'1.25rem'}}>
+          <input autoFocus value={search} onChange={e=>setSearch(e.target.value)}
+            onKeyDown={e=>{if(e.key==='Escape'){setSearch('');setShowSearch(false)}}}
+            placeholder="Buscar ingrediente..."
+            style={{width:'100%',padding:'0.65rem 1rem 0.65rem 2.5rem',border:'1px solid rgba(31,20,14,0.18)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box',background:white}}/>
+          <svg style={{position:'absolute',left:'0.8rem',top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={mu} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          {search.trim().length>0&&(
+            <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.12)',boxShadow:'0 8px 24px rgba(31,20,14,0.12)',zIndex:500,overflow:'hidden',maxHeight:320,overflowY:'auto'}}>
+              {searchResults.length===0&&(
+                <div style={{padding:'0.85rem 1rem',fontSize:'0.75rem',color:mu}}>Sin resultados para "<strong>{search}</strong>"</div>
+              )}
+              {searchResults.slice(0,10).map(s=>(
+                <button key={s.id} type="button" onClick={()=>goToSupply(s)}
+                  style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',padding:'0.7rem 1rem',background:'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.05)',cursor:'pointer',textAlign:'left',gap:'0.5rem'}}>
+                  <span style={{fontSize:'0.78rem',color:ink,fontWeight:500,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</span>
+                  <span style={{fontSize:'0.55rem',padding:'0.15rem 0.5rem',borderRadius:999,background:'rgba(31,20,14,0.06)',color:mu,flexShrink:0,whiteSpace:'nowrap'}}>{s.category||'Otros'}</span>
+                </button>
+              ))}
+              {!exactMatch&&(
+                <button type="button" onClick={()=>{onAdd();setSearch('');setShowSearch(false)}}
+                  style={{display:'flex',alignItems:'center',gap:'0.5rem',width:'100%',padding:'0.75rem 1rem',background:'rgba(227,90,27,0.05)',border:'none',borderTop:'1px solid rgba(227,90,27,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600,textAlign:'left'}}>
+                  <span style={{fontSize:'1rem',lineHeight:1}}>+</span> Añadir "<strong>{search.trim()}</strong>"
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Donut + bar */}
@@ -1793,7 +1838,7 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
             const stockQty = parseFloat(s.stock_qty||0)
             const hasCost = parseFloat(s.cost_per_unit||0) > 0
             return (
-              <div key={s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:i<items.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
+              <div key={s.id} id={'supply-'+s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:i<items.length-1?'1px solid rgba(31,20,14,0.05)':'none',transition:'background 0.4s',background:highlightId===s.id?'rgba(227,90,27,0.08)':'transparent'}}>
                 {/* Name + current $ value */}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:'0.78rem',color:ink,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</div>
