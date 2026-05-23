@@ -588,12 +588,9 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
     <div style={{marginTop:'0.75rem',padding:'0.75rem',background:'rgba(227,90,27,0.04)',borderRadius:8,border:'1px solid rgba(227,90,27,0.12)'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
         <div style={{fontSize:'0.58rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu}}>Ingredientes · {itemName}</div>
-        <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-          {totalCost>0&&<span style={{fontSize:'0.65rem',color:or,fontWeight:600}}>Costo: ${totalCost.toFixed(3)}</span>}
-          <button onClick={()=>setAdding(a=>!a)} style={{fontSize:'0.6rem',padding:'0.3rem 0.7rem',background:or,color:white,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
-            {adding?'Cancelar':'+ Añadir'}
-          </button>
-        </div>
+        <button onClick={()=>setAdding(a=>!a)} style={{fontSize:'0.6rem',padding:'0.3rem 0.7rem',background:or,color:white,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+          {adding?'Cancelar':'+ Añadir'}
+        </button>
       </div>
 
       {ingredients.map(ing=>(
@@ -605,7 +602,7 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
       ))}
 
       {ingredients.length===0&&!adding&&(
-        <div style={{fontSize:'0.65rem',color:'rgba(31,20,14,0.3)',fontStyle:'italic'}}>Sin ingredientes — añade para calcular costos automáticamente</div>
+        <div style={{fontSize:'0.65rem',color:'rgba(31,20,14,0.3)',fontStyle:'italic'}}>Sin ingredientes — añade la receta y usa "Estimado" para calcular el costo</div>
       )}
 
       {adding&&(
@@ -642,6 +639,8 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const [editForm, setEditForm] = useState({})
   const [showAdd, setShowAdd] = useState(false)
   const [addForm, setAddForm] = useState({name:'',description:'',category:'Galleta',price:''})
+  const [estimadoId, setEstimadoId] = useState(null)
+  const [savingEst, setSavingEst] = useState(false)
   const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
   const finp={width:'100%',padding:'0.5rem 0.75rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}
@@ -653,6 +652,24 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   function getCost(item){const c=item.catalog_costs?.cost;return c!=null?parseFloat(c):null}
   function getMargin(item){const p=getPrice(item),c=getCost(item);if(!p||c===null)return null;return Math.round(((p-c)/p)*100)}
   function mc(m){return m>=60?'#2d8a60':m>=40?or:'#c0392b'}
+
+  const ECONV={g:1,kg:1000,oz:28.3495,lb:453.592,ml:1,l:1000,tsp:5,tbsp:15,cup:240,'fl oz':30,pinch:0.625,dash:0.3125,unit:1}
+  function calcEstimado(item){
+    return (item.recipe_ingredients||[]).map(ri=>{
+      const supply=(supplies||[]).find(s=>s.id===ri.supply_id)
+      const cpu=parseFloat(supply?.cost_per_unit||0)
+      const qty=parseFloat(ri.quantity||0)
+      const fromU=ri.unit, toU=supply?.base_unit||ri.unit
+      const qtyInBase=qty*(ECONV[fromU]||1)/(ECONV[toU]||1)
+      return{name:supply?.name||ri.supply_name||'—',qty,unit:fromU,cpu,base_unit:toU,cost:cpu*qtyInBase,hasCpu:cpu>0}
+    })
+  }
+
+  async function saveEstimado(itemId,total){
+    setSavingEst(true)
+    await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:itemId,cost:total})})
+    showToast('Costo estimado guardado ✓');setEstimadoId(null);setSavingEst(false);loadAll()
+  }
 
   const filtered=(catalog||[])
     .filter(i=>filter==='Todos'||(i.category||'Galleta')===filter)
@@ -789,12 +806,52 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                     style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:'rgba(227,90,27,0.08)',color:or,border:'1px solid rgba(227,90,27,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
                     Costo
                   </button>
+                  {(item.recipe_ingredients||[]).length>0&&(
+                    <button onClick={()=>setEstimadoId(estimadoId===item.id?null:item.id)}
+                      style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:estimadoId===item.id?'rgba(45,138,96,0.15)':'rgba(45,138,96,0.07)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                      Estimado
+                    </button>
+                  )}
                   <button onClick={()=>deleteProduct(item.id,item.name)}
                     style={{fontSize:'0.6rem',padding:'0.3rem 0.5rem',background:'rgba(192,57,43,0.07)',color:'#c0392b',border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
                     ✕
                   </button>
                 </div>
               </div>
+              {/* Estimado breakdown */}
+              {estimadoId===item.id&&(()=>{
+                const lines=calcEstimado(item)
+                const total=lines.reduce((s,l)=>s+l.cost,0)
+                const missingPrice=lines.some(l=>!l.hasCpu)
+                return(
+                  <div style={{padding:'0.75rem 1.1rem',background:'rgba(45,138,96,0.03)',borderTop:'1px solid rgba(45,138,96,0.12)'}}>
+                    <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#2d8a60',marginBottom:'0.5rem',fontWeight:600}}>Estimado — basado en último precio de compra</div>
+                    {lines.length===0&&<div style={{fontSize:'0.7rem',color:mu,fontStyle:'italic'}}>No hay ingredientes en la receta. Añádelos desde "Editar".</div>}
+                    {lines.map((l,i)=>(
+                      <div key={i} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.25rem 0',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
+                        <span style={{flex:1,fontSize:'0.7rem',color:ink}}>{l.name}</span>
+                        <span style={{fontSize:'0.62rem',color:mu,flexShrink:0}}>{l.qty} {l.unit}</span>
+                        <span style={{fontSize:'0.58rem',color:mu,flexShrink:0,minWidth:90,textAlign:'right'}}>
+                          {l.hasCpu?`$${l.cpu.toFixed(4)}/${l.base_unit}`:<span style={{color:'#c0392b'}}>sin precio</span>}
+                        </span>
+                        <span style={{fontSize:'0.68rem',color:l.hasCpu?ink:mu,fontWeight:l.hasCpu?600:400,flexShrink:0,minWidth:55,textAlign:'right'}}>
+                          {l.hasCpu?`$${l.cost.toFixed(3)}`:'—'}
+                        </span>
+                      </div>
+                    ))}
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'0.6rem',paddingTop:'0.5rem',borderTop:'2px solid rgba(45,138,96,0.15)'}}>
+                      <div>
+                        <div style={{fontFamily:ffS,fontSize:'1.1rem',color:'#2d8a60'}}>Total estimado: <strong>${total.toFixed(3)}</strong></div>
+                        {missingPrice&&<div style={{fontSize:'0.58rem',color:'#c0392b',marginTop:'0.2rem'}}>⚠ Algunos ingredientes no tienen precio de compra registrado</div>}
+                      </div>
+                      <button onClick={()=>saveEstimado(item.id,total)} disabled={savingEst||total===0}
+                        style={{padding:'0.5rem 1rem',background:'#2d8a60',color:'white',border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.62rem',fontWeight:600,cursor:total>0?'pointer':'not-allowed',opacity:(savingEst||total===0)?0.5:1}}>
+                        {savingEst?'Guardando…':'Guardar como costo'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
               {/* Inline edit */}
               {isEditing&&(
                 <div style={{padding:'0.75rem 1.1rem 1rem',background:'rgba(227,90,27,0.025)',borderTop:'1px solid rgba(227,90,27,0.1)'}}>
