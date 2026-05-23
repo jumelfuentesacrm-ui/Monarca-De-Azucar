@@ -13,12 +13,15 @@ export default async function handler(req, res) {
         id, name, description, category, active, created_at, updated_at,
         badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price,
         catalog_prices ( id, amount, currency, interval, active ),
-        catalog_costs ( id, cost, notes, suppliers, updated_at ),
-        product_stock ( qty )
+        catalog_costs ( id, cost, notes, suppliers, updated_at )
       `)
       .order('name')
     if (error) return res.status(500).json({ error: error.message })
-    return res.status(200).json({ items: items || [] })
+    const { data: stockRows } = await supabase.from('product_stock').select('catalog_item_id, qty')
+    const stockMap = {}
+    ;(stockRows || []).forEach(r => { stockMap[r.catalog_item_id] = r.qty })
+    const itemsWithStock = (items || []).map(i => ({ ...i, product_stock: stockMap[i.id] != null ? [{ qty: stockMap[i.id] }] : [] }))
+    return res.status(200).json({ items: itemsWithStock })
   }
 
   if (req.method === 'POST') {
