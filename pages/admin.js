@@ -641,12 +641,16 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const [addForm, setAddForm] = useState({name:'',description:'',category:'Galleta',price:''})
   const [estimadoId, setEstimadoId] = useState(null)
   const [savingEst, setSavingEst] = useState(false)
+  const [extraCats, setExtraCats] = useState([])
+  const [addingCat, setAddingCat] = useState(false)
+  const [newCatName, setNewCatName] = useState('')
   const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
   const finp={width:'100%',padding:'0.5rem 0.75rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}
   const flbl={fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.2rem'}
 
-  const allCats = ['Todos',...[...new Set((catalog||[]).map(i=>i.category||'Galleta'))].sort((a,b)=>a.localeCompare(b,'es'))]
+  const derivedCats = [...new Set((catalog||[]).map(i=>i.category||'Galleta'))].sort((a,b)=>a.localeCompare(b,'es'))
+  const allCats = ['Todos',...new Set([...derivedCats,...extraCats])]
 
   function getPrice(item){return item.catalog_prices?.find(p=>p.active)?.amount??item.price??null}
   function getCost(item){const c=item.catalog_costs?.cost;return c!=null?parseFloat(c):null}
@@ -754,15 +758,50 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
         </div>
       )}
 
-      {/* Category filter */}
-      <div style={{display:'flex',gap:'0.35rem',flexWrap:'wrap',marginBottom:'0.65rem'}}>
+      {/* Category filter + manage */}
+      <div style={{display:'flex',gap:'0.35rem',flexWrap:'wrap',marginBottom:'0.65rem',alignItems:'center'}}>
         {allCats.map(c=>(
-          <button key={c} onClick={()=>setFilter(c)}
-            style={{padding:'0.3rem 0.75rem',borderRadius:999,border:'none',fontSize:'0.63rem',cursor:'pointer',
-              background:filter===c?ink:'rgba(31,20,14,0.06)',color:filter===c?'#FBF7EE':ink,fontFamily:ff}}>
-            {c}
-          </button>
+          <div key={c} style={{display:'flex',alignItems:'center',gap:0}}>
+            <button onClick={()=>setFilter(c)}
+              style={{padding:'0.3rem 0.75rem',borderRadius:c==='Todos'?999:'999px 0 0 999px',border:'none',fontSize:'0.63rem',cursor:'pointer',
+                background:filter===c?ink:'rgba(31,20,14,0.06)',color:filter===c?'#FBF7EE':ink,fontFamily:ff}}>
+              {c}
+            </button>
+            {c!=='Todos'&&(
+              <button title={`Eliminar categoría "${c}"`} onClick={()=>{
+                const count=(catalog||[]).filter(i=>(i.category||'Galleta')===c).length
+                if(count>0){showToast(`"${c}" tiene ${count} producto(s) — cámbiales la categoría primero`);return}
+                setExtraCats(prev=>prev.filter(x=>x!==c))
+                if(filter===c) setFilter('Todos')
+              }}
+                style={{padding:'0.3rem 0.45rem',borderRadius:'0 999px 999px 0',border:'none',fontSize:'0.55rem',cursor:'pointer',
+                  background:filter===c?'rgba(255,255,255,0.15)':'rgba(31,20,14,0.1)',
+                  color:filter===c?'rgba(255,255,255,0.7)':'rgba(31,20,14,0.4)',lineHeight:1}}>
+                ✕
+              </button>
+            )}
+          </div>
         ))}
+        {addingCat?(
+          <div style={{display:'flex',alignItems:'center',gap:'0.3rem'}}>
+            <input autoFocus value={newCatName} onChange={e=>setNewCatName(e.target.value)}
+              onKeyDown={e=>{
+                if(e.key==='Enter'&&newCatName.trim()){setExtraCats(p=>[...new Set([...p,newCatName.trim()])]);setNewCatName('');setAddingCat(false)}
+                if(e.key==='Escape'){setNewCatName('');setAddingCat(false)}
+              }}
+              placeholder="Nombre de categoría..."
+              style={{padding:'0.25rem 0.6rem',border:'1px solid rgba(31,20,14,0.2)',borderRadius:6,fontFamily:ff,fontSize:'0.63rem',outline:'none',width:150}}/>
+            <button onClick={()=>{if(newCatName.trim()){setExtraCats(p=>[...new Set([...p,newCatName.trim()])]);setNewCatName('');setAddingCat(false)}}}
+              style={{padding:'0.25rem 0.6rem',background:ink,color:white,border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.6rem',cursor:'pointer'}}>OK</button>
+            <button onClick={()=>{setNewCatName('');setAddingCat(false)}}
+              style={{padding:'0.25rem 0.5rem',background:'transparent',color:mu,border:'none',fontSize:'0.65rem',cursor:'pointer'}}>✕</button>
+          </div>
+        ):(
+          <button onClick={()=>setAddingCat(true)}
+            style={{padding:'0.3rem 0.75rem',borderRadius:999,border:'1px dashed rgba(31,20,14,0.2)',fontSize:'0.63rem',cursor:'pointer',background:'transparent',color:mu,fontFamily:ff}}>
+            + Categoría
+          </button>
+        )}
       </div>
       <input type="text" placeholder="Buscar producto..." value={search} onChange={e=>setSearch(e.target.value)}
         style={{width:'100%',padding:'0.6rem 1rem',border:'1px solid rgba(31,20,14,0.1)',borderRadius:8,fontFamily:ff,fontSize:'0.82rem',outline:'none',marginBottom:'1rem',boxSizing:'border-box'}}/>
