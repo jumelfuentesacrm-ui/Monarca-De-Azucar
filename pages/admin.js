@@ -890,18 +890,6 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
           return (
             <div key={item.id} style={{borderBottom:i<filtered.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
               <div style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.85rem 1.1rem'}}>
-                {/* Archive / Restore toggle */}
-                {showArchived?(
-                  <button onClick={()=>toggleActive(item)} title="Restaurar al catálogo"
-                    style={{fontSize:'0.58rem',padding:'0.3rem 0.6rem',background:'rgba(45,138,96,0.08)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff,flexShrink:0,whiteSpace:'nowrap'}}>
-                    ↩ Restaurar
-                  </button>
-                ):(
-                  <button onClick={()=>toggleActive(item)} title="Archivar producto"
-                    style={{fontSize:'0.58rem',padding:'0.3rem 0.6rem',background:'rgba(31,20,14,0.05)',color:mu,border:'1px solid rgba(31,20,14,0.1)',borderRadius:4,cursor:'pointer',fontFamily:ff,flexShrink:0,whiteSpace:'nowrap'}}>
-                    📦
-                  </button>
-                )}
                 {/* Info */}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:'0.35rem',flexWrap:'wrap',marginBottom:'0.2rem'}}>
@@ -920,20 +908,35 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                 </div>
                 {/* Actions */}
                 <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
-                  <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||''})}}
-                    style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:isEditing?'rgba(227,90,27,0.1)':'rgba(31,20,14,0.06)',color:isEditing?or:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
-                    {isEditing?'Cerrar':'Editar'}
-                  </button>
-                  {(item.recipe_ingredients||[]).length>0&&(
+                  {!showArchived&&(
+                    <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||''})}}
+                      style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:isEditing?'rgba(227,90,27,0.1)':'rgba(31,20,14,0.06)',color:isEditing?or:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                      {isEditing?'Cerrar':'Editar'}
+                    </button>
+                  )}
+                  {!showArchived&&(item.recipe_ingredients||[]).length>0&&(
                     <button onClick={()=>setEstimadoId(estimadoId===item.id?null:item.id)}
                       style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:estimadoId===item.id?'rgba(45,138,96,0.15)':'rgba(45,138,96,0.07)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
                       Estimado
                     </button>
                   )}
-                  <button onClick={()=>deleteProduct(item.id,item.name)}
-                    style={{fontSize:'0.6rem',padding:'0.3rem 0.5rem',background:'rgba(192,57,43,0.07)',color:'#c0392b',border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
-                    ✕
-                  </button>
+                  {showArchived?(
+                    <>
+                      <button onClick={()=>toggleActive(item)}
+                        style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:'rgba(45,138,96,0.08)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                        Restaurar
+                      </button>
+                      <button onClick={()=>deleteProduct(item.id,item.name)}
+                        style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.07)',color:'#c0392b',border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                        Eliminar
+                      </button>
+                    </>
+                  ):(
+                    <button onClick={()=>toggleActive(item)}
+                      style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:'rgba(31,20,14,0.05)',color:mu,border:'1px solid rgba(31,20,14,0.1)',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                      Archivar
+                    </button>
+                  )}
                 </div>
               </div>
               {/* Estimado breakdown */}
