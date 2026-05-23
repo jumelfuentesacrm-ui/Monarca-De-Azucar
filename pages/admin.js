@@ -672,6 +672,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const [newCatName, setNewCatName] = useState('')
   const [catDropAdd, setCatDropAdd] = useState(false)
   const [catDropEdit, setCatDropEdit] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
   const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
   const finp={width:'100%',padding:'0.5rem 0.75rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}
@@ -726,12 +727,15 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
     showToast('Costo estimado guardado ✓');setEstimadoId(null);setSavingEst(false);loadAll()
   }
 
-  const filtered=realCatalog
+  const archivedCatalog = realCatalog.filter(i => i.active === false)
+  const activeCatalog   = realCatalog.filter(i => i.active !== false)
+
+  const filtered=(showArchived ? archivedCatalog : activeCatalog)
     .filter(i=>filter==='Todos'||(i.category||'Galleta')===filter)
     .filter(i=>!search||i.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a,b)=>a.name.localeCompare(b.name,'es'))
 
-  const withMargin=realCatalog.map(i=>({...i,_m:getMargin(i)})).filter(i=>i._m!==null).sort((a,b)=>b._m-a._m)
+  const withMargin=activeCatalog.map(i=>({...i,_m:getMargin(i)})).filter(i=>i._m!==null).sort((a,b)=>b._m-a._m)
 
   async function addProduct(){
     if(!addForm.name){showToast('Nombre requerido');return}
@@ -760,10 +764,18 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
     <div>
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem',gap:'0.75rem',flexWrap:'wrap'}}>
-        <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Catálogo <span style={{fontSize:'0.6rem',color:mu,fontFamily:ff,fontWeight:400,letterSpacing:'0.08em'}}>{realCatalog.length} productos</span></div>
-        <button onClick={()=>setShowAdd(s=>!s)} style={{background:ink,color:'#FBF7EE',border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer'}}>
-          {showAdd?'Cancelar':'+ Añadir producto'}
-        </button>
+        <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>
+          {showArchived?'Archivo':'Catálogo'} <span style={{fontSize:'0.6rem',color:mu,fontFamily:ff,fontWeight:400,letterSpacing:'0.08em'}}>{showArchived?archivedCatalog.length:activeCatalog.length} productos</span>
+        </div>
+        <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+          <button onClick={()=>{setShowArchived(s=>!s);setFilter('Todos')}}
+            style={{background:showArchived?ink:'rgba(31,20,14,0.07)',color:showArchived?white:mu,border:'none',padding:'0.55rem 1rem',borderRadius:999,fontFamily:ff,fontSize:'0.63rem',fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:'0.35rem'}}>
+            📦 Archivo{archivedCatalog.length>0&&<span style={{background:showArchived?'rgba(255,255,255,0.2)':'rgba(31,20,14,0.1)',borderRadius:999,padding:'0 0.4rem',fontSize:'0.55rem'}}>{archivedCatalog.length}</span>}
+          </button>
+          {!showArchived&&<button onClick={()=>setShowAdd(s=>!s)} style={{background:ink,color:'#FBF7EE',border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer'}}>
+            {showAdd?'Cancelar':'+ Añadir producto'}
+          </button>}
+        </div>
       </div>
 
       {/* Add form */}
@@ -878,11 +890,18 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
           return (
             <div key={item.id} style={{borderBottom:i<filtered.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
               <div style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.85rem 1.1rem'}}>
-                {/* Active toggle */}
-                <button onClick={()=>toggleActive(item)} title={item.active?'Visible en app':'Oculto en app'}
-                  style={{width:36,height:20,borderRadius:10,border:'none',cursor:'pointer',padding:2,background:item.active?or:'rgba(31,20,14,0.12)',position:'relative',flexShrink:0}}>
-                  <div style={{width:16,height:16,borderRadius:'50%',background:'white',position:'absolute',top:2,left:item.active?18:2,transition:'left 0.2s',boxShadow:'0 1px 2px rgba(0,0,0,0.2)'}}/>
-                </button>
+                {/* Archive / Restore toggle */}
+                {showArchived?(
+                  <button onClick={()=>toggleActive(item)} title="Restaurar al catálogo"
+                    style={{fontSize:'0.58rem',padding:'0.3rem 0.6rem',background:'rgba(45,138,96,0.08)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff,flexShrink:0,whiteSpace:'nowrap'}}>
+                    ↩ Restaurar
+                  </button>
+                ):(
+                  <button onClick={()=>toggleActive(item)} title="Archivar producto"
+                    style={{fontSize:'0.58rem',padding:'0.3rem 0.6rem',background:'rgba(31,20,14,0.05)',color:mu,border:'1px solid rgba(31,20,14,0.1)',borderRadius:4,cursor:'pointer',fontFamily:ff,flexShrink:0,whiteSpace:'nowrap'}}>
+                    📦
+                  </button>
+                )}
                 {/* Info */}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:'0.35rem',flexWrap:'wrap',marginBottom:'0.2rem'}}>
@@ -2407,11 +2426,12 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
   const [filter, setFilter] = React.useState('Todos')
   const [saving, setSaving] = React.useState(false)
 
+  const CAT_PH = '__cat_placeholder__'
   React.useEffect(()=>{
-    setItems((catalog||[]).map(item=>({...item,visible:item.active,badge_hoy:item.badge_hoy||false,badge_nuevo:item.badge_nuevo||false,badge_temporada:item.badge_temporada||false,badge_agotado:item.badge_agotado||false,price:item.price||0})))
+    setItems((catalog||[]).filter(item=>item.description!==CAT_PH&&item.active!==false).map(item=>({...item,visible:item.active,badge_hoy:item.badge_hoy||false,badge_nuevo:item.badge_nuevo||false,badge_temporada:item.badge_temporada||false,badge_agotado:item.badge_agotado||false,price:item.price||0})))
   },[catalog])
 
-  const categoryList=['Todos',...Array.from(new Set((catalog||[]).map(i=>i.category).filter(Boolean))).sort()]
+  const categoryList=['Todos',...Array.from(new Set((catalog||[]).filter(i=>i.description!==CAT_PH&&i.active!==false).map(i=>i.category).filter(Boolean))).sort()]
   const filtered=filter==='Todos'?items:items.filter(i=>i.category===filter)
   const visibleItems=items.filter(i=>i.visible)
   const hoyItems=items.filter(i=>i.badge_hoy)
@@ -2456,7 +2476,7 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
         </button>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'0.75rem',marginBottom:'1.25rem'}}>
-        {[['Visibles en web',visibleItems.length,`de ${items.length}`,'#1F140E'],['Marcadas "Hoy"',hoyItems.length,'aparecen primero','#E35A1B'],['Marcadas "Nuevo"',nuevoItems.length,'con badge','#8e44ad'],['Última pub.','Hoy',new Date().toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'}),'#2d8a60']].map(([label,val,sub,color])=>(
+        {[['Visibles en web',visibleItems.length,`de ${items.filter(i=>!i.badge_agotado).length}`,'#1F140E'],['Marcadas "Hoy"',hoyItems.length,'aparecen primero','#E35A1B'],['Marcadas "Nuevo"',nuevoItems.length,'con badge','#8e44ad'],['Última pub.','Hoy',new Date().toLocaleTimeString('es-PR',{hour:'numeric',minute:'2-digit',timeZone:'America/Puerto_Rico'}),'#2d8a60']].map(([label,val,sub,color])=>(
           <div key={label} style={{background:'#FBF7EE',borderRadius:10,padding:'1rem',border:'1px solid rgba(31,20,14,0.07)'}}>
             <div style={{fontSize:'0.52rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#7A6452',marginBottom:'0.4rem'}}>{label}</div>
             <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.6rem',color,lineHeight:1}}>{val}</div>
