@@ -3445,7 +3445,7 @@ export default function Admin({session}){
             {panel==='bookings'&&<BookingsPanel/>}
             {panel==='campaigns'&&<CampaignsPanel cards={cards} users={users}/>}
             {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/> }
-            {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:item.catalog_costs?.cost||'',notes:item.catalog_costs?.notes||''});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}} showToast={showToast} loadAll={loadAll}/>}
+            {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:'',units:'1',notes:item.catalog_costs?.notes||'',_savedCost:item.catalog_costs?.cost||null});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}} showToast={showToast} loadAll={loadAll}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog} onCompra={()=>setShowPurchase(true)} onCompraItem={(id)=>{setPurchaseSupplyId(id);setShowPurchase(true)}}
               onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:'',stock_qty:''});setSupplyModal('add')}}
@@ -3741,22 +3741,56 @@ export default function Admin({session}){
             )}
 
 
-            <div style={{display:'flex',gap:'0.75rem',marginBottom:'1rem',alignItems:'flex-end'}}>
-              <div style={{flex:1}}>
-                <label style={lbl}>Cost ($) <span style={{color:gray,fontWeight:400,textTransform:'none',letterSpacing:0}}>— edit manually or calculate above</span></label>
-                <input id="cost-input" style={{...inp,marginBottom:0,fontSize:'1.1rem',fontWeight:600}} type="number" step="0.01" placeholder="0.00" value={costForm.cost} onChange={e=>setCostForm(f=>({...f,cost:e.target.value}))}/>
+            {costForm._savedCost&&(
+              <div style={{background:'rgba(31,20,14,0.04)',borderRadius:8,padding:'0.6rem 0.85rem',marginBottom:'0.85rem',fontSize:'0.68rem',color:gray}}>
+                Costo actual guardado: <strong style={{color:black}}>${parseFloat(costForm._savedCost).toFixed(4)}</strong> por unidad
               </div>
+            )}
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.85rem'}}>
+              <div>
+                <label style={lbl}>Costo total de la receta ($)</label>
+                <input id="cost-input" style={{...inp,marginBottom:0,fontSize:'1.1rem',fontWeight:600}} type="number" step="0.01" min="0" placeholder="0.00" value={costForm.cost} onChange={e=>setCostForm(f=>({...f,cost:e.target.value}))}/>
+              </div>
+              <div>
+                <label style={lbl}>Unidades que produce</label>
+                <input style={{...inp,marginBottom:0,fontSize:'1.1rem',fontWeight:600}} type="number" step="1" min="1" placeholder="1" value={costForm.units} onChange={e=>setCostForm(f=>({...f,units:e.target.value}))}/>
+              </div>
+            </div>
+
+            {costForm.cost&&parseFloat(costForm.cost)>0&&(()=>{
+              const total=parseFloat(costForm.cost)||0
+              const units=Math.max(1,parseInt(costForm.units)||1)
+              const perUnit=total/units
+              return(
+                <div style={{background:'rgba(227,90,27,0.06)',border:'1px solid rgba(227,90,27,0.18)',borderRadius:8,padding:'0.75rem 1rem',marginBottom:'0.85rem',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <div style={{fontSize:'0.62rem',color:gray}}>
+                    ${total.toFixed(2)} ÷ {units} {units===1?'unidad':'unidades'}
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:2}}>Costo por unidad</div>
+                    <div style={{fontFamily:ffS,fontSize:'1.4rem',color:gold,lineHeight:1}}>${perUnit.toFixed(4)}</div>
+                    <div style={{fontSize:'0.52rem',color:gray,marginTop:2}}>← esto se guardará</div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            <div style={{display:'flex',gap:'0.75rem',marginBottom:'1rem'}}>
               <button onClick={async()=>{
-                if(!costForm.cost){showToast('Enter a cost first');return}
-                const r=await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:editCost.id,cost:costForm.cost})})
+                if(!costForm.cost){showToast('Ingresa el costo primero');return}
+                const total=parseFloat(costForm.cost)||0
+                const units=Math.max(1,parseInt(costForm.units)||1)
+                const perUnit=(total/units).toFixed(4)
+                const r=await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:editCost.id,cost:perUnit})})
                 const d=await r.json()
                 if(r.ok){
-                  showToast('Cost saved ✓')
+                  showToast('Costo guardado ✓')
                   fetch('/api/admin/catalog').then(r=>r.json()).then(d=>setCatalog(d.items||[]))
-                  setEditarCost(d.item||editCost)
-                  setCostForm(f=>({...f,cost:d.item?.catalog_costs?.[0]?.cost||f.cost}))
+                  setCostForm(f=>({...f,_savedCost:perUnit}))
+                  loadAll()
                 } else showToast('Error: '+(d.error||'Unknown'))
-              }} style={{padding:'0.78rem 1.25rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',flexShrink:0}}>Guardar</button>
+              }} style={{flex:1,padding:'0.78rem 1.25rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase'}}>Guardar costo por unidad</button>
             </div>
             <CostHistorial productId={editCost.id}/>
             <button onClick={()=>setModal(null)} style={{width:'100%',background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer',marginTop:'0.5rem'}}>Cerrar</button>
