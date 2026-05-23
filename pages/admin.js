@@ -667,6 +667,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const [showAdd, setShowAdd] = useState(false)
   const [addForm, setAddForm] = useState({name:'',description:'',category:'Galleta',price:''})
   const [estimadoId, setEstimadoId] = useState(null)
+  const [estimadoYield, setEstimadoYield] = useState(1)
   const [savingEst, setSavingEst] = useState(false)
   const [addingCat, setAddingCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
@@ -706,6 +707,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
 
   function getPrice(item){return item.catalog_prices?.find(p=>p.active)?.amount??item.price??null}
   function getCost(item){const c=item.catalog_costs?.cost;return c!=null?parseFloat(c):null}
+  function getStock(item){const s=Array.isArray(item.product_stock)?item.product_stock[0]:item.product_stock;return s?.qty!=null?parseFloat(s.qty):null}
   function getMargin(item){const p=getPrice(item),c=getCost(item);if(!p||c===null)return null;return Math.round(((p-c)/p)*100)}
   function mc(m){return m>=60?'#2d8a60':m>=40?or:'#c0392b'}
 
@@ -721,10 +723,10 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
     })
   }
 
-  async function saveEstimado(itemId,total){
+  async function saveEstimado(itemId,costPerUnit){
     setSavingEst(true)
-    await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:itemId,cost:total})})
-    showToast('Costo estimado guardado ✓');setEstimadoId(null);setSavingEst(false);loadAll()
+    await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:itemId,cost:costPerUnit})})
+    showToast('Costo por unidad guardado ✓');setEstimadoId(null);setSavingEst(false);setEstimadoYield(1);loadAll()
   }
 
   const archivedCatalog = realCatalog.filter(i => i.active === false)
@@ -745,7 +747,10 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   }
 
   async function saveEdit(id){
-    await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:id,...editForm})})
+    const {stock,...rest}=editForm
+    const payload={product_id:id,...rest}
+    if(stock!==''&&stock!==undefined)payload.stock=stock
+    await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     showToast('Actualizado ✓');setEditingId(null);loadAll()
   }
 
@@ -885,7 +890,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
       {/* Products list */}
       <div style={{background:cr,borderRadius:12,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}>
         {filtered.map((item,i)=>{
-          const price=getPrice(item), cost=getCost(item), margin=getMargin(item)
+          const price=getPrice(item), cost=getCost(item), margin=getMargin(item), stock=getStock(item)
           const isEditing=editingId===item.id
           return (
             <div key={item.id} style={{borderBottom:i<filtered.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
@@ -900,6 +905,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                     {item.badge_agotado&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(192,57,43,0.12)',color:'#c0392b'}}>Agotado</span>}
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:'0.45rem',flexWrap:'wrap'}}>
+                    {stock!==null&&<span style={{fontSize:'0.62rem',color:mu}}>Disponible: <strong style={{color:ink}}>{stock}</strong> uds ·</span>}
                     <span style={{fontSize:'0.68rem',color:ink,fontWeight:600}}>{price?`$${parseFloat(price).toFixed(2)}`:'—'}</span>
                     {cost!==null&&<span style={{fontSize:'0.6rem',color:mu}}>· costo ${cost.toFixed(2)}</span>}
                     {margin!==null&&<span style={{fontSize:'0.6rem',color:mc(margin),fontWeight:600}}>· {margin}%</span>}
@@ -909,7 +915,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                 {/* Actions */}
                 <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
                   {!showArchived&&(
-                    <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||''})}}
+                    <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||'',stock:stock!=null?String(stock):''})}}
                       style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:isEditing?'rgba(227,90,27,0.1)':'rgba(31,20,14,0.06)',color:isEditing?or:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
                       {isEditing?'Cerrar':'Editar'}
                     </button>
@@ -942,11 +948,13 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
               {/* Estimado breakdown */}
               {estimadoId===item.id&&(()=>{
                 const lines=calcEstimado(item)
-                const total=lines.reduce((s,l)=>s+l.cost,0)
+                const totalReceta=lines.reduce((s,l)=>s+l.cost,0)
+                const yld=parseFloat(estimadoYield)||1
+                const costPerUnit=totalReceta/yld
                 const missingPrice=lines.some(l=>!l.hasCpu)
                 return(
                   <div style={{padding:'0.75rem 1.1rem',background:'rgba(45,138,96,0.03)',borderTop:'1px solid rgba(45,138,96,0.12)'}}>
-                    <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#2d8a60',marginBottom:'0.5rem',fontWeight:600}}>Estimado — basado en último precio de compra</div>
+                    <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:'#2d8a60',marginBottom:'0.5rem',fontWeight:600}}>Estimado — costo por unidad basado en último precio de compra</div>
                     {lines.length===0&&<div style={{fontSize:'0.7rem',color:mu,fontStyle:'italic'}}>No hay ingredientes en la receta. Añádelos desde "Editar".</div>}
                     {lines.map((l,i)=>(
                       <div key={i} style={{display:'flex',alignItems:'center',gap:'0.5rem',padding:'0.25rem 0',borderBottom:'1px solid rgba(31,20,14,0.04)'}}>
@@ -960,25 +968,37 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                         </span>
                       </div>
                     ))}
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:'0.6rem',paddingTop:'0.5rem',borderTop:'2px solid rgba(45,138,96,0.15)'}}>
-                      <div>
-                        <div style={{fontFamily:ffS,fontSize:'1.1rem',color:'#2d8a60'}}>Total estimado: <strong>${total.toFixed(3)}</strong></div>
-                        {missingPrice&&<div style={{fontSize:'0.58rem',color:'#c0392b',marginTop:'0.2rem'}}>⚠ Algunos ingredientes no tienen precio de compra registrado</div>}
+                    {lines.length>0&&(
+                      <div style={{marginTop:'0.75rem',padding:'0.75rem',background:'rgba(45,138,96,0.06)',borderRadius:8,border:'1px solid rgba(45,138,96,0.15)'}}>
+                        <div style={{display:'flex',alignItems:'center',gap:'0.75rem',flexWrap:'wrap',marginBottom:'0.5rem'}}>
+                          <span style={{fontSize:'0.62rem',color:mu}}>Costo total de la receta: <strong style={{color:ink}}>${totalReceta.toFixed(3)}</strong></span>
+                          <span style={{fontSize:'0.62rem',color:mu}}>÷</span>
+                          <div style={{display:'flex',alignItems:'center',gap:'0.35rem'}}>
+                            <input type="number" min="1" step="1" value={estimadoYield}
+                              onChange={e=>setEstimadoYield(e.target.value)}
+                              style={{width:60,padding:'0.3rem 0.5rem',border:'1px solid rgba(45,138,96,0.3)',borderRadius:5,fontFamily:ff,fontSize:'0.75rem',outline:'none',textAlign:'center'}}/>
+                            <span style={{fontSize:'0.62rem',color:mu}}>unidades por receta</span>
+                          </div>
+                          <span style={{fontSize:'0.62rem',color:mu}}>=</span>
+                          <span style={{fontFamily:ffS,fontSize:'1.1rem',color:'#2d8a60',fontWeight:600}}>${costPerUnit.toFixed(3)} <span style={{fontSize:'0.62rem',fontFamily:ff,fontWeight:400,color:mu}}>por unidad</span></span>
+                        </div>
+                        {missingPrice&&<div style={{fontSize:'0.58rem',color:'#c0392b'}}>⚠ Algunos ingredientes no tienen precio de compra registrado</div>}
+                        <button onClick={()=>saveEstimado(item.id,costPerUnit)} disabled={savingEst||totalReceta===0}
+                          style={{marginTop:'0.5rem',padding:'0.5rem 1.25rem',background:'#2d8a60',color:'white',border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.62rem',fontWeight:600,cursor:totalReceta>0?'pointer':'not-allowed',opacity:(savingEst||totalReceta===0)?0.5:1}}>
+                          {savingEst?'Guardando…':'Guardar costo por unidad →'}
+                        </button>
                       </div>
-                      <button onClick={()=>saveEstimado(item.id,total)} disabled={savingEst||total===0}
-                        style={{padding:'0.5rem 1rem',background:'#2d8a60',color:'white',border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.62rem',fontWeight:600,cursor:total>0?'pointer':'not-allowed',opacity:(savingEst||total===0)?0.5:1}}>
-                        {savingEst?'Guardando…':'Guardar como costo'}
-                      </button>
-                    </div>
+                    )}
                   </div>
                 )
               })()}
               {/* Inline edit */}
               {isEditing&&(
                 <div style={{padding:'0.75rem 1.1rem 1rem',background:'rgba(227,90,27,0.025)',borderTop:'1px solid rgba(227,90,27,0.1)'}}>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.5rem',marginBottom:'0.5rem'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:'0.5rem',marginBottom:'0.5rem'}}>
                     <div><div style={flbl}>Nombre</div><input value={editForm.name} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
                     <div><div style={flbl}>Precio ($)</div><input type="number" step="0.01" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
+                    <div><div style={flbl}>Disponibles</div><input type="number" min="0" step="1" placeholder="0" value={editForm.stock||''} onChange={e=>setEditForm(f=>({...f,stock:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.5rem',marginBottom:'0.75rem'}}>
                     <div style={{position:'relative'}}>
@@ -990,7 +1010,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                         style={{...finp,marginBottom:0}}/>
                       {catDropEdit&&(
                         <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
-                          {allCats.filter(c=>c!=='Todos'&&c.toLowerCase().includes((editForm.category||'').toLowerCase())).map(c=>(
+                          {allCats.filter(c=>c!=='Todos').map(c=>(
                             <button key={c} type="button" onMouseDown={()=>{setEditForm(f=>({...f,category:c}));setCatDropEdit(false)}}
                               style={{display:'block',width:'100%',padding:'0.5rem 0.75rem',background:editForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.75rem',color:ink}}>
                               {c}

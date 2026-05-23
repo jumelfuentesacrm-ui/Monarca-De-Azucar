@@ -13,7 +13,8 @@ export default async function handler(req, res) {
         id, name, description, category, active, created_at, updated_at,
         badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price,
         catalog_prices ( id, amount, currency, interval, active ),
-        catalog_costs ( id, cost, notes, suppliers, updated_at )
+        catalog_costs ( id, cost, notes, suppliers, updated_at ),
+        product_stock ( qty )
       `)
       .order('name')
     if (error) return res.status(500).json({ error: error.message })
@@ -43,8 +44,19 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PATCH') {
-    const { product_id, cost, notes, suppliers, active, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price, name, description, category } = req.body
+    const { product_id, cost, notes, suppliers, active, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price, name, description, category, stock } = req.body
     if (!product_id) return res.status(400).json({ error: 'product_id required' })
+
+    // Update product stock
+    if (stock !== undefined) {
+      const qty = parseFloat(stock) || 0
+      const { data: existingStock } = await supabase.from('product_stock').select('id').eq('catalog_item_id', product_id).single()
+      if (existingStock) {
+        await supabase.from('product_stock').update({ qty }).eq('catalog_item_id', product_id)
+      } else {
+        await supabase.from('product_stock').insert({ catalog_item_id: product_id, qty })
+      }
+    }
 
     // Update cost record
     if (cost !== undefined || notes !== undefined || suppliers !== undefined) {
