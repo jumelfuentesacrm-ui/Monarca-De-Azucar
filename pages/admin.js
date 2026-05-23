@@ -606,25 +606,52 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
       )}
 
       {adding&&(
-        <div style={{display:'flex',gap:'0.5rem',marginTop:'0.5rem',flexWrap:'wrap'}}>
+        <div style={{marginTop:'0.5rem',padding:'0.5rem',background:'rgba(31,20,14,0.03)',borderRadius:6,border:'1px solid rgba(31,20,14,0.08)'}}>
+          {/* 1. Ingredient */}
           <select value={form.supply_id} onChange={e=>setForm(f=>({...f,supply_id:e.target.value}))}
-            style={{flex:2,minWidth:120,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}>
+            style={{width:'100%',marginBottom:'0.4rem',padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none',boxSizing:'border-box'}}>
             <option value="">Ingrediente...</option>
-            {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque'].map(cat=>(
-              <optgroup key={cat} label={cat}>
-                {(supplies||[]).filter(s=>s.category===cat).map(s=>(
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </optgroup>
+            {(()=>{
+              const cats=['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque']
+              const uncategorized=(supplies||[]).filter(s=>!cats.includes(s.category))
+              return[...cats.map(cat=>{
+                const items=(supplies||[]).filter(s=>s.category===cat)
+                return items.length?<optgroup key={cat} label={cat}>{items.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</optgroup>:null
+              }).filter(Boolean),uncategorized.length?<optgroup key="Otros" label="Otros">{uncategorized.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</optgroup>:null].filter(Boolean)
+            })()}
+          </select>
+          {/* 2. Unit */}
+          <div style={{display:'flex',gap:'0.4rem',marginBottom:'0.4rem'}}>
+            <select value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value,quantity:''}))}
+              style={{flex:1,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}>
+              <optgroup label="Peso">{['g','kg','oz','lb'].map(u=><option key={u} value={u}>{u}</option>)}</optgroup>
+              <optgroup label="Volumen">{['ml','l','tsp','tbsp','cup','fl oz'].map(u=><option key={u} value={u}>{u}</option>)}</optgroup>
+              <optgroup label="Otros">{['pinch','dash','unit'].map(u=><option key={u} value={u}>{u}</option>)}</optgroup>
+            </select>
+            <input type="number" placeholder="cant." value={form.quantity} onChange={e=>setForm(f=>({...f,quantity:e.target.value}))}
+              style={{width:65,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}/>
+          </div>
+          {/* 3. Fraction quick-picks */}
+          <div style={{display:'flex',gap:'0.25rem',flexWrap:'wrap',marginBottom:'0.5rem'}}>
+            {[['⅛','0.125'],['¼','0.25'],['⅓','0.333'],['½','0.5'],['⅔','0.667'],['¾','0.75'],['1','1'],['1½','1.5'],['2','2'],['3','3'],['4','4'],['5','5']].map(([label,val])=>(
+              <button key={label} type="button" onClick={()=>setForm(f=>({...f,quantity:val}))}
+                style={{padding:'0.2rem 0.5rem',borderRadius:4,border:'1px solid rgba(31,20,14,0.12)',
+                  background:form.quantity===val?ink:'rgba(31,20,14,0.04)',
+                  color:form.quantity===val?white:ink,
+                  fontSize:'0.72rem',cursor:'pointer',fontFamily:ff,lineHeight:1.2}}>
+                {label}
+              </button>
             ))}
-          </select>
-          <input type="number" placeholder="Cantidad" value={form.quantity} onChange={e=>setForm(f=>({...f,quantity:e.target.value}))}
-            style={{width:70,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}/>
-          <select value={form.unit} onChange={e=>setForm(f=>({...f,unit:e.target.value}))}
-            style={{width:80,padding:'0.4rem 0.5rem',border:'1px solid rgba(31,20,14,0.15)',borderRadius:4,fontFamily:ff,fontSize:'0.72rem',outline:'none'}}>
-            {['g','kg','oz','lb','ml','l','tsp','tbsp','cup','fl oz','pinch','dash','unit'].map(u=><option key={u} value={u}>{u}</option>)}
-          </select>
-          <button onClick={addIngredient} style={{padding:'0.4rem 0.75rem',background:ink,color:white,border:'none',borderRadius:4,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>OK</button>
+          </div>
+          {/* 4. Preview + OK */}
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span style={{fontSize:'0.65rem',color:mu}}>
+              {form.quantity&&form.unit?`${form.quantity} ${form.unit}`:'—'}
+            </span>
+            <button onClick={addIngredient} style={{padding:'0.35rem 0.85rem',background:ink,color:white,border:'none',borderRadius:4,fontFamily:ff,fontSize:'0.65rem',cursor:'pointer'}}>
+              Añadir
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -794,19 +821,14 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
           </div>
         ))}
         {addingCat?(
-          <div style={{display:'flex',alignItems:'center',gap:'0.3rem'}}>
-            <input autoFocus value={newCatName} onChange={e=>setNewCatName(e.target.value)}
-              onKeyDown={e=>{
-                if(e.key==='Enter'&&newCatName.trim()){addExtraCat(newCatName.trim());setNewCatName('');setAddingCat(false)}
-                if(e.key==='Escape'){setNewCatName('');setAddingCat(false)}
-              }}
-              placeholder="Nombre de categoría..."
-              style={{padding:'0.25rem 0.6rem',border:'1px solid rgba(31,20,14,0.2)',borderRadius:6,fontFamily:ff,fontSize:'0.63rem',outline:'none',width:150}}/>
-            <button onClick={()=>{if(newCatName.trim()){addExtraCat(newCatName.trim());setNewCatName('');setAddingCat(false)}}}
-              style={{padding:'0.25rem 0.6rem',background:ink,color:white,border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.6rem',cursor:'pointer'}}>OK</button>
-            <button onClick={()=>{setNewCatName('');setAddingCat(false)}}
-              style={{padding:'0.25rem 0.5rem',background:'transparent',color:mu,border:'none',fontSize:'0.65rem',cursor:'pointer'}}>✕</button>
-          </div>
+          <input autoFocus value={newCatName} onChange={e=>setNewCatName(e.target.value)}
+            onKeyDown={e=>{
+              if(e.key==='Enter'){const v=newCatName.trim();if(v)addExtraCat(v);setNewCatName('');setAddingCat(false)}
+              if(e.key==='Escape'){setNewCatName('');setAddingCat(false)}
+            }}
+            onBlur={()=>{const v=newCatName.trim();if(v)addExtraCat(v);setNewCatName('');setAddingCat(false)}}
+            placeholder="Nombre... (Enter o clic afuera)"
+            style={{padding:'0.25rem 0.6rem',border:'1px solid rgba(31,20,14,0.25)',borderRadius:6,fontFamily:ff,fontSize:'0.63rem',outline:'none',width:170}}/>
         ):(
           <button onClick={()=>setAddingCat(true)}
             style={{padding:'0.3rem 0.75rem',borderRadius:999,border:'1px dashed rgba(31,20,14,0.2)',fontSize:'0.63rem',cursor:'pointer',background:'transparent',color:mu,fontFamily:ff}}>
