@@ -668,7 +668,6 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const [addForm, setAddForm] = useState({name:'',description:'',category:'Galleta',price:''})
   const [estimadoId, setEstimadoId] = useState(null)
   const [savingEst, setSavingEst] = useState(false)
-  const [extraCats, setExtraCats] = useState([])
   const [addingCat, setAddingCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
@@ -676,19 +675,31 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const finp={width:'100%',padding:'0.5rem 0.75rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}
   const flbl={fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:mu,marginBottom:'0.2rem'}
 
-  React.useEffect(()=>{
-    try{const s=localStorage.getItem('catalog_extra_cats');if(s)setExtraCats(JSON.parse(s))}catch{}
-  },[])
+  const CAT_PLACEHOLDER = '__cat_placeholder__'
+  const isPlaceholder = i => i.description === CAT_PLACEHOLDER
 
-  function addExtraCat(name){
-    setExtraCats(prev=>{const next=[...new Set([...prev,name])];localStorage.setItem('catalog_extra_cats',JSON.stringify(next));return next})
+  async function addExtraCat(name) {
+    if (!name.trim()) return
+    const res = await fetch('/api/admin/catalog', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: '__cat__'+name.trim(), category: name.trim(), active: false, description: CAT_PLACEHOLDER })
+    })
+    if (res.ok) { showToast('Categoría "'+name.trim()+'" añadida ✓'); loadAll() }
+    else showToast('Error al guardar categoría')
   }
-  function removeExtraCat(name){
-    setExtraCats(prev=>{const next=prev.filter(x=>x!==name);localStorage.setItem('catalog_extra_cats',JSON.stringify(next));return next})
+  async function removeExtraCat(name) {
+    const placeholder = (catalog||[]).find(i => isPlaceholder(i) && i.category === name)
+    if (placeholder) {
+      await fetch('/api/admin/catalog', {
+        method: 'DELETE', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ product_id: placeholder.id })
+      })
+    }
+    loadAll()
   }
 
-  const derivedCats = [...new Set((catalog||[]).map(i=>i.category||'Galleta'))].sort((a,b)=>a.localeCompare(b,'es'))
-  const allCats = ['Todos',...new Set([...derivedCats,...extraCats])]
+  const realCatalog = (catalog||[]).filter(i => !isPlaceholder(i))
+  const allCats = ['Todos',...[...new Set((catalog||[]).map(i=>i.category||'Galleta'))].sort((a,b)=>a.localeCompare(b,'es'))]
 
   function getPrice(item){return item.catalog_prices?.find(p=>p.active)?.amount??item.price??null}
   function getCost(item){const c=item.catalog_costs?.cost;return c!=null?parseFloat(c):null}
@@ -713,12 +724,12 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
     showToast('Costo estimado guardado ✓');setEstimadoId(null);setSavingEst(false);loadAll()
   }
 
-  const filtered=(catalog||[])
+  const filtered=realCatalog
     .filter(i=>filter==='Todos'||(i.category||'Galleta')===filter)
     .filter(i=>!search||i.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a,b)=>a.name.localeCompare(b.name,'es'))
 
-  const withMargin=(catalog||[]).map(i=>({...i,_m:getMargin(i)})).filter(i=>i._m!==null).sort((a,b)=>b._m-a._m)
+  const withMargin=realCatalog.map(i=>({...i,_m:getMargin(i)})).filter(i=>i._m!==null).sort((a,b)=>b._m-a._m)
 
   async function addProduct(){
     if(!addForm.name){showToast('Nombre requerido');return}
@@ -747,7 +758,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
     <div>
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem',gap:'0.75rem',flexWrap:'wrap'}}>
-        <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Catálogo <span style={{fontSize:'0.6rem',color:mu,fontFamily:ff,fontWeight:400,letterSpacing:'0.08em'}}>{(catalog||[]).length} productos</span></div>
+        <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>Catálogo <span style={{fontSize:'0.6rem',color:mu,fontFamily:ff,fontWeight:400,letterSpacing:'0.08em'}}>{realCatalog.length} productos</span></div>
         <button onClick={()=>setShowAdd(s=>!s)} style={{background:ink,color:'#FBF7EE',border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer'}}>
           {showAdd?'Cancelar':'+ Añadir producto'}
         </button>
@@ -807,7 +818,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
             </button>
             {c!=='Todos'&&(
               <button title={`Eliminar categoría "${c}"`} onClick={()=>{
-                const count=(catalog||[]).filter(i=>(i.category||'Galleta')===c).length
+                const count=realCatalog.filter(i=>(i.category||'Galleta')===c).length
                 if(count>0){showToast(`"${c}" tiene ${count} producto(s) — cámbiales la categoría primero`);return}
                 removeExtraCat(c)
                 if(filter===c) setFilter('Todos')
@@ -821,14 +832,19 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
           </div>
         ))}
         {addingCat?(
-          <input autoFocus value={newCatName} onChange={e=>setNewCatName(e.target.value)}
-            onKeyDown={e=>{
-              if(e.key==='Enter'){const v=newCatName.trim();if(v)addExtraCat(v);setNewCatName('');setAddingCat(false)}
-              if(e.key==='Escape'){setNewCatName('');setAddingCat(false)}
-            }}
-            onBlur={()=>{const v=newCatName.trim();if(v)addExtraCat(v);setNewCatName('');setAddingCat(false)}}
-            placeholder="Nombre... (Enter o clic afuera)"
-            style={{padding:'0.25rem 0.6rem',border:'1px solid rgba(31,20,14,0.25)',borderRadius:6,fontFamily:ff,fontSize:'0.63rem',outline:'none',width:170}}/>
+          <div style={{display:'flex',gap:'0.3rem',alignItems:'center'}}>
+            <input autoFocus value={newCatName} onChange={e=>setNewCatName(e.target.value)}
+              onKeyDown={async e=>{
+                if(e.key==='Enter'){const v=newCatName.trim();setNewCatName('');setAddingCat(false);if(v)await addExtraCat(v)}
+                if(e.key==='Escape'){setNewCatName('');setAddingCat(false)}
+              }}
+              placeholder="Nombre de categoría..."
+              style={{padding:'0.25rem 0.6rem',border:'1px solid rgba(227,90,27,0.4)',borderRadius:6,fontFamily:ff,fontSize:'0.63rem',outline:'none',width:160}}/>
+            <button type="button" onClick={async()=>{const v=newCatName.trim();setNewCatName('');setAddingCat(false);if(v)await addExtraCat(v)}}
+              style={{padding:'0.25rem 0.65rem',borderRadius:6,background:or,color:white,border:'none',cursor:'pointer',fontFamily:ff,fontSize:'0.63rem',fontWeight:600,flexShrink:0}}>
+              ✓
+            </button>
+          </div>
         ):(
           <button onClick={()=>setAddingCat(true)}
             style={{padding:'0.3rem 0.75rem',borderRadius:999,border:'1px dashed rgba(31,20,14,0.2)',fontSize:'0.63rem',cursor:'pointer',background:'transparent',color:mu,fontFamily:ff}}>
