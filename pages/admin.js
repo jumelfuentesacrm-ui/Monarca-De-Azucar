@@ -3005,8 +3005,20 @@ function PurchaseModal({ supplies, onClose, onSuccess, showToast, initialSupplyI
               </optgroup>
             ))}
           </select>
+          <label style={lbl}>Cantidad comprada</label>
+          <div style={{display:'flex',gap:'0.25rem',flexWrap:'wrap',marginBottom:'0.4rem'}}>
+            {[['⅛','0.125'],['¼','0.25'],['⅓','0.333'],['½','0.5'],['⅔','0.667'],['¾','0.75'],['1','1'],['1½','1.5'],['2','2'],['3','3'],['4','4'],['5','5']].map(([label,val])=>(
+              <button key={label} type="button" onClick={()=>setQty(val)}
+                style={{padding:'0.2rem 0.5rem',borderRadius:4,border:'1px solid rgba(31,20,14,0.12)',
+                  background:qty===val?ink:'rgba(31,20,14,0.04)',
+                  color:qty===val?white:ink,
+                  fontSize:'0.72rem',cursor:'pointer',fontFamily:ff,lineHeight:1.2}}>
+                {label}
+              </button>
+            ))}
+          </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'1rem'}}>
-            <div><label style={lbl}>Cantidad comprada</label><input type="number" min="0" step="0.01" placeholder="0" value={qty} onChange={e=>setQty(e.target.value)} style={{...inp,marginBottom:0}}/></div>
+            <div><input type="number" min="0" step="0.01" placeholder="0" value={qty} onChange={e=>setQty(e.target.value)} style={{...inp,marginBottom:0}}/></div>
             <div><label style={lbl}>Unidad</label><select value={unit} onChange={e=>setUnit(e.target.value)} style={{...inp,marginBottom:0}}>{UNITS.map(u=><option key={u} value={u}>{u}</option>)}</select></div>
           </div>
           <label style={lbl}>Precio total pagado ($)</label>
@@ -3192,7 +3204,7 @@ export default function Admin({session}){
   const [allUsers,setAllUsers]=useState([])
   const [supplies,setSupplies]=useState([])
   const [supplyModal,setSupplyModal]=useState(null) // null | 'add' | supply object
-  const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:'',stock_qty:''})
+  const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:'',stock_qty:'',purchase_qty:'',purchase_unit:'',purchase_price:''})
   const [rewardCard,setPremioCard]=useState(null) // card for inline reward modal
   const [expenseForm,setGastoForm]=useState({amount:'',description:'',date:new Date().toISOString().split('T')[0]})
 
@@ -3477,8 +3489,8 @@ export default function Admin({session}){
             {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:'',units:'1',notes:item.catalog_costs?.notes||'',_savedCost:item.catalog_costs?.cost||null});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}} showToast={showToast} loadAll={loadAll}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog} onCompra={()=>setShowPurchase(true)} onCompraItem={(id)=>{setPurchaseSupplyId(id);setShowPurchase(true)}}
-              onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:'',stock_qty:''});setSupplyModal('add')}}
-              onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,base_unit:s.base_unit||'g',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||'',stock_qty:''});setSupplyModal(s)}}
+              onAdd={()=>{setSupplyForm({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:'',stock_qty:'',purchase_qty:'',purchase_unit:'',purchase_price:''});setSupplyModal('add')}}
+              onEditar={(s)=>{setSupplyForm({name:s.name,category:s.category||'',cost:s.cost,base_unit:s.base_unit||'g',provider:s.provider||'',renewal_date:s.renewal_date||'',notes:s.notes||'',stock_qty:'',purchase_qty:'',purchase_unit:s.base_unit||'g',purchase_price:''});setSupplyModal(s)}}
               onEliminar={async(id)=>{if(!confirm('Eliminar this supply?'))return;await fetch('/api/admin/supplies',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});showToast('Supply deleted');loadAll()}}
               showToast={showToast}
             />}
@@ -3969,12 +3981,8 @@ export default function Admin({session}){
                 </div>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginTop:'1rem'}}>
-                <div>
-                  <label style={lbl}>Precio total ($)</label>
-                  <input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={supplyForm.cost} onChange={e=>setSupplyForm(f=>({...f,cost:e.target.value}))}/>
-                </div>
-                <div>
-                  <label style={lbl}>Unidad de medida</label>
+                <div style={{gridColumn:'1/-1'}}>
+                  <label style={lbl}>Unidad base del ingrediente</label>
                   <select style={{...inp,marginBottom:0}} value={supplyForm.base_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,base_unit:e.target.value}))}>
                     <optgroup label="Peso">
                       <option value="g">g — gramo</option>
@@ -4002,6 +4010,49 @@ export default function Admin({session}){
               </div>
               <label style={lbl}>Notas (opcional)</label>
               <input style={inp} type="text" placeholder="Marca, notas de compra..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
+              {/* ── Registrar compra ── */}
+              <div style={{marginTop:'1rem',padding:'0.85rem',background:'rgba(227,90,27,0.04)',borderRadius:8,border:'1px solid rgba(227,90,27,0.12)'}}>
+                <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:or,marginBottom:'0.75rem',fontFamily:ff}}>Registrar compra (opcional)</div>
+                <label style={lbl}>Cantidad comprada</label>
+                <div style={{display:'flex',gap:'0.25rem',flexWrap:'wrap',marginBottom:'0.4rem'}}>
+                  {[['⅛','0.125'],['¼','0.25'],['⅓','0.333'],['½','0.5'],['⅔','0.667'],['¾','0.75'],['1','1'],['1½','1.5'],['2','2'],['3','3'],['4','4'],['5','5']].map(([label,val])=>(
+                    <button key={label} type="button" onClick={()=>setSupplyForm(f=>({...f,purchase_qty:val}))}
+                      style={{padding:'0.2rem 0.5rem',borderRadius:4,border:'1px solid rgba(31,20,14,0.12)',
+                        background:supplyForm.purchase_qty===val?black:'rgba(31,20,14,0.04)',
+                        color:supplyForm.purchase_qty===val?white:black,
+                        fontSize:'0.72rem',cursor:'pointer',fontFamily:ff,lineHeight:1.2}}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
+                  <div>
+                    <input style={{...inp,marginBottom:0}} type="number" min="0" step="0.01" placeholder="0"
+                      value={supplyForm.purchase_qty} onChange={e=>setSupplyForm(f=>({...f,purchase_qty:e.target.value}))}/>
+                  </div>
+                  <div>
+                    <select style={{...inp,marginBottom:0}} value={supplyForm.purchase_unit||supplyForm.base_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,purchase_unit:e.target.value}))}>
+                      <optgroup label="Peso">
+                        <option value="g">g</option><option value="kg">kg</option><option value="oz">oz</option><option value="lb">lb</option>
+                      </optgroup>
+                      <optgroup label="Volumen">
+                        <option value="ml">ml</option><option value="l">l</option><option value="tsp">tsp</option><option value="tbsp">tbsp</option><option value="cup">cup</option><option value="fl oz">fl oz</option>
+                      </optgroup>
+                      <optgroup label="Otros">
+                        <option value="unit">unit</option>
+                      </optgroup>
+                    </select>
+                  </div>
+                </div>
+                <label style={lbl}>Precio total pagado ($)</label>
+                <input style={{...inp,marginBottom:'0.4rem'}} type="number" min="0" step="0.01" placeholder="0.00"
+                  value={supplyForm.purchase_price} onChange={e=>setSupplyForm(f=>({...f,purchase_price:e.target.value}))}/>
+                {supplyForm.purchase_qty&&supplyForm.purchase_price&&(
+                  <div style={{fontSize:'0.6rem',color:or}}>
+                    ${(parseFloat(supplyForm.purchase_price)/parseFloat(supplyForm.purchase_qty)).toFixed(4)} / {supplyForm.purchase_unit||supplyForm.base_unit||'g'}
+                  </div>
+                )}
+              </div>
               {supplyModal!=='add'&&(
                 <div style={{marginTop:'0.75rem',padding:'0.85rem',background:'rgba(31,20,14,0.03)',borderRadius:8,border:'1px solid rgba(31,20,14,0.08)'}}>
                   <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.4rem'}}>Ajuste manual de stock</div>
@@ -4020,15 +4071,24 @@ export default function Admin({session}){
               )}
               <div style={{display:'flex',gap:'0.75rem',marginTop:'0.75rem'}}>
                 <button onClick={async()=>{
-                  if(!supplyForm.name||!supplyForm.cost){showToast('Nombre y costo requeridos');return}
+                  if(!supplyForm.name){showToast('Nombre requerido');return}
+                  const hasPurchase=supplyForm.purchase_qty&&supplyForm.purchase_price
+                  let supplyId=null
                   if(supplyModal==='add'){
-                    await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(supplyForm)})
+                    const res=await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(supplyForm)})
+                    const data=await res.json()
+                    supplyId=data?.id||data?.[0]?.id
                     showToast('Ingrediente añadido ✓')
                   } else {
+                    supplyId=supplyModal.id
                     const payload={id:supplyModal.id,name:supplyForm.name,category:supplyForm.category,cost:supplyForm.cost,base_unit:supplyForm.base_unit,provider:supplyForm.provider,renewal_date:supplyForm.renewal_date,notes:supplyForm.notes}
                     if(supplyForm.stock_qty!==''&&supplyForm.stock_qty!==undefined)payload.stock_qty=supplyForm.stock_qty
                     await fetch('/api/admin/supplies',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
                     showToast('Ingrediente actualizado ✓')
+                  }
+                  if(hasPurchase&&supplyId){
+                    await fetch('/api/admin/purchases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({supply_id:supplyId,qty:parseFloat(supplyForm.purchase_qty),unit:supplyForm.purchase_unit||supplyForm.base_unit||'g',price_total:parseFloat(supplyForm.purchase_price)})})
+                    showToast('Compra registrada ✓')
                   }
                   setSupplyModal(null);loadAll()
                 }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar</button>
