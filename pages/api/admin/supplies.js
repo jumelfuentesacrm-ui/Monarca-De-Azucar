@@ -47,11 +47,12 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     const { name, category, cost, base_unit, provider, renewal_date, notes } = req.body
-    if (!name || cost === undefined) return res.status(400).json({ error: 'name and cost required' })
+    if (!name) return res.status(400).json({ error: 'name required' })
+    const costVal = (cost !== undefined && cost !== '' && cost !== null) ? parseFloat(cost) : 0
     const { data, error } = await supabaseAdmin.from('supplies').insert({
       name,
       category: category || null,
-      cost: parseFloat(cost),
+      cost: costVal,
       base_unit: base_unit || 'g',
       provider: provider || null,
       renewal_date: renewal_date || null,
@@ -59,7 +60,7 @@ export default async function handler(req, res) {
       active: true,
     }).select().single()
     if (error) return res.status(500).json({ error: error.message })
-    await supabaseAdmin.from('supply_cost_history').insert({ supply_id: data.id, cost: parseFloat(cost) })
+    if (costVal > 0) await supabaseAdmin.from('supply_cost_history').insert({ supply_id: data.id, cost: costVal }).catch(()=>{})
     return res.status(200).json({ supply: data })
   }
 

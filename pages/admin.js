@@ -3249,6 +3249,7 @@ export default function Admin({session}){
   const [allUsers,setAllUsers]=useState([])
   const [supplies,setSupplies]=useState([])
   const [supplyModal,setSupplyModal]=useState(null) // null | 'add' | supply object
+  const [catDropOpen,setCatDropOpen]=useState(false)
   const [supplyForm,setSupplyForm]=useState({name:'',category:'',cost:'',base_unit:'g',provider:'',renewal_date:'',notes:'',stock_qty:'',purchase_qty:'',purchase_unit:'',purchase_price:''})
   const [rewardCard,setPremioCard]=useState(null) // card for inline reward modal
   const [expenseForm,setGastoForm]=useState({amount:'',description:'',date:new Date().toISOString().split('T')[0]})
@@ -4067,12 +4068,37 @@ export default function Admin({session}){
 
                   {/* Categoría + Proveedor */}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
-                    <div>
+                    <div style={{position:'relative'}}>
                       <label style={lbl}>Categoría</label>
-                      <input style={{...inp,marginBottom:0}} list="supply-categories" type="text" placeholder="Secos, Lácteos..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
-                      <datalist id="supply-categories">
-                        {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros'].map(c=><option key={c} value={c}/>)}
-                      </datalist>
+                      {(()=>{
+                        const SUPPLY_CATS=['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
+                        const q=(supplyForm.category||'').toLowerCase()
+                        const filtered=SUPPLY_CATS.filter(c=>c.toLowerCase().includes(q))
+                        const exact=SUPPLY_CATS.some(c=>c.toLowerCase()===q)
+                        return(<>
+                          <input style={{...inp,marginBottom:0}} type="text" placeholder="Secos, Lácteos..."
+                            value={supplyForm.category}
+                            onFocus={()=>setCatDropOpen(true)}
+                            onBlur={()=>setTimeout(()=>setCatDropOpen(false),150)}
+                            onChange={e=>{setSupplyForm(f=>({...f,category:e.target.value}));setCatDropOpen(true)}}/>
+                          {catDropOpen&&(
+                            <div style={{position:'absolute',top:'100%',left:0,right:0,background:white,border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
+                              {filtered.map(c=>(
+                                <button key={c} type="button" onMouseDown={()=>{setSupplyForm(f=>({...f,category:c}));setCatDropOpen(false)}}
+                                  style={{display:'block',width:'100%',padding:'0.55rem 0.85rem',background:supplyForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.78rem',color:ink}}>
+                                  {c}
+                                </button>
+                              ))}
+                              {!exact&&supplyForm.category.trim()&&(
+                                <button type="button" onMouseDown={()=>setCatDropOpen(false)}
+                                  style={{display:'flex',alignItems:'center',gap:'0.4rem',width:'100%',padding:'0.6rem 0.85rem',background:'rgba(227,90,27,0.05)',border:'none',borderTop:'1px solid rgba(227,90,27,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600}}>
+                                  <span>+</span> Añadir "<strong>{supplyForm.category.trim()}</strong>"
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </>)
+                      })()}
                     </div>
                     <div>
                       <label style={lbl}>Proveedor</label>
@@ -4094,12 +4120,37 @@ export default function Admin({session}){
                 <>
                   {/* ══ EDIT mode: original layout ══ */}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
-                    <div>
+                    <div style={{position:'relative'}}>
                       <label style={lbl}>Categoría</label>
-                      <input style={{...inp,marginBottom:0}} list="supply-categories-edit" type="text" placeholder="Secos, Lácteos, Empaque..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
-                      <datalist id="supply-categories-edit">
-                        {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros'].map(c=><option key={c} value={c}/>)}
-                      </datalist>
+                      {(()=>{
+                        const SUPPLY_CATS=['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros']
+                        const q=(supplyForm.category||'').toLowerCase()
+                        const filtered=SUPPLY_CATS.filter(c=>c.toLowerCase().includes(q))
+                        const exact=SUPPLY_CATS.some(c=>c.toLowerCase()===q)
+                        return(<>
+                          <input style={{...inp,marginBottom:0}} type="text" placeholder="Secos, Lácteos, Empaque..."
+                            value={supplyForm.category}
+                            onFocus={()=>setCatDropOpen(true)}
+                            onBlur={()=>setTimeout(()=>setCatDropOpen(false),150)}
+                            onChange={e=>{setSupplyForm(f=>({...f,category:e.target.value}));setCatDropOpen(true)}}/>
+                          {catDropOpen&&(
+                            <div style={{position:'absolute',top:'100%',left:0,right:0,background:white,border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
+                              {filtered.map(c=>(
+                                <button key={c} type="button" onMouseDown={()=>{setSupplyForm(f=>({...f,category:c}));setCatDropOpen(false)}}
+                                  style={{display:'block',width:'100%',padding:'0.55rem 0.85rem',background:supplyForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.78rem',color:ink}}>
+                                  {c}
+                                </button>
+                              ))}
+                              {!exact&&supplyForm.category.trim()&&(
+                                <button type="button" onMouseDown={()=>setCatDropOpen(false)}
+                                  style={{display:'flex',alignItems:'center',gap:'0.4rem',width:'100%',padding:'0.6rem 0.85rem',background:'rgba(227,90,27,0.05)',border:'none',borderTop:'1px solid rgba(227,90,27,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600}}>
+                                  <span>+</span> Añadir "<strong>{supplyForm.category.trim()}</strong>"
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </>)
+                      })()}
                     </div>
                     <div>
                       <label style={lbl}>Proveedor</label>
@@ -4208,7 +4259,8 @@ export default function Admin({session}){
                   if(supplyModal==='add'){
                     const res=await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...supplyForm,base_unit:purchaseUnit})})
                     const data=await res.json()
-                    supplyId=data?.id||data?.[0]?.id
+                    if(!res.ok){showToast('Error: '+(data?.error||'No se pudo guardar'));return}
+                    supplyId=data?.supply?.id
                     showToast('Ingrediente añadido ✓')
                   } else {
                     supplyId=supplyModal.id
