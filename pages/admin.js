@@ -3992,135 +3992,221 @@ export default function Admin({session}){
 
         {supplyModal&&(
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setSupplyModal(null)}>
-            <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
+            <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'92vh',overflowY:'auto'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
                 <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>{supplyModal==='add'?'Añadir ingrediente':'Editar ingrediente'}</h3>
-                <button onClick={()=>setSupplyModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
+                <button onClick={()=>setSupplyModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
               </div>
-                            <label style={lbl}>SKUs / Códigos de barras</label>
-              <div style={{display:'flex',gap:'0.5rem',marginBottom:'0.35rem'}}>
-                <input type="text" placeholder="Escribe un SKU y presiona Enter..." style={{...inp,marginBottom:0,flex:1}}
-                  onKeyDown={e=>{if(e.key==='Enter'&&e.target.value.trim()){e.preventDefault();setSupplyForm(f=>({...f,skus:[...(f.skus||[]),e.target.value.trim()]}));e.target.value=''}}}/>
-                <button type="button" onClick={()=>setShowSupplyScanner(true)} style={{padding:'0.6rem 0.85rem',background:black,color:white,border:'none',borderRadius:6,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',flexShrink:0}}>Scan</button>
-              </div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem',marginBottom:'0.75rem'}}>
-                {(supplyForm.skus||[]).map((sku,i)=>(
-                  <span key={i} style={{padding:'0.2rem 0.6rem',background:'rgba(31,20,14,0.06)',borderRadius:999,fontSize:'0.65rem',color:black,display:'flex',alignItems:'center',gap:'0.3rem'}}>
-                    {sku}<button type="button" onClick={()=>setSupplyForm(f=>({...f,skus:f.skus.filter((_,j)=>j!==i)}))} style={{background:'none',border:'none',cursor:'pointer',color:gray,padding:0,lineHeight:1}}>✕</button>
-                  </span>
-                ))}
-              </div>
-<label style={lbl}>Nombre</label>
-              <input style={inp} type="text" placeholder="Harina de trigo, Mantequilla, Leche..." value={supplyForm.name} onChange={e=>setSupplyForm(f=>({...f,name:e.target.value}))}/>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
-                <div>
-                  <label style={lbl}>Categoría</label>
-                  <input style={{...inp,marginBottom:0}} list="supply-categories" type="text" placeholder="Secos, Lácteos, Empaque..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
-                  <datalist id="supply-categories">
-                    {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros'].map(c=><option key={c} value={c}/>)}
-                  </datalist>
-                </div>
-                <div>
-                  <label style={lbl}>Proveedor</label>
-                  <input style={{...inp,marginBottom:0}} type="text" placeholder="Costco, Sam's, Colmado..." value={supplyForm.provider} onChange={e=>setSupplyForm(f=>({...f,provider:e.target.value}))}/>
-                </div>
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginTop:'1rem'}}>
-                <div style={{gridColumn:'1/-1'}}>
-                  <label style={lbl}>Unidad base del ingrediente</label>
-                  <select style={{...inp,marginBottom:0}} value={supplyForm.base_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,base_unit:e.target.value}))}>
-                    <optgroup label="Peso">
-                      <option value="g">g — gramo</option>
-                      <option value="kg">kg — kilogramo</option>
-                      <option value="oz">oz — onza</option>
-                      <option value="lb">lb — libra</option>
-                    </optgroup>
-                    <optgroup label="Volumen">
-                      <option value="ml">ml — mililitro</option>
-                      <option value="l">l — litro</option>
-                      <option value="tsp">tsp — cucharadita</option>
-                      <option value="tbsp">tbsp — cucharada</option>
-                      <option value="cup">cup — taza (240 ml)</option>
-                      <option value="fl oz">fl oz — onza líquida</option>
-                    </optgroup>
-                    <optgroup label="Otros">
-                      <option value="unit">unit — unidad</option>
-                    </optgroup>
-                  </select>
-                </div>
-              </div>
-              <div style={{marginTop:'1rem'}}>
-                <label style={lbl}>Fecha de vencimiento (opcional)</label>
-                <input style={inp} type="date" value={supplyForm.renewal_date} onChange={e=>setSupplyForm(f=>({...f,renewal_date:e.target.value}))}/>
-              </div>
-              <label style={lbl}>Notas (opcional)</label>
-              <input style={inp} type="text" placeholder="Marca, notas de compra..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
-              {/* ── Registrar compra ── */}
-              <div style={{marginTop:'1rem',padding:'0.85rem',background:'rgba(227,90,27,0.04)',borderRadius:8,border:'1px solid rgba(227,90,27,0.12)'}}>
-                <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:or,marginBottom:'0.75rem',fontFamily:ff}}>Registrar compra (opcional)</div>
-                <label style={lbl}>Cantidad comprada</label>
-                <div style={{display:'flex',gap:'0.25rem',flexWrap:'wrap',marginBottom:'0.4rem'}}>
-                  {[['⅛','0.125'],['¼','0.25'],['⅓','0.333'],['½','0.5'],['⅔','0.667'],['¾','0.75'],['1','1'],['1½','1.5'],['2','2'],['3','3'],['4','4'],['5','5']].map(([label,val])=>(
-                    <button key={label} type="button" onClick={()=>setSupplyForm(f=>({...f,purchase_qty:val}))}
-                      style={{padding:'0.2rem 0.5rem',borderRadius:4,border:'1px solid rgba(31,20,14,0.12)',
-                        background:supplyForm.purchase_qty===val?black:'rgba(31,20,14,0.04)',
-                        color:supplyForm.purchase_qty===val?white:black,
-                        fontSize:'0.72rem',cursor:'pointer',fontFamily:ff,lineHeight:1.2}}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
-                  <div>
-                    <input style={{...inp,marginBottom:0}} type="number" min="0" step="0.01" placeholder="0"
-                      value={supplyForm.purchase_qty} onChange={e=>setSupplyForm(f=>({...f,purchase_qty:e.target.value}))}/>
+
+              {/* ── Nombre ── */}
+              <label style={lbl}>Nombre del ingrediente</label>
+              <input style={inp} autoFocus={supplyModal==='add'} type="text" placeholder="Harina de trigo, Mantequilla, Leche..." value={supplyForm.name} onChange={e=>setSupplyForm(f=>({...f,name:e.target.value}))}/>
+
+              {supplyModal==='add'?(
+                <>
+                  {/* ══ ADD: Compra inicial — campo principal ══ */}
+                  <div style={{marginBottom:'1rem',padding:'1rem',background:'rgba(227,90,27,0.05)',borderRadius:10,border:'2px solid rgba(227,90,27,0.2)'}}>
+                    <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:or,marginBottom:'0.15rem',fontWeight:600}}>¿Cuánto compraste?</div>
+                    <div style={{fontSize:'0.62rem',color:mu,marginBottom:'0.85rem'}}>Esto define tu stock inicial y el costo por unidad</div>
+
+                    {/* Fraction chips */}
+                    <div style={{display:'flex',gap:'0.25rem',flexWrap:'wrap',marginBottom:'0.5rem'}}>
+                      {[['⅛','0.125'],['¼','0.25'],['⅓','0.333'],['½','0.5'],['⅔','0.667'],['¾','0.75'],['1','1'],['1½','1.5'],['2','2'],['3','3'],['4','4'],['5','5']].map(([label,val])=>(
+                        <button key={label} type="button" onClick={()=>setSupplyForm(f=>({...f,purchase_qty:val}))}
+                          style={{padding:'0.25rem 0.6rem',borderRadius:5,border:'1px solid rgba(31,20,14,0.12)',
+                            background:supplyForm.purchase_qty===val?black:'rgba(31,20,14,0.04)',
+                            color:supplyForm.purchase_qty===val?white:black,
+                            fontSize:'0.75rem',cursor:'pointer',fontFamily:ff,lineHeight:1.3}}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Qty + Unit on one row */}
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.6rem',marginBottom:'0.75rem'}}>
+                      <div>
+                        <label style={lbl}>Cantidad</label>
+                        <input style={{...inp,marginBottom:0,fontSize:'1rem',fontWeight:600}} type="number" min="0" step="0.01" placeholder="0"
+                          value={supplyForm.purchase_qty} onChange={e=>setSupplyForm(f=>({...f,purchase_qty:e.target.value}))}/>
+                      </div>
+                      <div>
+                        <label style={lbl}>Unidad</label>
+                        <select style={{...inp,marginBottom:0}} value={supplyForm.purchase_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,purchase_unit:e.target.value,base_unit:e.target.value}))}>
+                          <optgroup label="Peso">
+                            <option value="g">g — gramo</option><option value="kg">kg — kilogramo</option>
+                            <option value="oz">oz — onza</option><option value="lb">lb — libra</option>
+                          </optgroup>
+                          <optgroup label="Volumen">
+                            <option value="ml">ml — mililitro</option><option value="l">l — litro</option>
+                            <option value="tsp">tsp — cucharadita</option><option value="tbsp">tbsp — cucharada</option>
+                            <option value="cup">cup — taza</option><option value="fl oz">fl oz — onza líquida</option>
+                          </optgroup>
+                          <optgroup label="Otros">
+                            <option value="unit">unit — unidad</option>
+                          </optgroup>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Price */}
+                    <label style={lbl}>Precio total pagado ($)</label>
+                    <input style={{...inp,marginBottom:'0.5rem'}} type="number" min="0" step="0.01" placeholder="0.00"
+                      value={supplyForm.purchase_price} onChange={e=>setSupplyForm(f=>({...f,purchase_price:e.target.value}))}/>
+
+                    {/* Live preview */}
+                    {supplyForm.purchase_qty&&supplyForm.purchase_price?(
+                      <div style={{background:'rgba(227,90,27,0.08)',borderRadius:6,padding:'0.5rem 0.75rem',fontSize:'0.68rem',color:ink}}>
+                        <span style={{color:or,fontWeight:700}}>${(parseFloat(supplyForm.purchase_price)/parseFloat(supplyForm.purchase_qty)).toFixed(4)}</span>
+                        <span style={{color:mu}}> por {supplyForm.purchase_unit||'g'} · stock inicial: </span>
+                        <span style={{fontWeight:600}}>{supplyForm.purchase_qty} {supplyForm.purchase_unit||'g'}</span>
+                      </div>
+                    ):(
+                      <div style={{fontSize:'0.62rem',color:'rgba(31,20,14,0.3)',fontStyle:'italic'}}>Ingresa cantidad y precio para ver el costo por unidad</div>
+                    )}
                   </div>
-                  <div>
-                    <select style={{...inp,marginBottom:0}} value={supplyForm.purchase_unit||supplyForm.base_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,purchase_unit:e.target.value}))}>
+
+                  {/* Categoría + Proveedor */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
+                    <div>
+                      <label style={lbl}>Categoría</label>
+                      <input style={{...inp,marginBottom:0}} list="supply-categories" type="text" placeholder="Secos, Lácteos..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
+                      <datalist id="supply-categories">
+                        {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros'].map(c=><option key={c} value={c}/>)}
+                      </datalist>
+                    </div>
+                    <div>
+                      <label style={lbl}>Proveedor</label>
+                      <input style={{...inp,marginBottom:0}} type="text" placeholder="Costco, Sam's..." value={supplyForm.provider} onChange={e=>setSupplyForm(f=>({...f,provider:e.target.value}))}/>
+                    </div>
+                  </div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
+                    <div>
+                      <label style={lbl}>Vence (opcional)</label>
+                      <input style={{...inp,marginBottom:0}} type="date" value={supplyForm.renewal_date} onChange={e=>setSupplyForm(f=>({...f,renewal_date:e.target.value}))}/>
+                    </div>
+                    <div>
+                      <label style={lbl}>Notas (opcional)</label>
+                      <input style={{...inp,marginBottom:0}} type="text" placeholder="Marca..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
+                    </div>
+                  </div>
+                </>
+              ):(
+                <>
+                  {/* ══ EDIT mode: original layout ══ */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem'}}>
+                    <div>
+                      <label style={lbl}>Categoría</label>
+                      <input style={{...inp,marginBottom:0}} list="supply-categories-edit" type="text" placeholder="Secos, Lácteos, Empaque..." value={supplyForm.category} onChange={e=>setSupplyForm(f=>({...f,category:e.target.value}))}/>
+                      <datalist id="supply-categories-edit">
+                        {['Secos','Lácteos','Huevos','Saborizantes','Chocolates','Aceites','Frutas y Frescos','Empaque','Otros'].map(c=><option key={c} value={c}/>)}
+                      </datalist>
+                    </div>
+                    <div>
+                      <label style={lbl}>Proveedor</label>
+                      <input style={{...inp,marginBottom:0}} type="text" placeholder="Costco, Sam's, Colmado..." value={supplyForm.provider} onChange={e=>setSupplyForm(f=>({...f,provider:e.target.value}))}/>
+                    </div>
+                  </div>
+                  <div style={{marginTop:'0.75rem'}}>
+                    <label style={lbl}>Unidad base del ingrediente</label>
+                    <select style={inp} value={supplyForm.base_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,base_unit:e.target.value}))}>
                       <optgroup label="Peso">
-                        <option value="g">g</option><option value="kg">kg</option><option value="oz">oz</option><option value="lb">lb</option>
+                        <option value="g">g — gramo</option><option value="kg">kg — kilogramo</option>
+                        <option value="oz">oz — onza</option><option value="lb">lb — libra</option>
                       </optgroup>
                       <optgroup label="Volumen">
-                        <option value="ml">ml</option><option value="l">l</option><option value="tsp">tsp</option><option value="tbsp">tbsp</option><option value="cup">cup</option><option value="fl oz">fl oz</option>
+                        <option value="ml">ml — mililitro</option><option value="l">l — litro</option>
+                        <option value="tsp">tsp — cucharadita</option><option value="tbsp">tbsp — cucharada</option>
+                        <option value="cup">cup — taza (240 ml)</option><option value="fl oz">fl oz — onza líquida</option>
                       </optgroup>
-                      <optgroup label="Otros">
-                        <option value="unit">unit</option>
-                      </optgroup>
+                      <optgroup label="Otros"><option value="unit">unit — unidad</option></optgroup>
                     </select>
                   </div>
-                </div>
-                <label style={lbl}>Precio total pagado ($)</label>
-                <input style={{...inp,marginBottom:'0.4rem'}} type="number" min="0" step="0.01" placeholder="0.00"
-                  value={supplyForm.purchase_price} onChange={e=>setSupplyForm(f=>({...f,purchase_price:e.target.value}))}/>
-                {supplyForm.purchase_qty&&supplyForm.purchase_price&&(
-                  <div style={{fontSize:'0.6rem',color:or}}>
-                    ${(parseFloat(supplyForm.purchase_price)/parseFloat(supplyForm.purchase_qty)).toFixed(4)} / {supplyForm.purchase_unit||supplyForm.base_unit||'g'}
+                  <label style={lbl}>Fecha de vencimiento (opcional)</label>
+                  <input style={inp} type="date" value={supplyForm.renewal_date} onChange={e=>setSupplyForm(f=>({...f,renewal_date:e.target.value}))}/>
+                  <label style={lbl}>Notas (opcional)</label>
+                  <input style={inp} type="text" placeholder="Marca, notas de compra..." value={supplyForm.notes} onChange={e=>setSupplyForm(f=>({...f,notes:e.target.value}))}/>
+
+                  {/* SKUs */}
+                  <label style={lbl}>SKUs / Códigos de barras</label>
+                  <div style={{display:'flex',gap:'0.5rem',marginBottom:'0.35rem'}}>
+                    <input type="text" placeholder="Escribe un SKU y presiona Enter..." style={{...inp,marginBottom:0,flex:1}}
+                      onKeyDown={e=>{if(e.key==='Enter'&&e.target.value.trim()){e.preventDefault();setSupplyForm(f=>({...f,skus:[...(f.skus||[]),e.target.value.trim()]}));e.target.value=''}}}/>
+                    <button type="button" onClick={()=>setShowSupplyScanner(true)} style={{padding:'0.6rem 0.85rem',background:black,color:white,border:'none',borderRadius:6,cursor:'pointer',fontFamily:ff,fontSize:'0.58rem',flexShrink:0}}>Scan</button>
                   </div>
-                )}
-              </div>
-              {supplyModal!=='add'&&(
-                <div style={{marginTop:'0.75rem',padding:'0.85rem',background:'rgba(31,20,14,0.03)',borderRadius:8,border:'1px solid rgba(31,20,14,0.08)'}}>
-                  <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.4rem'}}>Ajuste manual de stock</div>
-                  <div style={{fontSize:'0.62rem',color:mu,marginBottom:'0.5rem'}}>Stock actual: <strong style={{color:ink}}>{parseFloat(supplyModal?.stock_qty||0).toFixed(2)} {supplyModal?.base_unit||'g'}</strong></div>
-                  <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
-                    <input style={{...inp,marginBottom:0,flex:1}} type="number" min="0" step="0.01"
-                      placeholder={`Nuevo valor en ${supplyForm.base_unit||'g'} (ej: 0 para resetear)`}
-                      value={supplyForm.stock_qty}
-                      onChange={e=>setSupplyForm(f=>({...f,stock_qty:e.target.value}))}/>
-                    <button type="button" onClick={()=>setSupplyForm(f=>({...f,stock_qty:'0'}))}
-                      style={{padding:'0.6rem 0.85rem',background:'rgba(192,57,43,0.08)',color:'#c0392b',border:'1px solid rgba(192,57,43,0.15)',borderRadius:6,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
-                      Poner a 0
-                    </button>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'0.3rem',marginBottom:'0.75rem'}}>
+                    {(supplyForm.skus||[]).map((sku,i)=>(
+                      <span key={i} style={{padding:'0.2rem 0.6rem',background:'rgba(31,20,14,0.06)',borderRadius:999,fontSize:'0.65rem',color:black,display:'flex',alignItems:'center',gap:'0.3rem'}}>
+                        {sku}<button type="button" onClick={()=>setSupplyForm(f=>({...f,skus:f.skus.filter((_,j)=>j!==i)}))} style={{background:'none',border:'none',cursor:'pointer',color:gray,padding:0,lineHeight:1}}>✕</button>
+                      </span>
+                    ))}
                   </div>
-                </div>
+
+                  {/* Registrar compra (edit mode) */}
+                  <div style={{padding:'0.85rem',background:'rgba(227,90,27,0.04)',borderRadius:8,border:'1px solid rgba(227,90,27,0.12)'}}>
+                    <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:or,marginBottom:'0.75rem'}}>Registrar nueva compra</div>
+                    <div style={{display:'flex',gap:'0.25rem',flexWrap:'wrap',marginBottom:'0.4rem'}}>
+                      {[['⅛','0.125'],['¼','0.25'],['⅓','0.333'],['½','0.5'],['⅔','0.667'],['¾','0.75'],['1','1'],['1½','1.5'],['2','2'],['3','3'],['4','4'],['5','5']].map(([label,val])=>(
+                        <button key={label} type="button" onClick={()=>setSupplyForm(f=>({...f,purchase_qty:val}))}
+                          style={{padding:'0.2rem 0.5rem',borderRadius:4,border:'1px solid rgba(31,20,14,0.12)',
+                            background:supplyForm.purchase_qty===val?black:'rgba(31,20,14,0.04)',
+                            color:supplyForm.purchase_qty===val?white:black,
+                            fontSize:'0.72rem',cursor:'pointer',fontFamily:ff,lineHeight:1.2}}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.75rem',marginBottom:'0.75rem'}}>
+                      <div>
+                        <label style={lbl}>Cantidad</label>
+                        <input style={{...inp,marginBottom:0}} type="number" min="0" step="0.01" placeholder="0"
+                          value={supplyForm.purchase_qty} onChange={e=>setSupplyForm(f=>({...f,purchase_qty:e.target.value}))}/>
+                      </div>
+                      <div>
+                        <label style={lbl}>Unidad</label>
+                        <select style={{...inp,marginBottom:0}} value={supplyForm.purchase_unit||supplyForm.base_unit||'g'} onChange={e=>setSupplyForm(f=>({...f,purchase_unit:e.target.value}))}>
+                          <optgroup label="Peso"><option value="g">g</option><option value="kg">kg</option><option value="oz">oz</option><option value="lb">lb</option></optgroup>
+                          <optgroup label="Volumen"><option value="ml">ml</option><option value="l">l</option><option value="tsp">tsp</option><option value="tbsp">tbsp</option><option value="cup">cup</option><option value="fl oz">fl oz</option></optgroup>
+                          <optgroup label="Otros"><option value="unit">unit</option></optgroup>
+                        </select>
+                      </div>
+                    </div>
+                    <label style={lbl}>Precio total pagado ($)</label>
+                    <input style={{...inp,marginBottom:'0.4rem'}} type="number" min="0" step="0.01" placeholder="0.00"
+                      value={supplyForm.purchase_price} onChange={e=>setSupplyForm(f=>({...f,purchase_price:e.target.value}))}/>
+                    {supplyForm.purchase_qty&&supplyForm.purchase_price&&(
+                      <div style={{fontSize:'0.6rem',color:or,fontWeight:600}}>
+                        ${(parseFloat(supplyForm.purchase_price)/parseFloat(supplyForm.purchase_qty)).toFixed(4)} / {supplyForm.purchase_unit||supplyForm.base_unit||'g'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ajuste manual de stock (edit only) */}
+                  <div style={{marginTop:'0.75rem',padding:'0.85rem',background:'rgba(31,20,14,0.03)',borderRadius:8,border:'1px solid rgba(31,20,14,0.08)'}}>
+                    <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:'0.4rem'}}>Ajuste manual de stock</div>
+                    <div style={{fontSize:'0.62rem',color:mu,marginBottom:'0.5rem'}}>Stock actual: <strong style={{color:ink}}>{parseFloat(supplyModal?.stock_qty||0).toFixed(2)} {supplyModal?.base_unit||'g'}</strong></div>
+                    <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+                      <input style={{...inp,marginBottom:0,flex:1}} type="number" min="0" step="0.01"
+                        placeholder={`Nuevo valor en ${supplyForm.base_unit||'g'} (ej: 0 para resetear)`}
+                        value={supplyForm.stock_qty} onChange={e=>setSupplyForm(f=>({...f,stock_qty:e.target.value}))}/>
+                      <button type="button" onClick={()=>setSupplyForm(f=>({...f,stock_qty:'0'}))}
+                        style={{padding:'0.6rem 0.85rem',background:'rgba(192,57,43,0.08)',color:'#c0392b',border:'1px solid rgba(192,57,43,0.15)',borderRadius:6,fontFamily:ff,fontSize:'0.58rem',cursor:'pointer',whiteSpace:'nowrap',flexShrink:0}}>
+                        Poner a 0
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
-              <div style={{display:'flex',gap:'0.75rem',marginTop:'0.75rem'}}>
+
+              {/* ── Botones ── */}
+              <div style={{display:'flex',gap:'0.75rem',marginTop:'1rem'}}>
                 <button onClick={async()=>{
                   if(!supplyForm.name){showToast('Nombre requerido');return}
+                  if(supplyModal==='add'&&(!supplyForm.purchase_qty||!supplyForm.purchase_price)){showToast('Ingresa cantidad y precio de compra');return}
                   const hasPurchase=supplyForm.purchase_qty&&supplyForm.purchase_price
+                  const purchaseUnit=supplyForm.purchase_unit||supplyForm.base_unit||'g'
                   let supplyId=null
                   if(supplyModal==='add'){
-                    const res=await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(supplyForm)})
+                    const res=await fetch('/api/admin/supplies',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...supplyForm,base_unit:purchaseUnit})})
                     const data=await res.json()
                     supplyId=data?.id||data?.[0]?.id
                     showToast('Ingrediente añadido ✓')
@@ -4132,12 +4218,14 @@ export default function Admin({session}){
                     showToast('Ingrediente actualizado ✓')
                   }
                   if(hasPurchase&&supplyId){
-                    await fetch('/api/admin/purchases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({supply_id:supplyId,qty:parseFloat(supplyForm.purchase_qty),unit:supplyForm.purchase_unit||supplyForm.base_unit||'g',price_total:parseFloat(supplyForm.purchase_price)})})
-                    showToast('Compra registrada ✓')
+                    await fetch('/api/admin/purchases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({supply_id:supplyId,qty:parseFloat(supplyForm.purchase_qty),unit:purchaseUnit,price_total:parseFloat(supplyForm.purchase_price)})})
+                    if(supplyModal!=='add')showToast('Compra registrada ✓')
                   }
                   setSupplyModal(null);loadAll()
-                }} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Guardar</button>
-                <button onClick={()=>setSupplyModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Cancelar</button>
+                }} style={{flex:1,background:black,color:white,border:'none',padding:'0.9rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:6,cursor:'pointer'}}>
+                  {supplyModal==='add'?'Añadir al inventario →':'Guardar cambios'}
+                </button>
+                <button onClick={()=>setSupplyModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.9rem 1.25rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:6,cursor:'pointer'}}>Cancelar</button>
               </div>
             </div>
           </div>
