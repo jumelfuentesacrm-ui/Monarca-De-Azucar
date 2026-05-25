@@ -7,7 +7,7 @@ const supabase = createClient(
 )
 
 webpush.setVapidDetails(
-  process.env.VAPID_EMAIL || 'mailto:info@monarcadeazucar.com',
+  process.env.VAPID_EMAIL || 'mailto:jumelifuentes@gmail.com',
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 )
