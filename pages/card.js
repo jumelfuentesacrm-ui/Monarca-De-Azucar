@@ -122,6 +122,54 @@ export default function Card({ session }) {
   const [toast, setToast] = useState('')
   const [selectedItem, setSelectedItem] = useState(null)
   const [selectedItemCat, setSelectedItemCat] = useState('')
+  const [pushStatus, setPushStatus] = useState('unknown')
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushStatus('unsupported'); return
+    }
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+    const p = Notification.permission
+    setPushStatus(p === 'granted' ? 'granted' : p === 'denied' ? 'denied' : 'prompt')
+  }, [])
+
+  function urlBase64ToUint8Array(b64) {
+    const pad = '='.repeat((4 - b64.length % 4) % 4)
+    const base64 = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/')
+    return new Uint8Array([...atob(base64)].map(c => c.charCodeAt(0)))
+  }
+
+  async function subscribePush() {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)
+      })
+      await fetch('/api/card/push-subscribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON(), user_id: session?.user?.id || null })
+      })
+      setPushStatus('granted')
+      showToast('¡Notificaciones activadas! 🔔')
+    } catch { setPushStatus(Notification.permission === 'denied' ? 'denied' : 'prompt') }
+  }
+
+  async function unsubscribePush() {
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (sub) {
+        await fetch('/api/card/push-subscribe', {
+          method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        })
+        await sub.unsubscribe()
+      }
+      setPushStatus('prompt')
+      showToast('Notificaciones desactivadas')
+    } catch {}
+  }
 
   useEffect(() => {
     if (session === undefined) return
@@ -756,6 +804,37 @@ export default function Card({ session }) {
                   </div>
                 ))}
               </div>
+
+              {/* Push notifications toggle */}
+              {pushStatus !== 'unsupported' && (
+                <div style={{background:cr2,border:'1px solid '+cr3,borderRadius:12,padding:'16px',marginBottom:12}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+                    <div>
+                      <div style={{fontSize:'0.8rem',color:ink,fontWeight:500,marginBottom:2}}>
+                        🔔 Notificaciones
+                      </div>
+                      <div style={{fontSize:'0.62rem',color:mu,lineHeight:1.4}}>
+                        {pushStatus==='granted' ? 'Recibes notificaciones del menú y novedades' :
+                         pushStatus==='denied' ? 'Bloqueadas en ajustes del navegador' :
+                         'Activa para saber cuándo hay hornada nueva'}
+                      </div>
+                    </div>
+                    {pushStatus==='granted' ? (
+                      <button onClick={unsubscribePush}
+                        style={{flexShrink:0,padding:'8px 14px',background:'rgba(31,20,14,0.07)',color:mu,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.62rem',fontWeight:600,cursor:'pointer'}}>
+                        Desactivar
+                      </button>
+                    ) : pushStatus==='denied' ? (
+                      <span style={{flexShrink:0,fontSize:'0.58rem',color:mu}}>Ver ajustes →</span>
+                    ) : (
+                      <button onClick={subscribePush}
+                        style={{flexShrink:0,padding:'8px 14px',background:or,color:cr,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.62rem',fontWeight:600,cursor:'pointer'}}>
+                        Activar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <button onClick={handleSignOut} style={{width:'100%',padding:'14px',background:'transparent',border:'1.5px solid rgba(31,20,14,0.15)',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',color:mu,cursor:'pointer'}}>
                 Cerrar sesión
