@@ -2869,6 +2869,7 @@ function VlogPanel({ showToast }) {
   const [form, setForm] = React.useState({ title: '', body: '', image_url: '', published: true })
   const [editing, setEditing] = React.useState(null)
   const [saving, setSaving] = React.useState(false)
+  const [uploadingMedia, setUploadingMedia] = React.useState(false)
 
   async function loadPosts() {
     setLoading(true)
@@ -2889,6 +2890,19 @@ function VlogPanel({ showToast }) {
   function cancelEdit() {
     setEditing(null)
     setForm({ title: '', body: '', image_url: '', published: true })
+  }
+
+  async function uploadMedia(file) {
+    setUploadingMedia(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const r = await fetch('/api/admin/post-upload', { method: 'POST', body: fd })
+      const d = await r.json()
+      if (d.error) { showToast('Error al subir: ' + d.error); return }
+      setForm(f => ({ ...f, image_url: d.url }))
+      showToast('Archivo subido')
+    } catch { showToast('Error al subir') } finally { setUploadingMedia(false) }
   }
 
   async function save() {
@@ -2992,8 +3006,25 @@ function VlogPanel({ showToast }) {
           <textarea style={{ ...inp, minHeight: 100, resize: 'vertical' }} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="Escribe el contenido…"/>
         </div>
         <div style={{ marginBottom: '0.85rem' }}>
-          <span style={label}>URL de imagen (opcional)</span>
-          <input style={inp} value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://…"/>
+          <span style={label}>Video o imagen</span>
+          {form.image_url ? (
+            <div>
+              {/\.(mp4|webm|mov|ogg)(\?|$)/i.test(form.image_url)
+                ? <video src={form.image_url} muted controls style={{width:'100%',maxHeight:200,borderRadius:8,display:'block',marginBottom:8,objectFit:'cover'}}/>
+                : <img src={form.image_url} alt="" style={{width:'100%',maxHeight:200,borderRadius:8,display:'block',marginBottom:8,objectFit:'cover'}}/>
+              }
+              <button onClick={() => setForm(f => ({ ...f, image_url: '' }))}
+                style={{padding:'0.35rem 0.85rem',background:'rgba(192,57,43,0.08)',border:'1px solid rgba(192,57,43,0.2)',borderRadius:6,fontFamily:ff,fontSize:'0.65rem',color:'#c0392b',cursor:'pointer'}}>
+                Eliminar
+              </button>
+            </div>
+          ) : (
+            <label style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'1.5rem',border:'1.5px dashed rgba(31,20,14,0.2)',borderRadius:10,cursor:uploadingMedia?'default':'pointer',opacity:uploadingMedia?0.6:1}}>
+              <span style={{fontFamily:ff,fontSize:'0.75rem',color:mu}}>{uploadingMedia?'Subiendo…':'Subir video o foto'}</span>
+              <input type="file" accept="video/*,image/*" style={{display:'none'}} disabled={uploadingMedia}
+                onChange={e=>{if(e.target.files[0])uploadMedia(e.target.files[0])}}/>
+            </label>
+          )}
         </div>
         <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" id="vlog-pub" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))} style={{ cursor: 'pointer' }}/>
