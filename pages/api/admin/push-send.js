@@ -15,21 +15,30 @@ webpush.setVapidDetails(
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { title, body, url } = req.body
+  const { title, body, url, user_ids } = req.body
   if (!title || !body) return res.status(400).json({ error: 'title y body requeridos' })
+  if (!user_ids?.length) return res.status(400).json({ error: 'Selecciona al menos un cliente' })
 
-  const { data: subs, error } = await supabase.from('push_subscriptions').select('*')
+  const { data: subs, error } = await supabase
+    .from('push_subscriptions')
+    .select('*')
+    .not('user_id', 'is', null)
+    .in('user_id', user_ids)
+
   if (error) return res.status(500).json({ error: error.message })
-  if (!subs?.length) return res.status(200).json({ sent: 0, failed: 0 })
+  if (!subs?.length) return res.status(200).json({ sent: 0, failed: 0, total: 0 })
 
   const payload = JSON.stringify({ title, body, url: url || '/card' })
+  const now = new Date().toISOString()
 
   const results = await Promise.allSettled(
     subs.map(sub =>
       webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         payload
-      ).catch(async err => {
+      ).then(() => {
+        supabase.from('push_subscriptions').update({ last_notif_sent_at: now }).eq('endpoint', sub.endpoint)
+      }).catch(async err => {
         if (err.statusCode === 410 || err.statusCode === 404) {
           await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
         }
