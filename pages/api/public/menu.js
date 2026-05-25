@@ -25,18 +25,25 @@ export default async function handler(req, res) {
     return res.status(200).json({ items: basic || [] })
   }
 
-  // Also get prices
+  // Also get prices and stock
   const { data: prices } = await supabase
     .from('catalog_prices')
     .select('product_id, amount')
     .eq('active', true)
 
+  const { data: stockRows } = await supabase
+    .from('product_stock')
+    .select('catalog_item_id, qty')
+
   const priceMap = {}
   ;(prices || []).forEach(p => { priceMap[p.product_id] = p.amount })
+  const stockMap = {}
+  ;(stockRows || []).forEach(r => { stockMap[r.catalog_item_id] = r.qty })
 
   const enriched = (items || []).map(item => ({
     ...item,
     price: item.price || priceMap[item.id] || 0,
+    stock_qty: stockMap[item.id] != null ? stockMap[item.id] : null,
   }))
 
   return res.status(200).json({ items: enriched })

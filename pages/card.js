@@ -373,64 +373,163 @@ export default function Card({ session }) {
             )
           )}
 
-          {/* ── TAB: MENÚ (editorial style matching landing) ── */}
-          {tab === 'menu' && (
+          {/* ── TAB: MENÚ ── */}
+          {tab === 'menu' && (()=>{
+            const today = new Date().toLocaleDateString('es-PR',{day:'numeric',month:'long',timeZone:'America/Puerto_Rico'})
+            // Group by category, preserving order
+            const catOrder = []
+            const catMap = {}
+            catalog.forEach(item => {
+              const cat = item.category || 'Galletas'
+              if (!catMap[cat]) { catMap[cat] = []; catOrder.push(cat) }
+              catMap[cat].push(item)
+            })
+            return (
             <div className="fade-up">
-              {/* Header editorial */}
-              <div style={{paddingTop:28,marginBottom:24}}>
-                <div style={{fontSize:'0.55rem',letterSpacing:'0.2em',textTransform:'uppercase',color:mu,marginBottom:6}}>
-                  Frescos hoy · {new Date().toLocaleDateString('es-PR',{day:'numeric',month:'long',timeZone:'America/Puerto_Rico'})} · 7:00am
+              {/* Editorial header */}
+              <div style={{paddingTop:28,marginBottom:20}}>
+                <div style={{fontSize:'0.52rem',letterSpacing:'0.2em',textTransform:'uppercase',color:mu,marginBottom:8}}>§ 01 · El menú</div>
+                <div style={{fontFamily:ffS,fontSize:'clamp(1.7rem,7vw,2.3rem)',fontWeight:400,color:ink,lineHeight:1.05,marginBottom:6}}>
+                  Lo que se hornea hoy.
                 </div>
-                <div style={{fontFamily:ffS,fontSize:'clamp(1.6rem,6vw,2.2rem)',fontWeight:400,color:ink,lineHeight:1.1}}>
-                  01 · El menú
-                </div>
-                <div style={{fontFamily:ffS,fontSize:'clamp(1.1rem,4vw,1.4rem)',color:mu,fontStyle:'italic',marginTop:4}}>
-                  Lo que se <em style={{color:or}}>hornea</em> hoy.
-                </div>
-                <p style={{fontSize:'0.7rem',color:mu,marginTop:10,lineHeight:1.7}}>
+                <div style={{fontSize:'0.65rem',color:mu}}>
                   El menú cambia cada día con lo que esté en su mejor punto. Cuando se acaba, se acaba.
-                </p>
+                </div>
+                <div style={{fontSize:'0.6rem',color:mu,marginTop:4,fontStyle:'italic'}}>
+                  Esta es la carta del {today}.
+                </div>
               </div>
 
-              {/* Menu items editorial style */}
               {catalog.length === 0 ? (
                 <div style={{textAlign:'center',padding:'3rem 0',color:mu,fontSize:'0.82rem'}}>
                   <MonarcaButterfly size={48} animate={false} color="rgba(31,20,14,0.1)" style={{margin:'0 auto 12px'}}/>
                   El menú de hoy estará listo pronto.
                 </div>
-              ) : (
-                <div>
-                  {catalog.map((item, i) => (
-                    <div key={item.id} style={{display:'flex',alignItems:'flex-start',gap:16,padding:'16px 0',borderBottom:'1px solid rgba(31,20,14,0.07)',opacity:item.badge_agotado?0.4:1}}>
-                      {item.image_url
-                        ? <img src={item.image_url} alt={item.name} style={{width:56,height:56,borderRadius:8,objectFit:'cover',flexShrink:0,border:'1px solid rgba(31,20,14,0.07)'}}/>
-                        : <span style={{fontSize:'0.72rem',color:'rgba(31,20,14,0.3)',fontFamily:ffS,width:24,flexShrink:0,paddingTop:2}}>{String(i+1).padStart(2,'0')}</span>}
-                      <div style={{flex:1}}>
-                        <div style={{display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap',marginBottom:4}}>
-                          <span style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,color:ink}}>{item.name}</span>
-                          {item.badge_hoy && <span style={{fontSize:'0.5rem',padding:'2px 7px',borderRadius:999,background:or,color:cr,letterSpacing:'0.08em',textTransform:'uppercase'}}>Hoy</span>}
-                          {item.badge_nuevo && <span style={{fontSize:'0.5rem',padding:'2px 7px',borderRadius:999,background:'#8e44ad',color:cr,letterSpacing:'0.08em',textTransform:'uppercase'}}>Nuevo</span>}
-                          {item.badge_temporada && <span style={{fontSize:'0.5rem',padding:'2px 7px',borderRadius:999,background:'#2d8a60',color:cr,letterSpacing:'0.08em',textTransform:'uppercase'}}>Temporada</span>}
-                          {item.badge_agotado && <span style={{fontSize:'0.5rem',padding:'2px 7px',borderRadius:999,background:'rgba(31,20,14,0.15)',color:mu,letterSpacing:'0.08em',textTransform:'uppercase'}}>Agotado</span>}
-                        </div>
-                        {item.description && <div style={{fontSize:'0.65rem',color:mu,lineHeight:1.5}}>{item.description}</div>}
-                      </div>
-                      <div style={{textAlign:'right',flexShrink:0}}>
-                        <div style={{fontFamily:ffS,fontSize:'1rem',color:or}}>${parseFloat(item.price||0).toFixed(2)}</div>
-                        {!item.badge_agotado && (
-                          <button onClick={()=>addToCart(item)} className="tap-scale"
-                            style={{marginTop:6,padding:'6px 14px',background:or,color:cr,border:'none',borderRadius:999,fontSize:'0.6rem',fontWeight:600,cursor:'pointer',fontFamily:ff}}>
-                            + Añadir
-                          </button>
-                        )}
-                      </div>
+              ) : (<>
+
+              {/* Section index */}
+              <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',marginBottom:24,paddingBottom:16,borderBottom:'2px solid rgba(31,20,14,0.07)'}}>
+                {catOrder.map((cat, ci) => {
+                  const items = catMap[cat]
+                  const totalUnd = items.reduce((s,i) => s + (i.stock_qty != null ? i.stock_qty : 0), 0)
+                  const hasStock = items.some(i => i.stock_qty != null)
+                  return (
+                    <div key={cat} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',border:'1px solid rgba(31,20,14,0.1)',borderRadius:6,background:'rgba(31,20,14,0.02)'}}>
+                      <span style={{fontSize:'0.48rem',color:mu,letterSpacing:'0.1em',textTransform:'uppercase'}}>Sec. {String(ci+1).padStart(2,'0')}</span>
+                      <span style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>{cat}</span>
+                      {hasStock && <span style={{fontSize:'0.52rem',color:mu}}>{totalUnd} und</span>}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                })}
+              </div>
+
+              {/* Sections */}
+              {catOrder.map((cat, ci) => {
+                const items = catMap[cat]
+                const hero = items.find(i => i.badge_hoy && !i.badge_agotado)
+                const rest = items.filter(i => i !== hero)
+                return (
+                  <div key={cat} style={{marginBottom:36}}>
+
+                    {/* Hero "Pieza del día" */}
+                    {hero && (
+                      <div style={{marginBottom:20,borderRadius:14,overflow:'hidden',border:'1px solid rgba(31,20,14,0.08)',background:cr}}>
+                        {hero.image_url && (
+                          <div style={{height:160,overflow:'hidden',background:'rgba(31,20,14,0.04)'}}>
+                            <img src={hero.image_url} alt={hero.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                          </div>
+                        )}
+                        <div style={{padding:'14px 16px'}}>
+                          <div style={{fontSize:'0.5rem',letterSpacing:'0.15em',textTransform:'uppercase',color:or,marginBottom:4}}>★ Pieza del día · {cat}</div>
+                          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
+                            <div style={{flex:1}}>
+                              <div style={{fontFamily:ffS,fontSize:'1.25rem',color:ink,lineHeight:1.15,marginBottom:4}}>{hero.name}</div>
+                              {hero.description && <div style={{fontSize:'0.65rem',color:mu,lineHeight:1.5}}>{hero.description}</div>}
+                              {hero.stock_qty != null && <div style={{fontSize:'0.58rem',color:mu,marginTop:4}}>{hero.stock_qty} und disponibles</div>}
+                            </div>
+                            <div style={{textAlign:'right',flexShrink:0}}>
+                              <div style={{fontFamily:ffS,fontSize:'1.35rem',color:or,marginBottom:8}}>${parseFloat(hero.price||0).toFixed(2)}</div>
+                              <button onClick={()=>addToCart(hero)} className="tap-scale"
+                                style={{padding:'8px 18px',background:or,color:cr,border:'none',borderRadius:999,fontSize:'0.62rem',fontWeight:600,cursor:'pointer',fontFamily:ff}}>
+                                + Añadir
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Section header */}
+                    <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:12,paddingBottom:8,borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+                      <span style={{fontFamily:ffS,fontSize:'1.1rem',color:ink}}>{String(ci+1).padStart(2,'0')} <em style={{fontStyle:'italic',color:mu}}>{cat}</em></span>
+                      <span style={{fontSize:'0.5rem',color:mu,letterSpacing:'0.08em',textTransform:'uppercase'}}>{String(ci+1).padStart(2,'0')}/{String(catOrder.length).padStart(2,'0')}</span>
+                    </div>
+                    {hero && rest.length > 0 && (
+                      <div style={{fontSize:'0.55rem',color:mu,marginBottom:10,letterSpacing:'0.05em'}}>También en {cat.toLowerCase()}</div>
+                    )}
+
+                    {/* Item list */}
+                    {rest.map((item, ii) => (
+                      <div key={item.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'11px 0',borderBottom:'1px solid rgba(31,20,14,0.05)',opacity:item.badge_agotado?0.45:1}}>
+                        {item.image_url
+                          ? <img src={item.image_url} alt={item.name} style={{width:44,height:44,borderRadius:7,objectFit:'cover',flexShrink:0,border:'1px solid rgba(31,20,14,0.07)'}}/>
+                          : <span style={{fontSize:'0.65rem',color:'rgba(31,20,14,0.25)',fontFamily:ffS,width:22,flexShrink:0,paddingTop:3}}>{String(ii+1).padStart(2,'0')}</span>}
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontFamily:ffS,fontSize:'0.95rem',color:ink,lineHeight:1.2}}>{item.name}</div>
+                          {item.description && <div style={{fontSize:'0.6rem',color:mu,fontStyle:'italic',lineHeight:1.4,marginTop:2}}>{item.description}</div>}
+                          {item.badge_nuevo && <span style={{fontSize:'0.45rem',padding:'1px 5px',borderRadius:999,background:'#8e44ad18',color:'#8e44ad',letterSpacing:'0.06em',textTransform:'uppercase',marginTop:3,display:'inline-block'}}>Nuevo</span>}
+                          {item.badge_temporada && <span style={{fontSize:'0.45rem',padding:'1px 5px',borderRadius:999,background:'rgba(45,138,96,0.1)',color:'#2d8a60',letterSpacing:'0.06em',textTransform:'uppercase',marginTop:3,display:'inline-block'}}>Temporada</span>}
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0}}>
+                          {item.stock_qty != null && <div style={{fontSize:'0.52rem',color:mu,marginBottom:2}}>{item.stock_qty} und</div>}
+                          <div style={{fontFamily:ffS,fontSize:'1rem',color:item.badge_agotado?mu:or}}>${parseFloat(item.price||0).toFixed(2)}</div>
+                          {!item.badge_agotado && (
+                            <button onClick={()=>addToCart(item)} className="tap-scale"
+                              style={{marginTop:5,padding:'5px 12px',background:or,color:cr,border:'none',borderRadius:999,fontSize:'0.57rem',fontWeight:600,cursor:'pointer',fontFamily:ff}}>
+                              + Añadir
+                            </button>
+                          )}
+                          {item.badge_agotado && <div style={{fontSize:'0.5rem',color:mu,marginTop:4}}>Agotado</div>}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* If only hero (no rest) */}
+                    {hero && rest.length === 0 && null}
+                    {/* If no hero, all items shown as list */}
+                    {!hero && items.map((item, ii) => (
+                      <div key={item.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'11px 0',borderBottom:'1px solid rgba(31,20,14,0.05)',opacity:item.badge_agotado?0.45:1}}>
+                        {item.image_url
+                          ? <img src={item.image_url} alt={item.name} style={{width:44,height:44,borderRadius:7,objectFit:'cover',flexShrink:0,border:'1px solid rgba(31,20,14,0.07)'}}/>
+                          : <span style={{fontSize:'0.65rem',color:'rgba(31,20,14,0.25)',fontFamily:ffS,width:22,flexShrink:0,paddingTop:3}}>{String(ii+1).padStart(2,'0')}</span>}
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontFamily:ffS,fontSize:'0.95rem',color:ink,lineHeight:1.2}}>{item.name}</div>
+                          {item.description && <div style={{fontSize:'0.6rem',color:mu,fontStyle:'italic',lineHeight:1.4,marginTop:2}}>{item.description}</div>}
+                          {item.badge_nuevo && <span style={{fontSize:'0.45rem',padding:'1px 5px',borderRadius:999,background:'#8e44ad18',color:'#8e44ad',letterSpacing:'0.06em',textTransform:'uppercase',marginTop:3,display:'inline-block'}}>Nuevo</span>}
+                          {item.badge_temporada && <span style={{fontSize:'0.45rem',padding:'1px 5px',borderRadius:999,background:'rgba(45,138,96,0.1)',color:'#2d8a60',letterSpacing:'0.06em',textTransform:'uppercase',marginTop:3,display:'inline-block'}}>Temporada</span>}
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0}}>
+                          {item.stock_qty != null && <div style={{fontSize:'0.52rem',color:mu,marginBottom:2}}>{item.stock_qty} und</div>}
+                          <div style={{fontFamily:ffS,fontSize:'1rem',color:item.badge_agotado?mu:or}}>${parseFloat(item.price||0).toFixed(2)}</div>
+                          {!item.badge_agotado && (
+                            <button onClick={()=>addToCart(item)} className="tap-scale"
+                              style={{marginTop:5,padding:'5px 12px',background:or,color:cr,border:'none',borderRadius:999,fontSize:'0.57rem',fontWeight:600,cursor:'pointer',fontFamily:ff}}>
+                              + Añadir
+                            </button>
+                          )}
+                          {item.badge_agotado && <div style={{fontSize:'0.5rem',color:mu,marginTop:4}}>Agotado</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+
+              <div style={{fontSize:'0.55rem',color:mu,fontStyle:'italic',marginTop:4,marginBottom:24}}>* Cantidades aproximadas. Sugerimos venir antes del mediodía.</div>
+              </>)}
 
               {/* Custom orders section */}
-              <div style={{marginTop:32,paddingTop:24,borderTop:'1px solid rgba(31,20,14,0.07)'}}>
+              <div style={{marginTop:8,paddingTop:24,borderTop:'1px solid rgba(31,20,14,0.07)'}}>
                 <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:mu,marginBottom:6}}>02 · Pasteles a la medida</div>
                 <div style={{fontFamily:ffS,fontSize:'1.3rem',color:ink,marginBottom:8}}>Para los días grandes.</div>
                 <p style={{fontSize:'0.7rem',color:mu,lineHeight:1.7,marginBottom:16}}>Cumpleaños, bodas, el bautismo del sobrino. 72 horas de anticipación. Entrega en San Juan.</p>
@@ -442,7 +541,7 @@ export default function Card({ session }) {
 
               <div style={{height:32}}/>
             </div>
-          )}
+          )})()}
 
           {/* ── TAB: ORDENAR (carrito) ── */}
           {tab === 'ordenar' && (
