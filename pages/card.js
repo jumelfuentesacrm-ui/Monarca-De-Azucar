@@ -139,6 +139,17 @@ export default function Card({ session }) {
     setPushStatus(p === 'granted' ? 'granted' : p === 'denied' ? 'denied' : 'prompt')
   }, [])
 
+  React.useEffect(() => {
+    if (!session?.user?.id || typeof window === 'undefined' || !('serviceWorker' in navigator)) return
+    navigator.serviceWorker.ready.then(reg => reg.pushManager.getSubscription()).then(sub => {
+      if (!sub) return
+      fetch('/api/card/push-subscribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON(), user_id: session.user.id })
+      }).catch(() => {})
+    }).catch(() => {})
+  }, [session?.user?.id])
+
   function urlBase64ToUint8Array(b64) {
     const pad = '='.repeat((4 - b64.length % 4) % 4)
     const base64 = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/')
