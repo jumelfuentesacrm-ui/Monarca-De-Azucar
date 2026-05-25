@@ -782,6 +782,13 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
     loadAll()
   }
 
+  async function restoreAll(){
+    await Promise.all(archivedCatalog.map(item=>
+      fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:item.id,active:true})})
+    ))
+    loadAll()
+  }
+
   return (
     <div>
       {/* Header */}
@@ -789,16 +796,35 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
         <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>
           {showArchived?'Archivo':'Catálogo'} <span style={{fontSize:'0.6rem',color:mu,fontFamily:ff,fontWeight:400,letterSpacing:'0.08em'}}>{showArchived?archivedCatalog.length:activeCatalog.length} productos</span>
         </div>
-        <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+        <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexWrap:'wrap'}}>
           <button onClick={()=>{setShowArchived(s=>!s);setFilter('Todos')}}
             style={{background:showArchived?ink:'rgba(31,20,14,0.07)',color:showArchived?white:mu,border:'none',padding:'0.55rem 1rem',borderRadius:999,fontFamily:ff,fontSize:'0.63rem',fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:'0.35rem'}}>
             📦 Archivo{archivedCatalog.length>0&&<span style={{background:showArchived?'rgba(255,255,255,0.2)':'rgba(31,20,14,0.1)',borderRadius:999,padding:'0 0.4rem',fontSize:'0.55rem'}}>{archivedCatalog.length}</span>}
           </button>
+          {showArchived&&archivedCatalog.length>0&&(
+            <button onClick={restoreAll}
+              style={{background:'rgba(45,138,96,0.1)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.25)',padding:'0.55rem 1rem',borderRadius:999,fontFamily:ff,fontSize:'0.63rem',fontWeight:600,cursor:'pointer'}}>
+              ✓ Restaurar todos ({archivedCatalog.length})
+            </button>
+          )}
           {!showArchived&&<button onClick={()=>setShowAdd(s=>!s)} style={{background:ink,color:'#FBF7EE',border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer'}}>
             {showAdd?'Cancelar':'+ Añadir producto'}
           </button>}
         </div>
       </div>
+
+      {/* Archived warning banner */}
+      {!showArchived&&archivedCatalog.length>0&&(
+        <div style={{background:'rgba(227,90,27,0.07)',border:'1px solid rgba(227,90,27,0.2)',borderRadius:8,padding:'0.75rem 1rem',marginBottom:'1rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'0.75rem'}}>
+          <span style={{fontSize:'0.68rem',color:or}}>
+            📦 {archivedCatalog.length} producto{archivedCatalog.length!==1?'s':''} archivado{archivedCatalog.length!==1?'s':''} — no salen en el menú del sitio
+          </span>
+          <button onClick={()=>{setShowArchived(true);setFilter('Todos')}}
+            style={{fontSize:'0.6rem',color:or,background:'none',border:'1px solid rgba(227,90,27,0.3)',borderRadius:999,padding:'0.3rem 0.75rem',cursor:'pointer',fontFamily:ff,fontWeight:600,whiteSpace:'nowrap'}}>
+            Ver archivo →
+          </button>
+        </div>
+      )}
 
       {/* Add form */}
       {showAdd&&(
