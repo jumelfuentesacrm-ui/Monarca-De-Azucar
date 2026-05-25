@@ -10,10 +10,11 @@ export default async function handler(req, res) {
 
   let items = null
 
-  // Full query — show all items (active or not); use badge_agotado to hide from ordering
+  // Full query — show all active items
   const { data: full, error: fullErr } = await supabase
     .from('catalog_items')
     .select('id, name, description, active, category, price, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, image_url')
+    .eq('active', true)
     .order('category')
     .order('badge_hoy', { ascending: false })
     .order('name')
@@ -25,6 +26,7 @@ export default async function handler(req, res) {
     const { data: partial, error: partialErr } = await supabase
       .from('catalog_items')
       .select('id, name, description, active, category, price, badge_hoy, badge_nuevo, badge_temporada, badge_agotado')
+      .eq('active', true)
       .order('category')
       .order('badge_hoy', { ascending: false })
       .order('name')
@@ -36,6 +38,7 @@ export default async function handler(req, res) {
       const { data: basic } = await supabase
         .from('catalog_items')
         .select('id, name, description, active, category, created_at')
+        .eq('active', true)
         .order('category')
         .order('name')
       items = (basic || []).map(i => ({ ...i, image_url: null, price: 0 }))
