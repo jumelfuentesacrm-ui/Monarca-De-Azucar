@@ -120,6 +120,8 @@ export default function Card({ session }) {
   const [chatLoading, setChatLoading] = useState(false)
   const [profileForm, setProfileForm] = useState({full_name:'',phone:'',email:'',password:''})
   const [toast, setToast] = useState('')
+  const [selectedItem, setSelectedItem] = useState(null)
+  const [selectedItemCat, setSelectedItemCat] = useState('')
 
   useEffect(() => {
     if (session === undefined) return
@@ -222,6 +224,14 @@ export default function Card({ session }) {
   const rem = cur === 0 ? 5 : 5 - cur
   const cycle = card ? (Math.ceil((card.stamps || 1) / 5) || 1) : 1
 
+  const menuCatOrder = []
+  const menuCatMap = {}
+  catalog.forEach(item => {
+    const cat = item.category || 'Galletas'
+    if (!menuCatMap[cat]) { menuCatMap[cat] = []; menuCatOrder.push(cat) }
+    menuCatMap[cat].push(item)
+  })
+
   if (session === undefined || loading) return <LoadingScreen/>
 
   return (
@@ -233,8 +243,10 @@ export default function Card({ session }) {
         html,body{height:100%}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
         @keyframes pulse-or{0%,100%{box-shadow:0 4px 20px rgba(227,90,27,0.4)}50%{box-shadow:0 8px 32px rgba(227,90,27,0.65)}}
+        @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
         .fade-up{animation:fadeUp 0.4s ease both}
         .tap-scale:active{transform:scale(0.96);transition:transform 0.1s}
+        .item-row{cursor:pointer;transition:background 0.15s}.item-row:active{background:rgba(31,20,14,0.03)}
       `}</style>
 
       <div style={{minHeight:'100vh',background:cr,paddingTop:'calc(44px + env(safe-area-inset-top, 0px))',paddingBottom:'calc(80px + env(safe-area-inset-bottom, 0px))',fontFamily:ff}}>
@@ -379,13 +391,6 @@ export default function Card({ session }) {
             const _day = _d.toLocaleDateString('es-PR',{day:'numeric',timeZone:'America/Puerto_Rico'})
             const _month = _d.toLocaleDateString('es-PR',{month:'long',timeZone:'America/Puerto_Rico'})
             const todayStr = `${_day} de ${_month}`
-            const catOrder = []
-            const catMap = {}
-            catalog.forEach(item => {
-              const cat = item.category || 'Galletas'
-              if (!catMap[cat]) { catMap[cat] = []; catOrder.push(cat) }
-              catMap[cat].push(item)
-            })
             return (
             <div className="fade-up">
               {/* Editorial header */}
@@ -404,10 +409,10 @@ export default function Card({ session }) {
                 </div>
               ) : (<>
 
-              {/* Section index — flat chips, 0 border-radius */}
+              {/* Section index — flat chips */}
               <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:24,paddingBottom:16,borderBottom:'1px solid rgba(31,20,14,0.12)'}}>
-                {catOrder.map((cat, ci) => {
-                  const items = catMap[cat]
+                {menuCatOrder.map((cat, ci) => {
+                  const items = menuCatMap[cat]
                   const totalUnd = items.reduce((s,i) => s + (i.stock_qty != null ? i.stock_qty : 0), 0)
                   const hasStock = items.some(i => i.stock_qty != null)
                   return (
@@ -419,20 +424,23 @@ export default function Card({ session }) {
               </div>
 
               {/* Sections */}
-              {catOrder.map((cat, ci) => {
-                const items = catMap[cat]
+              {menuCatOrder.map((cat, ci) => {
+                const items = menuCatMap[cat]
                 const hero = items.find(i => i.badge_hoy && !i.badge_agotado)
-                const rest = items.filter(i => i !== hero)
-                const listItems = hero ? rest : items
+                const listItems = hero ? items.filter(i => i !== hero) : items
                 return (
-                  <div key={cat} style={{marginBottom:40}}>
+                  <div key={cat} style={{marginBottom:44}}>
 
-                    {/* Pieza del día — flat, cr2 background, no border-radius */}
+                    {/* Pieza del día — large square image, flat cr2 bg */}
                     {hero && (
-                      <div style={{marginBottom:20,background:cr2}}>
-                        {hero.image_url && (
-                          <img src={hero.image_url} alt={hero.name} style={{width:'100%',display:'block',aspectRatio:'4/3',objectFit:'cover'}}/>
-                        )}
+                      <div style={{marginBottom:20,background:cr2,cursor:'pointer'}}
+                        onClick={()=>{setSelectedItem(hero);setSelectedItemCat(cat)}}>
+                        {hero.image_url
+                          ? <img src={hero.image_url} alt={hero.name} style={{width:'100%',display:'block',aspectRatio:'1/1',objectFit:'cover'}}/>
+                          : <div style={{width:'100%',aspectRatio:'1/1',background:cr3,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                              <MonarcaButterfly size={64} animate={false} color="rgba(31,20,14,0.1)"/>
+                            </div>
+                        }
                         <div style={{padding:'16px'}}>
                           <div style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500,marginBottom:10}}>Pieza del día · {cat}</div>
                           <div style={{fontFamily:ffS,fontSize:'1.7rem',color:ink,lineHeight:1.05,marginBottom:6}}>{hero.name}</div>
@@ -442,7 +450,7 @@ export default function Card({ session }) {
                               {hero.stock_qty != null && <div style={{fontSize:11,color:mu,marginBottom:4}}>{hero.stock_qty} und</div>}
                               <div style={{fontFamily:ffS,fontSize:26,color:ink,lineHeight:1}}>${parseFloat(hero.price||0).toFixed(2)}</div>
                             </div>
-                            <button onClick={()=>addToCart(hero)} className="tap-scale"
+                            <button onClick={(e)=>{e.stopPropagation();addToCart(hero)}} className="tap-scale"
                               style={{padding:'11px 22px',background:ink,color:cr,border:'none',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:ff,letterSpacing:'0.04em'}}>
                               + Añadir
                             </button>
@@ -454,7 +462,7 @@ export default function Card({ session }) {
                     {/* Section header */}
                     <div style={{paddingBottom:10,borderBottom:'1px solid rgba(31,20,14,0.12)',marginBottom:16}}>
                       <span style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500}}>
-                        {String(ci+1).padStart(2,'0')} · {cat.toUpperCase()} · {String(ci+1).padStart(2,'0')}/{String(catOrder.length).padStart(2,'0')}
+                        {String(ci+1).padStart(2,'0')} · {cat.toUpperCase()} · {String(ci+1).padStart(2,'0')}/{String(menuCatOrder.length).padStart(2,'0')}
                       </span>
                     </div>
 
@@ -464,9 +472,11 @@ export default function Card({ session }) {
                       </div>
                     )}
 
-                    {/* Item list — no add button, display only */}
+                    {/* Item list — clickable, opens detail */}
                     {listItems.map((item) => (
-                      <div key={item.id} style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,padding:'13px 0',borderBottom:'1px solid rgba(31,20,14,0.07)',opacity:item.badge_agotado?0.4:1}}>
+                      <div key={item.id} className="item-row"
+                        onClick={()=>{setSelectedItem(item);setSelectedItemCat(cat)}}
+                        style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,padding:'13px 0',borderBottom:'1px solid rgba(31,20,14,0.07)',opacity:item.badge_agotado?0.4:1}}>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontFamily:ffS,fontSize:'1.05rem',color:ink,lineHeight:1.2,marginBottom:item.description?3:0}}>{item.name}</div>
                           {item.description && <div style={{fontSize:12,color:mu,lineHeight:1.4}}>{item.description}</div>}
@@ -475,6 +485,7 @@ export default function Card({ session }) {
                         <div style={{textAlign:'right',flexShrink:0,paddingTop:2}}>
                           {item.stock_qty != null && <div style={{fontSize:11,color:mu,marginBottom:2}}>{item.stock_qty} und</div>}
                           <div style={{fontFamily:ffS,fontSize:18,color:ink,lineHeight:1}}>${parseFloat(item.price||0).toFixed(2)}</div>
+                          <div style={{fontSize:10,color:mu,marginTop:3,letterSpacing:'0.04em'}}>Ver →</div>
                         </div>
                       </div>
                     ))}
@@ -805,6 +816,133 @@ export default function Card({ session }) {
           </button>
         </nav>
       </div>
+
+      {/* ── PRODUCT DETAIL OVERLAY ── */}
+      {selectedItem && (
+        <div style={{position:'fixed',inset:0,zIndex:300,background:cr,overflowY:'auto',WebkitOverflowScrolling:'touch',animation:'slideUp 0.32s cubic-bezier(0.32,0.72,0,1)'}}>
+          {/* Sticky header */}
+          <div style={{position:'sticky',top:0,zIndex:10,background:'rgba(251,247,238,0.97)',backdropFilter:'blur(12px)',padding:'env(safe-area-inset-top,12px) 20px 12px',borderBottom:'1px solid rgba(31,20,14,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between',minHeight:52}}>
+            <button onClick={()=>setSelectedItem(null)} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,color:ink,fontFamily:ff,fontWeight:500,padding:'6px 0',letterSpacing:'0.04em',display:'flex',alignItems:'center',gap:6}}>
+              <span style={{fontSize:16,lineHeight:1}}>←</span> Volver
+            </button>
+            {!selectedItem.badge_agotado && (
+              <button onClick={()=>{addToCart(selectedItem);showToast(`${selectedItem.name} añadido`);setSelectedItem(null)}} className="tap-scale"
+                style={{padding:'9px 18px',background:ink,color:cr,border:'none',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:ff,letterSpacing:'0.04em'}}>
+                + Añadir
+              </button>
+            )}
+          </div>
+
+          {/* Hero image — square */}
+          {selectedItem.image_url
+            ? <img src={selectedItem.image_url} alt={selectedItem.name} style={{width:'100%',display:'block',aspectRatio:'1/1',objectFit:'cover'}}/>
+            : <div style={{width:'100%',aspectRatio:'1/1',background:cr2,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <MonarcaButterfly size={80} animate={false} color="rgba(31,20,14,0.08)"/>
+              </div>
+          }
+
+          {/* Content */}
+          <div style={{padding:'28px 20px 0'}}>
+            {/* Category + badges */}
+            <div style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500,marginBottom:12}}>
+              {selectedItemCat}
+              {selectedItem.badge_hoy && ' · Pieza del día'}
+              {selectedItem.badge_nuevo && ' · Nuevo'}
+              {selectedItem.badge_temporada && ' · Temporada'}
+            </div>
+
+            {/* Name */}
+            <div style={{fontFamily:ffS,fontSize:'clamp(1.8rem,8vw,2.4rem)',color:ink,lineHeight:1.0,letterSpacing:'-0.02em',marginBottom:16}}>
+              {selectedItem.name}
+            </div>
+
+            {/* Price + stock */}
+            <div style={{display:'flex',alignItems:'baseline',gap:14,marginBottom:20}}>
+              <div style={{fontFamily:ffS,fontSize:34,color:ink,lineHeight:1}}>${parseFloat(selectedItem.price||0).toFixed(2)}</div>
+              {selectedItem.stock_qty != null && (
+                <div style={{fontSize:12,color:mu}}>{selectedItem.stock_qty} und disponibles</div>
+              )}
+            </div>
+
+            {/* CTA */}
+            {!selectedItem.badge_agotado ? (
+              <button onClick={()=>{addToCart(selectedItem);showToast(`${selectedItem.name} añadido`);setSelectedItem(null)}} className="tap-scale"
+                style={{width:'100%',padding:'16px',background:ink,color:cr,border:'none',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:ff,letterSpacing:'0.05em',marginBottom:28}}>
+                Añadir al carrito →
+              </button>
+            ) : (
+              <div style={{width:'100%',padding:'15px',background:'rgba(31,20,14,0.05)',color:mu,fontSize:13,fontFamily:ff,textAlign:'center',marginBottom:28,letterSpacing:'0.06em',textTransform:'uppercase'}}>
+                Agotado por hoy
+              </div>
+            )}
+
+            {/* Description */}
+            {selectedItem.description && (
+              <div style={{marginBottom:28}}>
+                <div style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500,marginBottom:12}}>Descripción</div>
+                <p style={{fontSize:15,color:ink,lineHeight:1.7}}>{selectedItem.description}</p>
+              </div>
+            )}
+
+            <div style={{height:1,background:'rgba(31,20,14,0.08)',marginBottom:28}}/>
+
+            {/* Reviews */}
+            <div style={{marginBottom:28}}>
+              <div style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500,marginBottom:16}}>Opiniones</div>
+              {[
+                {name:'Carmen R.',stars:5,text:'Lo mejor que he probado. Siempre fresco y con sabor casero. Vale cada centavo.'},
+                {name:'José M.',stars:5,text:'Mi favorito del menú. Vengo específicamente por esto cada semana.'},
+                {name:'Daniela V.',stars:4,text:'El sabor es único. Lo recomiendo especialmente para el desayuno.'},
+              ].map((r,i) => (
+                <div key={i} style={{paddingBottom:16,marginBottom:16,borderBottom:i<2?'1px solid rgba(31,20,14,0.06)':'none'}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+                    <div style={{fontSize:13,color:ink,fontWeight:500}}>{r.name}</div>
+                    <div style={{fontSize:11,color:or,letterSpacing:1}}>{'★'.repeat(r.stars)}{'☆'.repeat(5-r.stars)}</div>
+                  </div>
+                  <p style={{fontSize:13,color:mu,lineHeight:1.55}}>{r.text}</p>
+                </div>
+              ))}
+            </div>
+
+            <div style={{height:1,background:'rgba(31,20,14,0.08)',marginBottom:28}}/>
+
+            {/* Recommendations */}
+            {(() => {
+              const recs = (menuCatMap[selectedItemCat]||[]).filter(i => i.id !== selectedItem.id && !i.badge_agotado).slice(0,3)
+              if (!recs.length) return null
+              return (
+                <div style={{marginBottom:40}}>
+                  <div style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500,marginBottom:16}}>
+                    También en {selectedItemCat.toUpperCase()}
+                  </div>
+                  {recs.map(rec => (
+                    <div key={rec.id} className="item-row"
+                      onClick={()=>setSelectedItem(rec)}
+                      style={{display:'flex',alignItems:'center',gap:14,padding:'12px 0',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>
+                      {rec.image_url
+                        ? <img src={rec.image_url} alt={rec.name} style={{width:56,height:56,objectFit:'cover',flexShrink:0}}/>
+                        : <div style={{width:56,height:56,background:cr2,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                            <MonarcaButterfly size={28} animate={false} color="rgba(31,20,14,0.1)"/>
+                          </div>
+                      }
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontFamily:ffS,fontSize:'1rem',color:ink,lineHeight:1.2}}>{rec.name}</div>
+                        {rec.description && <div style={{fontSize:12,color:mu,marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{rec.description}</div>}
+                      </div>
+                      <div style={{textAlign:'right',flexShrink:0}}>
+                        <div style={{fontFamily:ffS,fontSize:17,color:ink}}>${parseFloat(rec.price||0).toFixed(2)}</div>
+                        <div style={{fontSize:10,color:mu,marginTop:2}}>Ver →</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+
+          <div style={{height:'calc(60px + env(safe-area-inset-bottom,0px))'}}/>
+        </div>
+      )}
 
       {/* QR Flip Modal */}
       {showQRFlip&&card&&(
