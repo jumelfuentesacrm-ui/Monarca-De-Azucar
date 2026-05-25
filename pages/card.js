@@ -375,8 +375,10 @@ export default function Card({ session }) {
 
           {/* ── TAB: MENÚ ── */}
           {tab === 'menu' && (()=>{
-            const today = new Date().toLocaleDateString('es-PR',{day:'numeric',month:'long',timeZone:'America/Puerto_Rico'})
-            // Group by category, preserving order
+            const _d = new Date()
+            const _day = _d.toLocaleDateString('es-PR',{day:'numeric',timeZone:'America/Puerto_Rico'})
+            const _month = _d.toLocaleDateString('es-PR',{month:'long',timeZone:'America/Puerto_Rico'})
+            const todayStr = `${_day} de ${_month}`
             const catOrder = []
             const catMap = {}
             catalog.forEach(item => {
@@ -387,17 +389,12 @@ export default function Card({ session }) {
             return (
             <div className="fade-up">
               {/* Editorial header */}
-              <div style={{paddingTop:28,marginBottom:20}}>
-                <div style={{fontSize:'0.52rem',letterSpacing:'0.2em',textTransform:'uppercase',color:mu,marginBottom:8}}>§ 01 · El menú</div>
-                <div style={{fontFamily:ffS,fontSize:'clamp(1.7rem,7vw,2.3rem)',fontWeight:400,color:ink,lineHeight:1.05,marginBottom:6}}>
-                  Lo que se hornea hoy.
+              <div style={{paddingTop:28,marginBottom:24}}>
+                <div style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500,marginBottom:14}}>§ 01 · El menú</div>
+                <div style={{fontFamily:ffS,fontSize:'clamp(2.5rem,12vw,5.5rem)',fontWeight:400,color:ink,lineHeight:0.92,letterSpacing:'-0.035em',marginBottom:14}}>
+                  Lo que se<br/><em style={{fontStyle:'italic'}}>hornea</em> hoy.
                 </div>
-                <div style={{fontSize:'0.65rem',color:mu}}>
-                  El menú cambia cada día con lo que esté en su mejor punto. Cuando se acaba, se acaba.
-                </div>
-                <div style={{fontSize:'0.6rem',color:mu,marginTop:4,fontStyle:'italic'}}>
-                  Esta es la carta del {today}.
-                </div>
+                <div style={{fontSize:13,color:mu,fontWeight:700}}>{todayStr}</div>
               </div>
 
               {catalog.length === 0 ? (
@@ -407,17 +404,15 @@ export default function Card({ session }) {
                 </div>
               ) : (<>
 
-              {/* Section index */}
-              <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',marginBottom:24,paddingBottom:16,borderBottom:'2px solid rgba(31,20,14,0.07)'}}>
+              {/* Section index — flat chips, 0 border-radius */}
+              <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:24,paddingBottom:16,borderBottom:'1px solid rgba(31,20,14,0.12)'}}>
                 {catOrder.map((cat, ci) => {
                   const items = catMap[cat]
                   const totalUnd = items.reduce((s,i) => s + (i.stock_qty != null ? i.stock_qty : 0), 0)
                   const hasStock = items.some(i => i.stock_qty != null)
                   return (
-                    <div key={cat} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 10px',border:'1px solid rgba(31,20,14,0.1)',borderRadius:6,background:'rgba(31,20,14,0.02)'}}>
-                      <span style={{fontSize:'0.48rem',color:mu,letterSpacing:'0.1em',textTransform:'uppercase'}}>Sec. {String(ci+1).padStart(2,'0')}</span>
-                      <span style={{fontSize:'0.65rem',color:ink,fontWeight:500}}>{cat}</span>
-                      {hasStock && <span style={{fontSize:'0.52rem',color:mu}}>{totalUnd} und</span>}
+                    <div key={cat} style={{padding:'6px 10px',background:cr3,fontSize:10,color:ink,letterSpacing:'0.05em',textTransform:'uppercase',fontWeight:500,fontFamily:ff}}>
+                      Sec. {String(ci+1).padStart(2,'0')} · {cat}{hasStock ? ` · ${totalUnd} und` : ''}
                     </div>
                   )
                 })}
@@ -428,96 +423,58 @@ export default function Card({ session }) {
                 const items = catMap[cat]
                 const hero = items.find(i => i.badge_hoy && !i.badge_agotado)
                 const rest = items.filter(i => i !== hero)
+                const listItems = hero ? rest : items
                 return (
-                  <div key={cat} style={{marginBottom:36}}>
+                  <div key={cat} style={{marginBottom:40}}>
 
-                    {/* Hero "Pieza del día" */}
+                    {/* Pieza del día — flat, cr2 background, no border-radius */}
                     {hero && (
-                      <div style={{marginBottom:20,borderRadius:14,overflow:'hidden',border:'1px solid rgba(31,20,14,0.08)',background:cr}}>
+                      <div style={{marginBottom:20,background:cr2}}>
                         {hero.image_url && (
-                          <div style={{height:160,overflow:'hidden',background:'rgba(31,20,14,0.04)'}}>
-                            <img src={hero.image_url} alt={hero.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                          </div>
+                          <img src={hero.image_url} alt={hero.name} style={{width:'100%',display:'block',aspectRatio:'4/3',objectFit:'cover'}}/>
                         )}
-                        <div style={{padding:'14px 16px'}}>
-                          <div style={{fontSize:'0.5rem',letterSpacing:'0.15em',textTransform:'uppercase',color:or,marginBottom:4}}>★ Pieza del día · {cat}</div>
-                          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
-                            <div style={{flex:1}}>
-                              <div style={{fontFamily:ffS,fontSize:'1.25rem',color:ink,lineHeight:1.15,marginBottom:4}}>{hero.name}</div>
-                              {hero.description && <div style={{fontSize:'0.65rem',color:mu,lineHeight:1.5}}>{hero.description}</div>}
-                              {hero.stock_qty != null && <div style={{fontSize:'0.58rem',color:mu,marginTop:4}}>{hero.stock_qty} und disponibles</div>}
+                        <div style={{padding:'16px'}}>
+                          <div style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500,marginBottom:10}}>Pieza del día · {cat}</div>
+                          <div style={{fontFamily:ffS,fontSize:'1.7rem',color:ink,lineHeight:1.05,marginBottom:6}}>{hero.name}</div>
+                          {hero.description && <div style={{fontSize:13,color:mu,lineHeight:1.5,marginBottom:12}}>{hero.description}</div>}
+                          <div style={{display:'flex',alignItems:'flex-end',justifyContent:'space-between',gap:12}}>
+                            <div>
+                              {hero.stock_qty != null && <div style={{fontSize:11,color:mu,marginBottom:4}}>{hero.stock_qty} und</div>}
+                              <div style={{fontFamily:ffS,fontSize:26,color:ink,lineHeight:1}}>${parseFloat(hero.price||0).toFixed(2)}</div>
                             </div>
-                            <div style={{textAlign:'right',flexShrink:0}}>
-                              <div style={{fontFamily:ffS,fontSize:'1.35rem',color:or,marginBottom:8}}>${parseFloat(hero.price||0).toFixed(2)}</div>
-                              <button onClick={()=>addToCart(hero)} className="tap-scale"
-                                style={{padding:'8px 18px',background:or,color:cr,border:'none',borderRadius:999,fontSize:'0.62rem',fontWeight:600,cursor:'pointer',fontFamily:ff}}>
-                                + Añadir
-                              </button>
-                            </div>
+                            <button onClick={()=>addToCart(hero)} className="tap-scale"
+                              style={{padding:'11px 22px',background:ink,color:cr,border:'none',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:ff,letterSpacing:'0.04em'}}>
+                              + Añadir
+                            </button>
                           </div>
                         </div>
                       </div>
                     )}
 
                     {/* Section header */}
-                    <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:12,paddingBottom:8,borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
-                      <span style={{fontFamily:ffS,fontSize:'1.1rem',color:ink}}>{String(ci+1).padStart(2,'0')} <em style={{fontStyle:'italic',color:mu}}>{cat}</em></span>
-                      <span style={{fontSize:'0.5rem',color:mu,letterSpacing:'0.08em',textTransform:'uppercase'}}>{String(ci+1).padStart(2,'0')}/{String(catOrder.length).padStart(2,'0')}</span>
+                    <div style={{paddingBottom:10,borderBottom:'1px solid rgba(31,20,14,0.12)',marginBottom:16}}>
+                      <span style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500}}>
+                        {String(ci+1).padStart(2,'0')} · {cat.toUpperCase()} · {String(ci+1).padStart(2,'0')}/{String(catOrder.length).padStart(2,'0')}
+                      </span>
                     </div>
-                    {hero && rest.length > 0 && (
-                      <div style={{fontSize:'0.55rem',color:mu,marginBottom:10,letterSpacing:'0.05em'}}>También en {cat.toLowerCase()}</div>
+
+                    {hero && listItems.length > 0 && (
+                      <div style={{fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:mu,fontWeight:500,marginBottom:14}}>
+                        También en {cat.toUpperCase()}
+                      </div>
                     )}
 
-                    {/* Item list */}
-                    {rest.map((item, ii) => (
-                      <div key={item.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'11px 0',borderBottom:'1px solid rgba(31,20,14,0.05)',opacity:item.badge_agotado?0.45:1}}>
-                        {item.image_url
-                          ? <img src={item.image_url} alt={item.name} style={{width:44,height:44,borderRadius:7,objectFit:'cover',flexShrink:0,border:'1px solid rgba(31,20,14,0.07)'}}/>
-                          : <span style={{fontSize:'0.65rem',color:'rgba(31,20,14,0.25)',fontFamily:ffS,width:22,flexShrink:0,paddingTop:3}}>{String(ii+1).padStart(2,'0')}</span>}
+                    {/* Item list — no add button, display only */}
+                    {listItems.map((item) => (
+                      <div key={item.id} style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,padding:'13px 0',borderBottom:'1px solid rgba(31,20,14,0.07)',opacity:item.badge_agotado?0.4:1}}>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontFamily:ffS,fontSize:'0.95rem',color:ink,lineHeight:1.2}}>{item.name}</div>
-                          {item.description && <div style={{fontSize:'0.6rem',color:mu,fontStyle:'italic',lineHeight:1.4,marginTop:2}}>{item.description}</div>}
-                          {item.badge_nuevo && <span style={{fontSize:'0.45rem',padding:'1px 5px',borderRadius:999,background:'#8e44ad18',color:'#8e44ad',letterSpacing:'0.06em',textTransform:'uppercase',marginTop:3,display:'inline-block'}}>Nuevo</span>}
-                          {item.badge_temporada && <span style={{fontSize:'0.45rem',padding:'1px 5px',borderRadius:999,background:'rgba(45,138,96,0.1)',color:'#2d8a60',letterSpacing:'0.06em',textTransform:'uppercase',marginTop:3,display:'inline-block'}}>Temporada</span>}
+                          <div style={{fontFamily:ffS,fontSize:'1.05rem',color:ink,lineHeight:1.2,marginBottom:item.description?3:0}}>{item.name}</div>
+                          {item.description && <div style={{fontSize:12,color:mu,lineHeight:1.4}}>{item.description}</div>}
+                          {item.badge_agotado && <div style={{fontSize:10,color:mu,marginTop:4,letterSpacing:'0.1em',textTransform:'uppercase'}}>Agotado</div>}
                         </div>
-                        <div style={{textAlign:'right',flexShrink:0}}>
-                          {item.stock_qty != null && <div style={{fontSize:'0.52rem',color:mu,marginBottom:2}}>{item.stock_qty} und</div>}
-                          <div style={{fontFamily:ffS,fontSize:'1rem',color:item.badge_agotado?mu:or}}>${parseFloat(item.price||0).toFixed(2)}</div>
-                          {!item.badge_agotado && (
-                            <button onClick={()=>addToCart(item)} className="tap-scale"
-                              style={{marginTop:5,padding:'5px 12px',background:or,color:cr,border:'none',borderRadius:999,fontSize:'0.57rem',fontWeight:600,cursor:'pointer',fontFamily:ff}}>
-                              + Añadir
-                            </button>
-                          )}
-                          {item.badge_agotado && <div style={{fontSize:'0.5rem',color:mu,marginTop:4}}>Agotado</div>}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* If only hero (no rest) */}
-                    {hero && rest.length === 0 && null}
-                    {/* If no hero, all items shown as list */}
-                    {!hero && items.map((item, ii) => (
-                      <div key={item.id} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'11px 0',borderBottom:'1px solid rgba(31,20,14,0.05)',opacity:item.badge_agotado?0.45:1}}>
-                        {item.image_url
-                          ? <img src={item.image_url} alt={item.name} style={{width:44,height:44,borderRadius:7,objectFit:'cover',flexShrink:0,border:'1px solid rgba(31,20,14,0.07)'}}/>
-                          : <span style={{fontSize:'0.65rem',color:'rgba(31,20,14,0.25)',fontFamily:ffS,width:22,flexShrink:0,paddingTop:3}}>{String(ii+1).padStart(2,'0')}</span>}
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontFamily:ffS,fontSize:'0.95rem',color:ink,lineHeight:1.2}}>{item.name}</div>
-                          {item.description && <div style={{fontSize:'0.6rem',color:mu,fontStyle:'italic',lineHeight:1.4,marginTop:2}}>{item.description}</div>}
-                          {item.badge_nuevo && <span style={{fontSize:'0.45rem',padding:'1px 5px',borderRadius:999,background:'#8e44ad18',color:'#8e44ad',letterSpacing:'0.06em',textTransform:'uppercase',marginTop:3,display:'inline-block'}}>Nuevo</span>}
-                          {item.badge_temporada && <span style={{fontSize:'0.45rem',padding:'1px 5px',borderRadius:999,background:'rgba(45,138,96,0.1)',color:'#2d8a60',letterSpacing:'0.06em',textTransform:'uppercase',marginTop:3,display:'inline-block'}}>Temporada</span>}
-                        </div>
-                        <div style={{textAlign:'right',flexShrink:0}}>
-                          {item.stock_qty != null && <div style={{fontSize:'0.52rem',color:mu,marginBottom:2}}>{item.stock_qty} und</div>}
-                          <div style={{fontFamily:ffS,fontSize:'1rem',color:item.badge_agotado?mu:or}}>${parseFloat(item.price||0).toFixed(2)}</div>
-                          {!item.badge_agotado && (
-                            <button onClick={()=>addToCart(item)} className="tap-scale"
-                              style={{marginTop:5,padding:'5px 12px',background:or,color:cr,border:'none',borderRadius:999,fontSize:'0.57rem',fontWeight:600,cursor:'pointer',fontFamily:ff}}>
-                              + Añadir
-                            </button>
-                          )}
-                          {item.badge_agotado && <div style={{fontSize:'0.5rem',color:mu,marginTop:4}}>Agotado</div>}
+                        <div style={{textAlign:'right',flexShrink:0,paddingTop:2}}>
+                          {item.stock_qty != null && <div style={{fontSize:11,color:mu,marginBottom:2}}>{item.stock_qty} und</div>}
+                          <div style={{fontFamily:ffS,fontSize:18,color:ink,lineHeight:1}}>${parseFloat(item.price||0).toFixed(2)}</div>
                         </div>
                       </div>
                     ))}
@@ -525,7 +482,12 @@ export default function Card({ session }) {
                 )
               })}
 
-              <div style={{fontSize:'0.55rem',color:mu,fontStyle:'italic',marginTop:4,marginBottom:24}}>* Cantidades aproximadas. Sugerimos venir antes del mediodía.</div>
+              <div style={{fontSize:12,color:mu,fontStyle:'italic',marginBottom:16}}>* Cantidades aproximadas. Sugerimos venir antes del mediodía.</div>
+              <div style={{marginBottom:28}}>
+                <button onClick={()=>setTab('ordenar')} style={{background:'none',border:'none',cursor:'pointer',padding:0,fontSize:12,fontWeight:500,color:ink,letterSpacing:'0.04em',fontFamily:ff}}>
+                  Ordena para recoger →
+                </button>
+              </div>
               </>)}
 
               {/* Custom orders section */}
