@@ -2801,6 +2801,98 @@ function InventoryDropdown({ catalog, supplies, cards }) {
 }
 
 
+function PushPanel({ showToast }) {
+  const ff='"DM Sans",system-ui,sans-serif'
+  const ffS='"Instrument Serif",serif'
+  const ink='#1F140E', or='#E35A1B', mu='#7A6452', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE'
+  const [form, setForm] = React.useState({ title: '', body: '', url: '/card' })
+  const [sending, setSending] = React.useState(false)
+  const [result, setResult] = React.useState(null)
+
+  async function send() {
+    if (!form.title.trim() || !form.body.trim()) return showToast('Necesitas título y mensaje')
+    setSending(true)
+    setResult(null)
+    try {
+      const r = await fetch('/api/admin/push-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      })
+      const data = await r.json()
+      if (data.error) { showToast('Error: ' + data.error); return }
+      setResult(data)
+      showToast(`Enviado a ${data.sent} dispositivo${data.sent !== 1 ? 's' : ''}`)
+      setForm(f => ({ ...f, title: '', body: '' }))
+    } catch { showToast('Error al enviar') } finally { setSending(false) }
+  }
+
+  const presets = [
+    { label: '🍪 Hornada nueva', title: '¡Recién salido del horno!', body: 'La hornada de hoy ya está lista. Ven antes de que se acabe.' },
+    { label: '⚡ Últimas unidades', title: 'Últimas unidades', body: 'Quedan pocas piezas de hoy. Date prisa antes del mediodía.' },
+    { label: '✨ Edición especial', title: 'Edición especial hoy', body: 'Hay algo especial en el menú de hoy. Entra a ver.' },
+    { label: '🕐 Horario', title: 'Abrimos hoy', body: 'Estamos abiertos de 7am a 2pm. Te esperamos con el café listo.' },
+  ]
+
+  return (
+    <div>
+      <div style={{ fontFamily: ffS, fontSize: '1.5rem', fontWeight: 400, marginBottom: '0.5rem' }}>
+        Notificaciones push
+      </div>
+      <div style={{ fontSize: '0.68rem', color: mu, marginBottom: '1.5rem', lineHeight: 1.5 }}>
+        Envía notificaciones directamente al teléfono de tus clientes. Solo llega a quienes activaron las notificaciones en la app.
+      </div>
+
+      {/* Presets */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.5rem', fontWeight: 600 }}>Plantillas rápidas</div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {presets.map(p => (
+            <button key={p.label} onClick={() => setForm(f => ({ ...f, title: p.title, body: p.body }))}
+              style={{ padding: '0.45rem 0.85rem', background: cr2, border: '1px solid ' + cr3, borderRadius: 999, fontFamily: ff, fontSize: '0.65rem', color: ink, cursor: 'pointer' }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Form */}
+      <div style={{ background: cr, border: '1px solid rgba(31,20,14,0.1)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '0.85rem' }}>
+          <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.35rem', fontWeight: 600 }}>Título</div>
+          <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+            placeholder="¡Recién salido del horno!"
+            style={{ width: '100%', padding: '0.7rem 0.85rem', border: '1px solid rgba(31,20,14,0.12)', borderRadius: 8, fontFamily: ff, fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ marginBottom: '0.85rem' }}>
+          <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.35rem', fontWeight: 600 }}>Mensaje</div>
+          <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+            placeholder="La hornada de hoy ya está lista. Ven antes de que se acabe."
+            rows={3}
+            style={{ width: '100%', padding: '0.7rem 0.85rem', border: '1px solid rgba(31,20,14,0.12)', borderRadius: 8, fontFamily: ff, fontSize: '0.82rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ marginBottom: '1rem' }}>
+          <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.35rem', fontWeight: 600 }}>URL destino (opcional)</div>
+          <input value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
+            placeholder="/card"
+            style={{ width: '100%', padding: '0.7rem 0.85rem', border: '1px solid rgba(31,20,14,0.12)', borderRadius: 8, fontFamily: ff, fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+        <button onClick={send} disabled={sending || !form.title.trim() || !form.body.trim()}
+          style={{ padding: '0.75rem 1.5rem', background: sending ? mu : ink, color: cr, border: 'none', borderRadius: 999, fontFamily: ff, fontSize: '0.72rem', fontWeight: 600, cursor: sending ? 'not-allowed' : 'pointer', opacity: (!form.title.trim() || !form.body.trim()) ? 0.5 : 1 }}>
+          {sending ? 'Enviando...' : '🔔 Enviar notificación'}
+        </button>
+      </div>
+
+      {result && (
+        <div style={{ background: result.sent > 0 ? 'rgba(45,138,96,0.08)' : 'rgba(192,57,43,0.08)', border: `1px solid ${result.sent > 0 ? 'rgba(45,138,96,0.2)' : 'rgba(192,57,43,0.2)'}`, borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.72rem', color: result.sent > 0 ? '#2d8a60' : '#c0392b' }}>
+          {result.sent > 0 ? `✓ Enviado a ${result.sent} dispositivo${result.sent !== 1 ? 's' : ''}` : 'No hay dispositivos suscritos aún'}
+          {result.failed > 0 && ` · ${result.failed} fallaron`}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StockPanel({ catalog, supplies, loadAll, showToast }) {
   const [entries, setEntries] = React.useState({})
   const [recipes, setRecipes] = React.useState({})
@@ -3669,7 +3761,7 @@ export default function Admin({session}){
             {/* OPERACIÓN */}
             <div style={{padding:'0.25rem 0'}}>
               <div style={{fontSize:'0.5rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',padding:'0 1.25rem',marginBottom:'0.35rem'}}>Operación</div>
-              {[['system','Configuración'],['catalog','Catálogo'],['supplies','Inventario'],['website','Website'],['notifications','Alertas']].map(([id,label])=>(
+              {[['system','Configuración'],['catalog','Catálogo'],['supplies','Inventario'],['website','Website'],['push','🔔 Notificaciones'],['notifications','Alertas']].map(([id,label])=>(
                 <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
                   <span style={{fontSize:'0.72rem',color:panel===id?gold:'rgba(255,255,255,0.7)'}}>{label}</span>
                 </button>
@@ -3692,7 +3784,8 @@ export default function Admin({session}){
             {panel==='notifications'&&<NotificationsPanel cards={cards} users={users}/>}
             {panel==='bookings'&&<BookingsPanel/>}
             {panel==='campaigns'&&<CampaignsPanel cards={cards} users={users}/>}
-            {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/> }
+            {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/>}
+            {panel==='push'&&<PushPanel showToast={showToast}/>}
             {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:'',units:'1',notes:item.catalog_costs?.notes||'',_savedCost:item.catalog_costs?.cost||null});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}} showToast={showToast} loadAll={loadAll}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog} onCompra={()=>setShowPurchase(true)} onCompraItem={(id)=>{setPurchaseSupplyId(id);setShowPurchase(true)}}
@@ -3843,6 +3936,7 @@ export default function Admin({session}){
                 ['punch','Sellar visita'],
                 ['campaigns','Campañas'],
                 ['website','Website'],
+                ['push','🔔 Notificaciones'],
                 ['catalog','Catálogo'],
                 ['supplies','Inventario'],
                 ['system','Configuración'],
