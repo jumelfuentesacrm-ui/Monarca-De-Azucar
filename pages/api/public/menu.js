@@ -7,25 +7,47 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
-  
-  const { data: items, error } = await supabase
+
+  let items = null
+
+  // Full query with all columns
+  const { data: full, error: fullErr } = await supabase
     .from('catalog_items')
     .select('id, name, description, active, category, price, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, image_url')
     .eq('active', true)
+    .order('category')
     .order('badge_hoy', { ascending: false })
     .order('name')
 
-  if (error) {
-    // Fallback without badge columns if they don't exist yet
-    const { data: basic } = await supabase
+  if (!fullErr) {
+    items = full
+  } else {
+    // Fallback without image_url (column may not exist yet)
+    const { data: partial, error: partialErr } = await supabase
       .from('catalog_items')
-      .select('id, name, description, active, created_at')
+      .select('id, name, description, active, category, price, badge_hoy, badge_nuevo, badge_temporada, badge_agotado')
       .eq('active', true)
+      .order('category')
+      .order('badge_hoy', { ascending: false })
       .order('name')
-    return res.status(200).json({ items: basic || [] })
+
+    if (!partialErr) {
+      items = (partial || []).map(i => ({ ...i, image_url: null }))
+    } else {
+      // Final fallback: minimal columns
+      const { data: basic } = await supabase
+        .from('catalog_items')
+        .select('id, name, description, active, category, created_at')
+        .eq('active', true)
+        .order('category')
+        .order('name')
+      items = (basic || []).map(i => ({ ...i, image_url: null, price: 0 }))
+    }
   }
 
-  // Also get prices and stock
+  if (!items) return res.status(200).json({ items: [] })
+
+  // Get prices and stock
   const { data: prices } = await supabase
     .from('catalog_prices')
     .select('product_id, amount')
@@ -40,7 +62,7 @@ export default async function handler(req, res) {
   const stockMap = {}
   ;(stockRows || []).forEach(r => { stockMap[r.catalog_item_id] = r.qty })
 
-  const enriched = (items || []).map(item => ({
+  const enriched = items.map(item => ({
     ...item,
     price: item.price || priceMap[item.id] || 0,
     stock_qty: stockMap[item.id] != null ? stockMap[item.id] : null,
@@ -48,3 +70,4 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ items: enriched })
 }
+
