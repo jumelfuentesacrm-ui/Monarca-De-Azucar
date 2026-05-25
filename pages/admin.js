@@ -3480,6 +3480,9 @@ export default function Admin({session}){
   const [loading,setLoading]=useState(true)
   const [punchId,setPunchId]=useState('')
   const [punchAmt,setPunchAmt]=useState('')
+  const [punchProduct,setPunchProduct]=useState('')
+  const [punchProductSearch,setPunchProductSearch]=useState('')
+  const [punchProductOpen,setPunchProductOpen]=useState(false)
   const [modal,setModal]=useState(null)
   const [form,setForm]=useState({})
   const [toast,setToast]=useState('')
@@ -3546,17 +3549,16 @@ export default function Admin({session}){
   async function doPunch(){
     if(!punchId){showToast('Select a client');return}
     if(!punchAmt||parseFloat(punchAmt)<=0){showToast('Amount is required');return}
-    const res=await fetch('/api/admin/punch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({card_id:punchId,payment_amount:punchAmt})})
+    const res=await fetch('/api/admin/punch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({card_id:punchId,payment_amount:punchAmt,product_name:punchProduct||null})})
     const data=await res.json()
     if(res.ok){
       showToast(data.message)
       const card=cards.find(c=>c.id===punchId)
-      // Register sale + push notification
       await fetch('/api/admin/sales',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
         customer_id:card?.user_id,
         customer_name:card?.profiles?.business_name||card?.profiles?.full_name||'',
         customer_email:card?.profiles?.email||'',
-        product_name:'Manual Payment',
+        product_name:punchProduct||'Manual Payment',
         amount:parseFloat(punchAmt),
         currency:'usd',
         type:'manual',
@@ -3565,7 +3567,7 @@ export default function Admin({session}){
         notes:'Registered via punch'
       })})
       sendPush('New Sale', `$${parseFloat(punchAmt).toFixed(2)} — ${card?.profiles?.business_name||card?.profiles?.full_name||'Client'}`, '/admin')
-      setPunchId('');setPunchAmt('');loadAll()
+      setPunchId('');setPunchAmt('');setPunchProduct('');setPunchProductSearch('');loadAll()
     }
     else showToast('Error: '+data.error)
   }
@@ -3882,17 +3884,48 @@ export default function Admin({session}){
             </>}
 
 
-            {panel==='punch'&&<>
+            {panel==='punch'&&(()=>{
+              const punchCatalog=(catalog||[]).filter(item=>item.active!==false)
+              const punchWords=punchProductSearch.trim().toLowerCase().split(/\s+/).filter(Boolean)
+              const punchFiltered=punchWords.length===0?punchCatalog:punchCatalog.filter(item=>punchWords.every(w=>item.name.toLowerCase().includes(w)))
+              return<>
               <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400,color:ink,marginBottom:'1.25rem'}}>Sellar visita</h2>
               <div style={{background:white,borderRadius:10,padding:'1.5rem',border:'1px solid rgba(31,20,14,0.07)'}}>
                 <div className="punch-row" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1rem'}}>
-                  <div><label style={lbl}>Client</label><select value={punchId} onChange={e=>setPunchId(e.target.value)} style={{...inp,marginBottom:0}}><option value="">Select</option>{cards.map(c=><option key={c.id} value={c.id}>{c.profiles?.business_name||c.profiles?.full_name} · {c.stamps%5===0&&c.stamps>0?5:c.stamps%5}/5</option>)}</select></div>
-                  <div><label style={lbl}>Amount <span style={{color:'#c0392b'}}>*</span></label><input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={punchAmt} onChange={e=>setPunchAmt(e.target.value)}/></div>
+                  <div><label style={lbl}>Cliente</label><select value={punchId} onChange={e=>setPunchId(e.target.value)} style={{...inp,marginBottom:0}}><option value="">Seleccionar</option>{cards.map(c=><option key={c.id} value={c.id}>{c.profiles?.business_name||c.profiles?.full_name} · {c.stamps%5===0&&c.stamps>0?5:c.stamps%5}/5</option>)}</select></div>
+                  <div><label style={lbl}>Monto <span style={{color:'#c0392b'}}>*</span></label><input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={punchAmt} onChange={e=>setPunchAmt(e.target.value)}/></div>
                 </div>
+
+                {/* Product search */}
+                <div style={{marginBottom:'1rem',position:'relative'}}>
+                  <label style={lbl}>Producto</label>
+                  <input
+                    value={punchProduct?punchProduct:punchProductSearch}
+                    onChange={e=>{if(punchProduct)setPunchProduct('');setPunchProductSearch(e.target.value);setPunchProductOpen(true)}}
+                    onFocus={()=>setPunchProductOpen(true)}
+                    placeholder="Buscar producto..."
+                    style={{...inp,marginBottom:0,paddingRight:punchProduct?'2.5rem':'0.85rem'}}
+                  />
+                  {punchProduct&&<button onClick={()=>{setPunchProduct('');setPunchProductSearch('');setPunchProductOpen(false)}} style={{position:'absolute',right:'0.5rem',bottom:'0.55rem',background:'none',border:'none',cursor:'pointer',color:mu,fontSize:'1rem',lineHeight:1}}>×</button>}
+                  {punchProductOpen&&!punchProduct&&(
+                    <div style={{position:'absolute',top:'100%',left:0,right:0,background:white,border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,zIndex:50,maxHeight:200,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
+                      {punchFiltered.length===0?<div style={{padding:'0.75rem 1rem',fontSize:'0.72rem',color:mu}}>Sin resultados</div>:punchFiltered.map(item=>(
+                        <div key={item.id} onClick={()=>{setPunchProduct(item.name);setPunchProductSearch('');setPunchProductOpen(false)}}
+                          style={{padding:'0.65rem 1rem',fontSize:'0.78rem',color:ink,cursor:'pointer',borderBottom:'1px solid rgba(31,20,14,0.05)'}}
+                          onMouseEnter={e=>e.currentTarget.style.background='rgba(31,20,14,0.04)'}
+                          onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                          {item.name}
+                          {item.price&&<span style={{fontSize:'0.65rem',color:mu,marginLeft:'0.5rem'}}>${item.price}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {punchId&&(()=>{const card=cards.find(c=>c.id===punchId);const cur=card?(card.stamps%5===0&&card.stamps>0?5:card.stamps%5):0;return<div style={{background:'linear-gradient(135deg,#1a1917,#252320)',borderRadius:10,padding:'1.1rem',marginBottom:'1rem',border:'1px solid rgba(227,90,27,0.22)',color:white}}><div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.45rem'}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM · {card?.profiles?.business_name||card?.profiles?.full_name}</div><div style={{display:'flex',gap:5}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:15,height:15,borderRadius:'50%',border:'1.5px solid rgba(227,90,27,0.22)',background:i<cur?gold:i===cur?'rgba(227,90,27,0.35)':'transparent'}}/>)}</div></div>})()}
-                <button onClick={doPunch} style={{width:'100%',background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Dar Sello</button>
+                <button onClick={()=>{setPunchProductOpen(false);doPunch()}} style={{width:'100%',background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Dar Sello</button>
               </div>
-            </>}
+            </>})()}
           </div>
         </div>
 
