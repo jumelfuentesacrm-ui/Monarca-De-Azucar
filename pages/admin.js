@@ -536,115 +536,6 @@ function CampaignsPanel({ cards, users }) {
 }
 
 
-function PushPanel() {
-  const [title, setTitle] = React.useState('')
-  const [body, setBody] = React.useState('')
-  const [url, setUrl] = React.useState('/card')
-  const [sending, setSending] = React.useState(false)
-  const [result, setResult] = React.useState(null)
-  const [subCount, setSubCount] = React.useState(null)
-
-  React.useEffect(() => {
-    fetch('/api/push/count').then(r => r.json()).then(d => setSubCount(d.count)).catch(() => {})
-  }, [])
-
-  async function send() {
-    if (!title.trim() || !body.trim()) return
-    setSending(true); setResult(null)
-    try {
-      const r = await fetch('/api/push/send', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title.trim(), body: body.trim(), url: url.trim() || '/card' })
-      })
-      const data = await r.json()
-      setResult(data)
-      if (data.sent > 0) { setTitle(''); setBody('') }
-    } catch { setResult({ error: 'Error al enviar' }) }
-    setSending(false)
-  }
-
-  const presets = [
-    { label: '🥐 Menú del día', title: 'El menú de hoy está listo', body: 'Ven a ver lo que horneamos hoy. Hay cosas ricas esperándote.' },
-    { label: '⚡ Últimas unidades', title: 'Últimas unidades disponibles', body: 'Quedan pocas piezas de hoy. ¡Apúrate antes de que se agoten!' },
-    { label: '🎉 Novedad', title: 'Algo nuevo en Monarca', body: 'Tenemos una novedad que te va a encantar. Pasa a verla.' },
-  ]
-
-  return (
-    <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.5rem'}}>
-        <h2 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Notificaciones push</h2>
-        {subCount !== null && (
-          <div style={{fontSize:'0.62rem',color:gray,background:'rgba(31,20,14,0.05)',padding:'0.3rem 0.75rem',borderRadius:999}}>
-            🔔 {subCount} suscriptor{subCount!==1?'es':''}
-          </div>
-        )}
-      </div>
-
-      {/* Quick presets */}
-      <div style={{marginBottom:'1.25rem'}}>
-        <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:'0.5rem'}}>Plantillas rápidas</div>
-        <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
-          {presets.map(p => (
-            <button key={p.label} onClick={() => { setTitle(p.title); setBody(p.body) }}
-              style={{padding:'0.45rem 0.85rem',background:'rgba(31,20,14,0.05)',border:'1px solid rgba(31,20,14,0.1)',borderRadius:999,fontSize:'0.65rem',cursor:'pointer',fontFamily:ff,color:ink}}>
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Compose */}
-      <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.08)',padding:'1.25rem',marginBottom:'1rem'}}>
-        <div style={{marginBottom:'0.85rem'}}>
-          <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:'0.35rem'}}>Título</div>
-          <input value={title} onChange={e=>setTitle(e.target.value)} maxLength={60}
-            placeholder="El menú de hoy está listo"
-            style={{width:'100%',padding:'0.65rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
-          <div style={{fontSize:'0.5rem',color:gray,marginTop:'0.2rem',textAlign:'right'}}>{title.length}/60</div>
-        </div>
-        <div style={{marginBottom:'0.85rem'}}>
-          <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:'0.35rem'}}>Mensaje</div>
-          <textarea value={body} onChange={e=>setBody(e.target.value)} maxLength={120} rows={3}
-            placeholder="Ven a ver lo que horneamos hoy..."
-            style={{width:'100%',padding:'0.65rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>
-          <div style={{fontSize:'0.5rem',color:gray,marginTop:'0.2rem',textAlign:'right'}}>{body.length}/120</div>
-        </div>
-        <div style={{marginBottom:'1rem'}}>
-          <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:gray,marginBottom:'0.35rem'}}>Link al tocar (opcional)</div>
-          <input value={url} onChange={e=>setUrl(e.target.value)}
-            placeholder="/card"
-            style={{width:'100%',padding:'0.65rem 0.85rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.82rem',outline:'none',boxSizing:'border-box'}}/>
-        </div>
-
-        {/* Preview */}
-        {(title||body) && (
-          <div style={{background:'rgba(31,20,14,0.03)',border:'1px solid rgba(31,20,14,0.08)',borderRadius:8,padding:'0.75rem 1rem',marginBottom:'1rem'}}>
-            <div style={{fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:gray,marginBottom:'0.5rem'}}>Vista previa</div>
-            <div style={{display:'flex',alignItems:'flex-start',gap:'0.75rem'}}>
-              <div style={{width:32,height:32,borderRadius:6,background:'#1F140E',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.85rem',flexShrink:0}}>🦋</div>
-              <div>
-                <div style={{fontSize:'0.72rem',fontWeight:600,color:ink,marginBottom:2}}>{title||'Título'}</div>
-                <div style={{fontSize:'0.65rem',color:gray,lineHeight:1.4}}>{body||'Mensaje...'}</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <button onClick={send} disabled={sending||!title.trim()||!body.trim()}
-          style={{width:'100%',padding:'0.85rem',background:sending||!title.trim()||!body.trim()?'rgba(31,20,14,0.1)':ink,color:sending||!title.trim()||!body.trim()?gray:white,border:'none',borderRadius:6,fontFamily:ff,fontSize:'0.68rem',fontWeight:600,letterSpacing:'0.1em',textTransform:'uppercase',cursor:sending||!title.trim()||!body.trim()?'default':'pointer',transition:'all 0.2s'}}>
-          {sending ? 'Enviando...' : `Enviar notificación${subCount ? ` a ${subCount} persona${subCount!==1?'s':''}` : ''}`}
-        </button>
-      </div>
-
-      {result && (
-        <div style={{padding:'0.75rem 1rem',borderRadius:6,background:result.error?'rgba(192,57,43,0.07)':'rgba(45,138,96,0.07)',border:`1px solid ${result.error?'rgba(192,57,43,0.2)':'rgba(45,138,96,0.2)'}`,fontSize:'0.7rem',color:result.error?'#c0392b':'#2d8a60'}}>
-          {result.error ? `Error: ${result.error}` : `✓ Enviado a ${result.sent} de ${result.total} suscriptores${result.stale>0?` · ${result.stale} suscripciones expiradas eliminadas`:''}`}
-        </div>
-      )}
-    </div>
-  )
-}
-
 function RecipeEditor({ itemId, itemName, supplies, showToast }) {
   const [ingredients, setIngredients] = React.useState([])
   const [adding, setAdding] = React.useState(false)
@@ -908,7 +799,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
         <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexWrap:'wrap'}}>
           <button onClick={()=>{setShowArchived(s=>!s);setFilter('Todos')}}
             style={{background:showArchived?ink:'rgba(31,20,14,0.07)',color:showArchived?white:mu,border:'none',padding:'0.55rem 1rem',borderRadius:999,fontFamily:ff,fontSize:'0.63rem',fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:'0.35rem'}}>
-            📦 Archivo{archivedCatalog.length>0&&<span style={{background:showArchived?'rgba(255,255,255,0.2)':'rgba(31,20,14,0.1)',borderRadius:999,padding:'0 0.4rem',fontSize:'0.55rem'}}>{archivedCatalog.length}</span>}
+            Archivo{archivedCatalog.length>0&&<span style={{background:showArchived?'rgba(255,255,255,0.2)':'rgba(31,20,14,0.1)',borderRadius:999,padding:'0 0.4rem',fontSize:'0.55rem'}}>{archivedCatalog.length}</span>}
           </button>
           {showArchived&&archivedCatalog.length>0&&(
             <button onClick={restoreAll}
@@ -926,7 +817,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
       {!showArchived&&archivedCatalog.length>0&&(
         <div style={{background:'rgba(227,90,27,0.07)',border:'1px solid rgba(227,90,27,0.2)',borderRadius:8,padding:'0.75rem 1rem',marginBottom:'1rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'0.75rem'}}>
           <span style={{fontSize:'0.68rem',color:or}}>
-            📦 {archivedCatalog.length} producto{archivedCatalog.length!==1?'s':''} archivado{archivedCatalog.length!==1?'s':''} — no salen en el menú del sitio
+            {archivedCatalog.length} producto{archivedCatalog.length!==1?'s':''} archivado{archivedCatalog.length!==1?'s':''} — no salen en el menú del sitio
           </span>
           <button onClick={()=>{setShowArchived(true);setFilter('Todos')}}
             style={{fontSize:'0.6rem',color:or,background:'none',border:'1px solid rgba(227,90,27,0.3)',borderRadius:999,padding:'0.3rem 0.75rem',cursor:'pointer',fontFamily:ff,fontWeight:600,whiteSpace:'nowrap'}}>
@@ -2988,7 +2879,7 @@ function PushPanel({ showToast }) {
         </div>
         <button onClick={send} disabled={sending || !form.title.trim() || !form.body.trim()}
           style={{ padding: '0.75rem 1.5rem', background: sending ? mu : ink, color: cr, border: 'none', borderRadius: 999, fontFamily: ff, fontSize: '0.72rem', fontWeight: 600, cursor: sending ? 'not-allowed' : 'pointer', opacity: (!form.title.trim() || !form.body.trim()) ? 0.5 : 1 }}>
-          {sending ? 'Enviando...' : '🔔 Enviar notificación'}
+          {sending ? 'Enviando...' : 'Enviar notificación'}
         </button>
       </div>
 
@@ -3870,7 +3761,7 @@ export default function Admin({session}){
             {/* OPERACIÓN */}
             <div style={{padding:'0.25rem 0'}}>
               <div style={{fontSize:'0.5rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',padding:'0 1.25rem',marginBottom:'0.35rem'}}>Operación</div>
-              {[['system','Configuración'],['catalog','Catálogo'],['supplies','Inventario'],['website','Website'],['push','🔔 Notificaciones'],['notifications','Alertas']].map(([id,label])=>(
+              {[['system','Configuración'],['catalog','Catálogo'],['supplies','Inventario'],['website','Website'],['push','Notificaciones'],['notifications','Alertas']].map(([id,label])=>(
                 <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
                   <span style={{fontSize:'0.72rem',color:panel===id?gold:'rgba(255,255,255,0.7)'}}>{label}</span>
                 </button>
@@ -4045,7 +3936,7 @@ export default function Admin({session}){
                 ['punch','Sellar visita'],
                 ['campaigns','Campañas'],
                 ['website','Website'],
-                ['push','🔔 Notificaciones'],
+                ['push','Notificaciones'],
                 ['catalog','Catálogo'],
                 ['supplies','Inventario'],
                 ['system','Configuración'],
@@ -4690,7 +4581,7 @@ export default function Admin({session}){
               <div style={{padding:'1.5rem'}}>
                 {!devUnlocked?(
                   <div style={{textAlign:'center'}}>
-                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
+                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}></div>
                     <div style={{fontFamily:ffS,fontSize:'1.1rem',marginBottom:'0.5rem'}}>Acceso restringido</div>
                     <input type="password" placeholder="Password..." value={devPassword} onChange={e=>setDevPassword(e.target.value)}
                       onKeyDown={e=>{if(e.key==='Enter'){if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}}
@@ -4700,7 +4591,7 @@ export default function Admin({session}){
                   </div>
                 ):(
                   <div>
-                    {[{section:'🎨 Landing — Colores',items:[['Color primario','primary'],['Fondo','background'],['Texto','text']],type:'color'},{section:'🖥️ Admin Panel — Colores',items:[['Sidebar','adminSidebar'],['Acento','adminAccent'],['Header','adminHeader']],type:'color'},{section:'📱 App Cliente — Colores',items:[['Acento','clientAccent'],['Fondo tarjeta','clientCard'],['Texto secundario','clientMuted']],type:'color'}].map(({section,items})=>(
+                    {[{section:'Landing — Colores',items:[['Color primario','primary'],['Fondo','background'],['Texto','text']],type:'color'},{section:'Admin Panel — Colores',items:[['Sidebar','adminSidebar'],['Acento','adminAccent'],['Header','adminHeader']],type:'color'},{section:'App Cliente — Colores',items:[['Acento','clientAccent'],['Fondo tarjeta','clientCard'],['Texto secundario','clientMuted']],type:'color'}].map(({section,items})=>(
                       <div key={section} style={{marginBottom:'1.25rem'}}>
                         <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.75rem',paddingBottom:'0.4rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
                         {items.map(([label,key])=>(
@@ -4715,7 +4606,7 @@ export default function Admin({session}){
                       </div>
                     ))}
                     <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'0.5rem 0 1.25rem'}}/>
-                    {[{section:'✏️ Landing — Textos',items:[['Título hero','hero'],['Subtítulo','sub'],['Botón CTA','cta']]},{section:'✏️ App Cliente — Textos',items:[['Saludo tarjeta','cardGreeting'],['CTA recompensa','rewardCta']]}].map(({section,items})=>(
+                    {[{section:'Landing — Textos',items:[['Título hero','hero'],['Subtítulo','sub'],['Botón CTA','cta']]},{section:'App Cliente — Textos',items:[['Saludo tarjeta','cardGreeting'],['CTA recompensa','rewardCta']]}].map(({section,items})=>(
                       <div key={section} style={{marginBottom:'1.25rem'}}>
                         <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.75rem',paddingBottom:'0.4rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
                         {items.map(([label,key])=>(
@@ -4787,7 +4678,7 @@ export default function Admin({session}){
               <div style={{padding:'1.5rem'}}>
                 {!devUnlocked?(
                   <div style={{textAlign:'center'}}>
-                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}>🔒</div>
+                    <div style={{fontSize:'2rem',marginBottom:'1rem'}}></div>
                     <div style={{fontFamily:ffS,fontSize:'1.1rem',marginBottom:'0.5rem'}}>Acceso restringido</div>
                     <input type="password" placeholder="Password..." value={devPassword} onChange={e=>setDevPassword(e.target.value)}
                       onKeyDown={e=>{if(e.key==='Enter'){if(devPassword==='BlacknRed1@.')setDevUnlocked(true);else showToast('Password incorrecto')}}}
@@ -4797,7 +4688,7 @@ export default function Admin({session}){
                   </div>
                 ):(
                   <div>
-                    {[{section:'🎨 Landing — Colores',items:[['Color primario','primary'],['Fondo','background'],['Texto','text']]},{section:'🖥️ Admin — Colores',items:[['Sidebar','adminSidebar'],['Acento','adminAccent']]},{section:'📱 Cliente — Colores',items:[['Acento','clientAccent'],['Fondo tarjeta','clientCard']]}].map(({section,items})=>(
+                    {[{section:'Landing — Colores',items:[['Color primario','primary'],['Fondo','background'],['Texto','text']]},{section:'Admin — Colores',items:[['Sidebar','adminSidebar'],['Acento','adminAccent']]},{section:'Cliente — Colores',items:[['Acento','clientAccent'],['Fondo tarjeta','clientCard']]}].map(({section,items})=>(
                       <div key={section} style={{marginBottom:'1.25rem'}}>
                         <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.6rem',paddingBottom:'0.3rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
                         {items.map(([label,key])=>(
@@ -4812,7 +4703,7 @@ export default function Admin({session}){
                       </div>
                     ))}
                     <div style={{height:'1px',background:'rgba(31,20,14,0.07)',margin:'0.5rem 0 1.25rem'}}/>
-                    {[{section:'✏️ Landing — Textos',items:[['Hero','hero'],['Subtítulo','sub'],['CTA','cta']]},{section:'✏️ Cliente — Textos',items:[['Saludo','cardGreeting'],['CTA recompensa','rewardCta']]}].map(({section,items})=>(
+                    {[{section:'Landing — Textos',items:[['Hero','hero'],['Subtítulo','sub'],['CTA','cta']]},{section:'Cliente — Textos',items:[['Saludo','cardGreeting'],['CTA recompensa','rewardCta']]}].map(({section,items})=>(
                       <div key={section} style={{marginBottom:'1.25rem'}}>
                         <div style={{fontSize:'0.55rem',letterSpacing:'0.15em',textTransform:'uppercase',color:gray,marginBottom:'0.6rem',paddingBottom:'0.3rem',borderBottom:'1px solid rgba(31,20,14,0.07)'}}>{section}</div>
                         {items.map(([label,key])=>(
