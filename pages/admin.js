@@ -2619,25 +2619,66 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
           </div>
         </div>
         <div style={{position:'sticky',top:72}}>
-          <div style={{background:'#1F140E',borderRadius:12,overflow:'hidden'}}>
-            <div style={{background:'rgba(255,255,255,0.04)',padding:'0.6rem 1rem',display:'flex',alignItems:'center',gap:'0.5rem',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-              <div style={{flex:1,background:'rgba(255,255,255,0.06)',borderRadius:4,padding:'0.2rem 0.6rem',fontSize:'0.55rem',color:'rgba(255,255,255,0.4)',textAlign:'center'}}>monarcadeazucar.com/#menu</div>
+          {/* Preview phone shell */}
+          <div style={{background:'#E8E0D4',borderRadius:12,overflow:'hidden',border:'1px solid rgba(31,20,14,0.1)'}}>
+            <div style={{background:'rgba(31,20,14,0.06)',padding:'0.6rem 1rem',display:'flex',alignItems:'center',gap:'0.5rem',borderBottom:'1px solid rgba(31,20,14,0.08)'}}>
+              <div style={{flex:1,background:'white',borderRadius:4,padding:'0.2rem 0.6rem',fontSize:'0.55rem',color:'rgba(31,20,14,0.4)',textAlign:'center'}}>monarcadeazucar.com/card</div>
               <div style={{width:8,height:8,borderRadius:'50%',background:'#28c840'}}/>
             </div>
-            <div style={{padding:'1.25rem 1rem',maxHeight:400,overflowY:'auto'}}>
-              <div style={{fontSize:'0.52rem',letterSpacing:'0.16em',textTransform:'uppercase',color:'rgba(251,247,238,0.35)',marginBottom:'0.25rem'}}>01 · El menú</div>
-              <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.3rem',color:'#FBF7EE',fontStyle:'italic',marginBottom:'1rem'}}>Lo que se <em style={{color:'#E35A1B'}}>hornea</em> hoy.</div>
-              {previewSorted.length===0&&<div style={{fontSize:'0.72rem',color:'rgba(251,247,238,0.3)',textAlign:'center',padding:'1rem 0'}}>Activa productos para verlos aquí</div>}
-              {previewSorted.map((item,i)=>(
-                <div key={item.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.65rem 0',borderBottom:'1px solid rgba(255,255,255,0.06)',opacity:item.badge_agotado?0.4:1}}>
-                  <span style={{fontSize:'0.62rem',color:'rgba(251,247,238,0.3)',width:20,flexShrink:0,textAlign:'right'}}>{String(i+1).padStart(2,'0')}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:'0.75rem',color:'#FBF7EE',fontWeight:500}}>{item.name}</div>
-                    {item.badge_temporada&&<span style={{fontSize:'0.48rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(45,138,96,0.2)',color:'#4ecb71',letterSpacing:'0.06em',textTransform:'uppercase'}}>Temporada</span>}
+            <div style={{padding:'1rem',maxHeight:440,overflowY:'auto',background:'#FBF7EE'}}>
+              {/* Header */}
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:'0.45rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'#7A6452',marginBottom:6}}>§ 01 · El menú</div>
+                <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1.45rem',color:'#1F140E',lineHeight:0.95,letterSpacing:'-0.03em',marginBottom:6}}>Lo que se<br/><em style={{fontStyle:'italic',color:'#E35A1B'}}>hornea</em> hoy.</div>
+              </div>
+              {previewSorted.length===0 ? (
+                <div style={{fontSize:'0.62rem',color:'#7A6452',textAlign:'center',padding:'1rem 0'}}>Activa productos para verlos aquí</div>
+              ) : (()=>{
+                // Group by category
+                const catOrder=[...new Set(previewSorted.map(i=>i.category).filter(Boolean))]
+                // Category chips
+                return <>
+                  <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:10,paddingBottom:8,borderBottom:'1px solid rgba(31,20,14,0.12)'}}>
+                    {catOrder.map((cat,ci)=>(
+                      <div key={cat} style={{padding:'3px 7px',background:'#EDE3CE',fontSize:'0.45rem',color:'#1F140E',letterSpacing:'0.05em',textTransform:'uppercase'}}>
+                        Sec. {String(ci+1).padStart(2,'0')} · {cat}
+                      </div>
+                    ))}
                   </div>
-                  <span style={{fontFamily:'"Instrument Serif",serif',fontSize:'0.88rem',color:'#E35A1B',flexShrink:0}}>${parseFloat(item.price||0).toFixed(2)}</span>
-                </div>
-              ))}
+                  {catOrder.map((cat,ci)=>{
+                    const catItems=previewSorted.filter(i=>i.category===cat)
+                    const hero=catItems.find(i=>i.badge_hoy&&!i.badge_agotado)
+                    const rest=hero?catItems.filter(i=>i!==hero):catItems
+                    return(
+                      <div key={cat} style={{marginBottom:16}}>
+                        {hero&&(
+                          <div style={{marginBottom:8,background:'#F4EDDD'}}>
+                            <div style={{width:'100%',aspectRatio:'1/1',background:'#EDE3CE',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.6rem',color:'#7A6452'}}>
+                              {hero.image_url?<img src={hero.image_url} alt={hero.name} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>:'Foto'}
+                            </div>
+                            <div style={{padding:'8px 10px'}}>
+                              <div style={{fontSize:'0.45rem',letterSpacing:'0.16em',textTransform:'uppercase',color:'#7A6452',marginBottom:4}}>Pieza del día · {cat}</div>
+                              <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'1rem',color:'#1F140E',lineHeight:1.05,marginBottom:4}}>{hero.name}</div>
+                              <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'0.9rem',color:'#1F140E'}}>${parseFloat(hero.price||0).toFixed(2)}</div>
+                            </div>
+                          </div>
+                        )}
+                        <div style={{paddingBottom:4,borderBottom:'1px solid rgba(31,20,14,0.12)',marginBottom:6}}>
+                          <span style={{fontSize:'0.42rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'#7A6452'}}>
+                            {String(ci+1).padStart(2,'0')} · {cat.toUpperCase()}
+                          </span>
+                        </div>
+                        {rest.map(item=>(
+                          <div key={item.id} style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',padding:'7px 0',borderBottom:'1px solid rgba(31,20,14,0.06)',opacity:item.badge_agotado?0.4:1}}>
+                            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'0.82rem',color:'#1F140E',lineHeight:1.2,flex:1,minWidth:0,paddingRight:8}}>{item.name}</div>
+                            <div style={{fontFamily:'"Instrument Serif",serif',fontSize:'0.78rem',color:'#1F140E',flexShrink:0}}>${parseFloat(item.price||0).toFixed(2)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+                </>
+              })()}
             </div>
           </div>
         </div>
