@@ -402,7 +402,9 @@ export default function Card({ session }) {
                 <div>
                   {catalog.map((item, i) => (
                     <div key={item.id} style={{display:'flex',alignItems:'flex-start',gap:16,padding:'16px 0',borderBottom:'1px solid rgba(31,20,14,0.07)',opacity:item.badge_agotado?0.4:1}}>
-                      <span style={{fontSize:'0.72rem',color:'rgba(31,20,14,0.3)',fontFamily:ffS,width:24,flexShrink:0,paddingTop:2}}>{String(i+1).padStart(2,'0')}</span>
+                      {item.image_url
+                        ? <img src={item.image_url} alt={item.name} style={{width:56,height:56,borderRadius:8,objectFit:'cover',flexShrink:0,border:'1px solid rgba(31,20,14,0.07)'}}/>
+                        : <span style={{fontSize:'0.72rem',color:'rgba(31,20,14,0.3)',fontFamily:ffS,width:24,flexShrink:0,paddingTop:2}}>{String(i+1).padStart(2,'0')}</span>}
                       <div style={{flex:1}}>
                         <div style={{display:'flex',alignItems:'baseline',gap:8,flexWrap:'wrap',marginBottom:4}}>
                           <span style={{fontFamily:ffS,fontSize:'1rem',fontWeight:400,color:ink}}>{item.name}</span>

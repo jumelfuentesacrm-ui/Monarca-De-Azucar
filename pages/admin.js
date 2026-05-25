@@ -669,6 +669,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const [estimadoId, setEstimadoId] = useState(null)
   const [estimadoYield, setEstimadoYield] = useState(1)
   const [savingEst, setSavingEst] = useState(false)
+  const [uploadingImg, setUploadingImg] = useState(false)
   const [addingCat, setAddingCat] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [catDropAdd, setCatDropAdd] = useState(false)
@@ -727,6 +728,22 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
     setSavingEst(true)
     await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:itemId,cost:costPerUnit})})
     showToast('Costo por unidad guardado ✓');setEstimadoId(null);setSavingEst(false);setEstimadoYield(1);loadAll()
+  }
+
+  async function uploadPhoto(productId, file){
+    setUploadingImg(true)
+    const fd=new FormData();fd.append('product_id',productId);fd.append('file',file)
+    const res=await fetch('/api/admin/product-image',{method:'POST',body:fd})
+    const data=await res.json()
+    if(res.ok){setEditForm(f=>({...f,image_url:data.image_url}));showToast('Foto subida ✓');loadAll()}
+    else showToast('Error al subir foto: '+(data?.error||''))
+    setUploadingImg(false)
+  }
+
+  async function removePhoto(productId){
+    const res=await fetch('/api/admin/product-image',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:productId})})
+    if(res.ok){setEditForm(f=>({...f,image_url:''}));showToast('Foto eliminada');loadAll()}
+    else showToast('Error al eliminar foto')
   }
 
   const archivedCatalog = realCatalog.filter(i => i.active === false)
@@ -895,6 +912,12 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
           return (
             <div key={item.id} style={{borderBottom:i<filtered.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
               <div style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.85rem 1.1rem'}}>
+                {/* Thumbnail */}
+                <div style={{width:40,height:40,borderRadius:6,overflow:'hidden',flexShrink:0,background:'rgba(31,20,14,0.04)',border:'1px solid rgba(31,20,14,0.06)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  {item.image_url
+                    ? <img src={item.image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                    : <span style={{fontSize:'1rem',opacity:0.15}}>📷</span>}
+                </div>
                 {/* Info */}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:'0.35rem',flexWrap:'wrap',marginBottom:'0.2rem'}}>
@@ -915,7 +938,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                 {/* Actions */}
                 <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
                   {!showArchived&&(
-                    <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||'',stock:stock!=null?String(stock):''})}}
+                    <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||'',stock:stock!=null?String(stock):'',image_url:item.image_url||''})}}
                       style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:isEditing?'rgba(227,90,27,0.1)':'rgba(31,20,14,0.06)',color:isEditing?or:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
                       {isEditing?'Cerrar':'Editar'}
                     </button>
@@ -1020,6 +1043,31 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                       )}
                     </div>
                     <div><div style={flbl}>Descripción</div><input value={editForm.description} onChange={e=>setEditForm(f=>({...f,description:e.target.value}))} placeholder="Opcional..." style={{...finp,marginBottom:0}}/></div>
+                  </div>
+                  {/* Photo upload */}
+                  <div style={{marginBottom:'0.75rem'}}>
+                    <div style={flbl}>Foto del producto</div>
+                    <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
+                      <div style={{width:72,height:72,borderRadius:8,background:'rgba(31,20,14,0.04)',border:'1px solid rgba(31,20,14,0.1)',overflow:'hidden',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        {editForm.image_url
+                          ? <img src={editForm.image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                          : <span style={{fontSize:'1.4rem',opacity:0.2}}>📷</span>}
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:'0.35rem'}}>
+                        <label style={{display:'inline-block',padding:'0.4rem 0.85rem',background:ink,color:'#FBF7EE',borderRadius:6,fontSize:'0.6rem',fontWeight:600,cursor:uploadingImg?'not-allowed':'pointer',opacity:uploadingImg?0.6:1}}>
+                          {uploadingImg?'Subiendo…':'Subir foto'}
+                          <input type="file" accept="image/*" style={{display:'none'}} disabled={uploadingImg}
+                            onChange={e=>{if(e.target.files[0])uploadPhoto(item.id,e.target.files[0])}}/>
+                        </label>
+                        {editForm.image_url&&(
+                          <button onClick={()=>removePhoto(item.id)}
+                            style={{padding:'0.4rem 0.85rem',background:'rgba(192,57,43,0.07)',color:'#c0392b',border:'none',borderRadius:6,fontSize:'0.6rem',cursor:'pointer',textAlign:'left'}}>
+                            Quitar foto
+                          </button>
+                        )}
+                        <span style={{fontSize:'0.55rem',color:mu}}>JPG/PNG · máx 8MB</span>
+                      </div>
+                    </div>
                   </div>
                   <RecipeEditor itemId={item.id} itemName={item.name} supplies={supplies} showToast={showToast}/>
                   <div style={{display:'flex',gap:'0.5rem',marginTop:'0.5rem'}}>

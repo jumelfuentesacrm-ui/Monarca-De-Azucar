@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   
   const { data: items, error } = await supabase
     .from('catalog_items')
-    .select('id, name, description, active, category, price, badge_hoy, badge_nuevo, badge_temporada, badge_agotado')
+    .select('id, name, description, active, category, price, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, image_url')
     .eq('active', true)
     .order('badge_hoy', { ascending: false })
     .order('name')

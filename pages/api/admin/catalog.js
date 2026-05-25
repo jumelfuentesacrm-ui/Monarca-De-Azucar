@@ -11,7 +11,7 @@ export default async function handler(req, res) {
       .from('catalog_items')
       .select(`
         id, name, description, category, active, created_at, updated_at,
-        badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price,
+        badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price, image_url,
         catalog_prices ( id, amount, currency, interval, active ),
         catalog_costs ( id, cost, notes, suppliers, updated_at )
       `)
