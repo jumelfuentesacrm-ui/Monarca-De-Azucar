@@ -270,6 +270,12 @@ export default function Card({ session }) {
   const cur = card ? (card.stamps % 5 === 0 && card.stamps > 0 ? 5 : card.stamps % 5) : 0
   const hasReward = card && card.stamps > 0 && card.stamps % 5 === 0
   const rem = cur === 0 ? 5 : 5 - cur
+  const firstName = card?.profiles?.full_name?.split(' ')[0] || 'Amigo'
+  const lastVisitDate = card?.stamp_history?.length > 0
+    ? new Date([...card.stamp_history].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0].created_at)
+        .toLocaleDateString('es-PR',{day:'numeric',month:'long',timeZone:'America/Puerto_Rico'})
+    : null
+  const timeGreeting = (()=>{ const h=new Date().getHours(); return h<12?'Buenos días':h<18?'Buenas tardes':'Buenas noches' })()
   const cycle = card ? (Math.ceil((card.stamps || 1) / 5) || 1) : 1
 
   const menuCatOrder = []
@@ -328,12 +334,29 @@ export default function Card({ session }) {
             </div>
             ) : (
             <div className="fade-up">
-              <div style={{textAlign:'center',padding:'28px 0 20px'}}>
-                <div style={{fontSize:'0.56rem',letterSpacing:'0.2em',textTransform:'uppercase',color:or,marginBottom:8}}>Club Monarca · Tarjeta de Lealtad</div>
-                <h2 style={{fontFamily:ffS,fontWeight:400,fontSize:'clamp(1.5rem,6vw,2.2rem)',color:ink,fontStyle:'italic',marginBottom:4}}>
-                  {card ? `Hola, ${card.profiles?.full_name?.split(' ')[0] || 'Amigo'}.` : 'Bienvenido al Club'}
-                </h2>
-                <div style={{fontSize:'0.63rem',color:mu}}>Miembro #{card?.card_number || '—'}</div>
+              {/* Horizontal greeting card */}
+              <div style={{background:cr2,borderRadius:16,padding:'16px 20px',border:'1px solid '+cr3,marginBottom:20,marginTop:20}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:'0.48rem',letterSpacing:'0.15em',textTransform:'uppercase',color:mu,marginBottom:4}}>Club Monarca · #{card?.card_number||'—'}</div>
+                    <div style={{fontFamily:ffS,fontSize:'clamp(1.2rem,5vw,1.6rem)',color:ink,fontStyle:'italic',lineHeight:1.1}}>
+                      {timeGreeting}, {firstName}.
+                    </div>
+                  </div>
+                  <div style={{textAlign:'right',flexShrink:0}}>
+                    <div style={{display:'flex',gap:5,marginBottom:4,justifyContent:'flex-end'}}>
+                      {[0,1,2,3,4].map(i=>(
+                        <div key={i} style={{width:10,height:10,borderRadius:'50%',background:i<cur?or:'rgba(31,20,14,0.12)',border:i<cur?'none':'1px solid rgba(31,20,14,0.18)',transition:'background 0.3s'}}/>
+                      ))}
+                    </div>
+                    <div style={{fontSize:'0.58rem',color:mu}}>{cur}/5 piezas</div>
+                  </div>
+                </div>
+                {lastVisitDate&&(
+                  <div style={{fontSize:'0.6rem',color:mu,marginTop:10,paddingTop:10,borderTop:'1px solid rgba(31,20,14,0.08)'}}>
+                    Última visita: {lastVisitDate}
+                  </div>
+                )}
               </div>
 
               {!card ? (
@@ -854,30 +877,6 @@ export default function Card({ session }) {
             <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='tarjeta'?600:400}}>Club</span>
           </button>
 
-          {/* Menú — lines perfectly centered */}
-          <button onClick={()=>setTab('menu')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:tab==='menu'?or:mu,fontFamily:ff,padding:'4px 0'}}>
-            <svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <line x1="0" y1="2" x2="20" y2="2"/>
-              <line x1="0" y1="8" x2="20" y2="8"/>
-              <line x1="0" y1="14" x2="20" y2="14"/>
-            </svg>
-            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='menu'?600:400}}>Menú</span>
-          </button>
-
-          {/* Ordenar — elevated */}
-          <button onClick={()=>setTab('ordenar')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',fontFamily:ff,padding:'4px 0'}}>
-            <div style={{width:48,height:48,borderRadius:'50%',background:or,display:'flex',alignItems:'center',justifyContent:'center',marginTop:-18,boxShadow:'0 4px 20px rgba(227,90,27,0.45)',position:'relative'}}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
-              </svg>
-              <div style={{position:'absolute',bottom:-3,right:-3}}>
-                <MonarcaButterfly size={13} animate={true} color="white"/>
-              </div>
-              {cartCount>0&&<div style={{position:'absolute',top:-4,right:-4,width:18,height:18,borderRadius:'50%',background:ink,color:'#FBF7EE',fontSize:'0.55rem',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>{cartCount}</div>}
-            </div>
-            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',color:tab==='ordenar'?or:mu,fontWeight:tab==='ordenar'?600:400}}>Ordenar</span>
-          </button>
-
           {/* Escribenos */}
           <button onClick={()=>setTab('escribenos')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:tab==='escribenos'?or:mu,fontFamily:ff,padding:'4px 0'}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -886,12 +885,35 @@ export default function Card({ session }) {
             <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='escribenos'?600:400}}>Escribenos</span>
           </button>
 
-          {/* Cuenta */}
+          {/* MENÚ — elevated orange */}
+          <button onClick={()=>setTab('menu')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',fontFamily:ff,padding:'4px 0'}}>
+            <div style={{width:48,height:48,borderRadius:'50%',background:or,display:'flex',alignItems:'center',justifyContent:'center',marginTop:-18,boxShadow:'0 4px 20px rgba(227,90,27,0.45)',position:'relative'}}>
+              <svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+                <line x1="0" y1="2" x2="20" y2="2"/>
+                <line x1="0" y1="8" x2="20" y2="8"/>
+                <line x1="0" y1="14" x2="20" y2="14"/>
+              </svg>
+            </div>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',color:tab==='menu'?or:mu,fontWeight:tab==='menu'?600:400}}>Menú</span>
+          </button>
+
+          {/* Carrito */}
+          <button onClick={()=>setTab('ordenar')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:tab==='ordenar'?or:mu,fontFamily:ff,padding:'4px 0',position:'relative'}}>
+            <div style={{position:'relative'}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+              </svg>
+              {cartCount>0&&<div style={{position:'absolute',top:-6,right:-6,width:16,height:16,borderRadius:'50%',background:or,color:'white',fontSize:'0.48rem',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center'}}>{cartCount}</div>}
+            </div>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='ordenar'?600:400}}>Carrito</span>
+          </button>
+
+          {/* Mi Cuenta */}
           <button onClick={()=>setTab('cuenta')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',color:tab==='cuenta'?or:mu,fontFamily:ff,padding:'4px 0'}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
             </svg>
-            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='cuenta'?600:400}}>Cuenta</span>
+            <span style={{fontSize:'0.5rem',letterSpacing:'0.06em',textTransform:'uppercase',fontWeight:tab==='cuenta'?600:400}}>Mi Cuenta</span>
           </button>
         </nav>
       </div>
