@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { randomUUID } from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -18,9 +17,9 @@ export default async function handler(req, res) {
       `)
       .order('name')
     if (error) return res.status(500).json({ error: error.message })
-    const { data: stockRows } = await supabase.from('product_stock').select('catalog_item_id, qty')
+    const { data: stockRows } = await supabase.from('product_stock').select('catalog_item_id, qty_available')
     const stockMap = {}
-    ;(stockRows || []).forEach(r => { stockMap[r.catalog_item_id] = r.qty })
+    ;(stockRows || []).forEach(r => { stockMap[r.catalog_item_id] = r.qty_available })
     const itemsWithStock = (items || []).map(i => ({ ...i, product_stock: stockMap[i.id] != null ? [{ qty: stockMap[i.id] }] : [] }))
     return res.status(200).json({ items: itemsWithStock })
   }
@@ -51,27 +50,16 @@ export default async function handler(req, res) {
     const { product_id, cost, notes, suppliers, active, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price, name, description, category, stock } = req.body
     if (!product_id) return res.status(400).json({ error: 'product_id required' })
 
-    // Update product stock
+    // Update product stock (column is qty_available)
     if (stock !== undefined) {
-      const qty = parseFloat(stock) || 0
-      try {
-        const { data: updated, error: updErr } = await supabase
-          .from('product_stock').update({ qty }).eq('catalog_item_id', product_id).select('catalog_item_id')
-        if (updErr) {
-          console.error('[catalog PATCH] stock update error:', JSON.stringify(updErr))
-          return res.status(500).json({ error: 'stock update: ' + updErr.message, detail: updErr })
-        }
-        if (!updated || updated.length === 0) {
-          const { error: insErr } = await supabase
-            .from('product_stock').insert({ id: randomUUID(), catalog_item_id: product_id, qty })
-          if (insErr) {
-            console.error('[catalog PATCH] stock insert error:', JSON.stringify(insErr))
-            return res.status(500).json({ error: 'stock insert: ' + insErr.message, detail: insErr })
-          }
-        }
-      } catch (e) {
-        console.error('[catalog PATCH] stock exception:', e)
-        return res.status(500).json({ error: 'stock exception: ' + e.message })
+      const qty_available = parseFloat(stock) || 0
+      const { data: updated, error: updErr } = await supabase
+        .from('product_stock').update({ qty_available, updated_at: new Date() }).eq('catalog_item_id', product_id).select('catalog_item_id')
+      if (updErr) return res.status(500).json({ error: 'stock update: ' + updErr.message })
+      if (!updated || updated.length === 0) {
+        const { error: insErr } = await supabase
+          .from('product_stock').insert({ catalog_item_id: product_id, qty_available })
+        if (insErr) return res.status(500).json({ error: 'stock insert: ' + insErr.message })
       }
     }
 
