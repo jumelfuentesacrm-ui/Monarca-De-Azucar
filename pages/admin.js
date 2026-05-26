@@ -778,7 +778,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const archivedCatalog = realCatalog.filter(i => i.active === false)
   const activeCatalog   = realCatalog.filter(i => i.active !== false)
 
-  const filtered=(showArchived ? archivedCatalog : activeCatalog)
+  const filtered=realCatalog
     .filter(i=>filter==='Todos'||(i.category||'Galleta')===filter)
     .filter(i=>!search||i.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a,b)=>a.name.localeCompare(b.name,'es'))
@@ -823,37 +823,20 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'1.25rem',gap:'0.75rem',flexWrap:'wrap'}}>
         <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:400}}>
-          {showArchived?'Archivo':'Catálogo'} <span style={{fontSize:'0.6rem',color:mu,fontFamily:ff,fontWeight:400,letterSpacing:'0.08em'}}>{showArchived?archivedCatalog.length:activeCatalog.length} productos</span>
+          Catálogo <span style={{fontSize:'0.6rem',color:mu,fontFamily:ff,fontWeight:400,letterSpacing:'0.08em'}}>{realCatalog.length} productos</span>
         </div>
         <div style={{display:'flex',gap:'0.5rem',alignItems:'center',flexWrap:'wrap'}}>
-          <button onClick={()=>{setShowArchived(s=>!s);setFilter('Todos')}}
-            style={{background:showArchived?ink:'rgba(31,20,14,0.07)',color:showArchived?white:mu,border:'none',padding:'0.55rem 1rem',borderRadius:999,fontFamily:ff,fontSize:'0.63rem',fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:'0.35rem'}}>
-            Archivo{archivedCatalog.length>0&&<span style={{background:showArchived?'rgba(255,255,255,0.2)':'rgba(31,20,14,0.1)',borderRadius:999,padding:'0 0.4rem',fontSize:'0.55rem'}}>{archivedCatalog.length}</span>}
-          </button>
-          {showArchived&&archivedCatalog.length>0&&(
+          {archivedCatalog.length>0&&(
             <button onClick={restoreAll}
-              style={{background:'rgba(45,138,96,0.1)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.25)',padding:'0.55rem 1rem',borderRadius:999,fontFamily:ff,fontSize:'0.63rem',fontWeight:600,cursor:'pointer'}}>
-              ✓ Restaurar todos ({archivedCatalog.length})
+              style={{background:'rgba(45,138,96,0.08)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',padding:'0.55rem 1rem',borderRadius:999,fontFamily:ff,fontSize:'0.63rem',fontWeight:600,cursor:'pointer'}}>
+              Publicar todos ({archivedCatalog.length})
             </button>
           )}
-          {!showArchived&&<button onClick={()=>setShowAdd(s=>!s)} style={{background:ink,color:'#FBF7EE',border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer'}}>
+          <button onClick={()=>setShowAdd(s=>!s)} style={{background:ink,color:'#FBF7EE',border:'none',padding:'0.6rem 1.1rem',borderRadius:999,fontFamily:ff,fontSize:'0.65rem',fontWeight:600,cursor:'pointer'}}>
             {showAdd?'Cancelar':'+ Añadir producto'}
-          </button>}
-        </div>
-      </div>
-
-      {/* Archived warning banner */}
-      {!showArchived&&archivedCatalog.length>0&&(
-        <div style={{background:'rgba(227,90,27,0.07)',border:'1px solid rgba(227,90,27,0.2)',borderRadius:8,padding:'0.75rem 1rem',marginBottom:'1rem',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'0.75rem'}}>
-          <span style={{fontSize:'0.68rem',color:or}}>
-            {archivedCatalog.length} producto{archivedCatalog.length!==1?'s':''} archivado{archivedCatalog.length!==1?'s':''} — no salen en el menú del sitio
-          </span>
-          <button onClick={()=>{setShowArchived(true);setFilter('Todos')}}
-            style={{fontSize:'0.6rem',color:or,background:'none',border:'1px solid rgba(227,90,27,0.3)',borderRadius:999,padding:'0.3rem 0.75rem',cursor:'pointer',fontFamily:ff,fontWeight:600,whiteSpace:'nowrap'}}>
-            Ver archivo →
           </button>
         </div>
-      )}
+      </div>
 
       {/* Add form */}
       {showAdd&&(
@@ -965,7 +948,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
           const price=getPrice(item), cost=getCost(item), margin=getMargin(item), stock=getStock(item)
           const isEditing=editingId===item.id
           return (
-            <div key={item.id} style={{borderBottom:i<filtered.length-1?'1px solid rgba(31,20,14,0.05)':'none'}}>
+            <div key={item.id} style={{borderBottom:i<filtered.length-1?'1px solid rgba(31,20,14,0.05)':'none',opacity:item.active===false?0.55:1}}>
               <div style={{display:'flex',alignItems:'center',gap:'0.65rem',padding:'0.85rem 1.1rem'}}>
                 {/* Thumbnail */}
                 <div style={{width:40,height:40,borderRadius:6,overflow:'hidden',flexShrink:0,background:'rgba(31,20,14,0.04)',border:'1px solid rgba(31,20,14,0.06)',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -1002,6 +985,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                       </span>
                     )}
                     <span style={{fontSize:'0.5rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(31,20,14,0.06)',color:mu}}>{item.category||'Galleta'}</span>
+                    {item.active===false&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(31,20,14,0.08)',color:mu,fontWeight:600}}>Oculto en web</span>}
                     {item.badge_hoy&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(227,90,27,0.12)',color:or}}>Hoy</span>}
                     {item.badge_nuevo&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(142,68,173,0.12)',color:'#8e44ad'}}>Nuevo</span>}
                     {item.badge_agotado&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(192,57,43,0.12)',color:'#c0392b'}}>Agotado</span>}
@@ -1024,23 +1008,21 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                 </div>
                 {/* Actions */}
                 <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
-                  {!showArchived&&(
-                    <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||'',stock:stock!=null?String(stock):'',image_url:item.image_url||''})}}
-                      style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:isEditing?'rgba(227,90,27,0.1)':'rgba(31,20,14,0.06)',color:isEditing?or:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
-                      {isEditing?'Cerrar':'Editar'}
-                    </button>
-                  )}
-                  {!showArchived&&(item.recipe_ingredients||[]).length>0&&(
+                  <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||'',stock:stock!=null?String(stock):'',image_url:item.image_url||''})}}
+                    style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:isEditing?'rgba(227,90,27,0.1)':'rgba(31,20,14,0.06)',color:isEditing?or:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                    {isEditing?'Cerrar':'Editar'}
+                  </button>
+                  {(item.recipe_ingredients||[]).length>0&&(
                     <button onClick={()=>setEstimadoId(estimadoId===item.id?null:item.id)}
                       style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:estimadoId===item.id?'rgba(45,138,96,0.15)':'rgba(45,138,96,0.07)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
                       Estimado
                     </button>
                   )}
-                  {showArchived?(
+                  {item.active===false?(
                     <>
                       <button onClick={()=>toggleActive(item)}
                         style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:'rgba(45,138,96,0.08)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
-                        Restaurar
+                        Publicar
                       </button>
                       <button onClick={()=>deleteProduct(item.id,item.name)}
                         style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.07)',color:'#c0392b',border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
@@ -1050,7 +1032,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                   ):(
                     <button onClick={()=>toggleActive(item)}
                       style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:'rgba(31,20,14,0.05)',color:mu,border:'1px solid rgba(31,20,14,0.1)',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
-                      Archivar
+                      Ocultar
                     </button>
                   )}
                 </div>
