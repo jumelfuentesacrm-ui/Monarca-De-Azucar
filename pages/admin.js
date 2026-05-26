@@ -693,6 +693,8 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   const [catDropAdd, setCatDropAdd] = useState(false)
   const [catDropEdit, setCatDropEdit] = useState(false)
   const [showArchived, setShowArchived] = useState(false)
+  const [stockEditId, setStockEditId] = useState(null)
+  const [stockEditVal, setStockEditVal] = useState('')
   const ffS='"Instrument Serif",serif', ff='"DM Sans",sans-serif'
   const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', mu='#7A6452', white='white'
   const finp={width:'100%',padding:'0.5rem 0.75rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}
@@ -746,6 +748,13 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
     setSavingEst(true)
     await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:itemId,cost:costPerUnit})})
     showToast('Costo por unidad guardado ✓');setEstimadoId(null);setSavingEst(false);setEstimadoYield(1);loadAll()
+  }
+
+  async function saveStockInline(itemId, val) {
+    const qty = parseFloat(val)
+    if (isNaN(qty) || qty < 0) { setStockEditId(null); return }
+    await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:itemId,stock:qty})})
+    setStockEditId(null); loadAll()
   }
 
   async function uploadPhoto(productId, file){
@@ -966,15 +975,44 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{display:'flex',alignItems:'center',gap:'0.35rem',flexWrap:'wrap',marginBottom:'0.2rem'}}>
                     <span style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{item.name}</span>
+                    {/* Stock pill — click to edit inline */}
+                    {stockEditId===item.id?(
+                      <span style={{display:'inline-flex',alignItems:'center',gap:'0.2rem'}}>
+                        <input autoFocus type="number" min="0" step="1"
+                          value={stockEditVal}
+                          onChange={e=>setStockEditVal(e.target.value)}
+                          onKeyDown={e=>{if(e.key==='Enter')saveStockInline(item.id,stockEditVal);if(e.key==='Escape')setStockEditId(null)}}
+                          style={{width:54,padding:'0.1rem 0.35rem',border:'1px solid rgba(227,90,27,0.5)',borderRadius:4,fontFamily:ff,fontSize:'0.66rem',outline:'none',textAlign:'center'}}/>
+                        <button onMouseDown={()=>saveStockInline(item.id,stockEditVal)}
+                          style={{fontSize:'0.55rem',padding:'0.1rem 0.4rem',background:or,color:'white',border:'none',borderRadius:4,cursor:'pointer'}}>✓</button>
+                        <button onMouseDown={()=>setStockEditId(null)}
+                          style={{fontSize:'0.55rem',padding:'0.1rem 0.35rem',background:'rgba(31,20,14,0.07)',color:mu,border:'none',borderRadius:4,cursor:'pointer'}}>✕</button>
+                      </span>
+                    ):(
+                      <span onClick={()=>{setStockEditId(item.id);setStockEditVal(stock!=null?String(stock):'0')}}
+                        title="Clic para editar existencias"
+                        style={{fontSize:'0.6rem',padding:'0.15rem 0.55rem',borderRadius:20,cursor:'pointer',userSelect:'none',
+                          background:stock===null?'rgba(31,20,14,0.06)':stock===0?'rgba(192,57,43,0.1)':stock<=5?'rgba(227,90,27,0.12)':'rgba(45,138,96,0.1)',
+                          color:stock===null?mu:stock===0?'#c0392b':stock<=5?or:'#2d8a60',
+                          border:stock===null?'1px dashed rgba(31,20,14,0.1)':'1px solid transparent',
+                          fontWeight:600}}>
+                        {stock!=null?stock:'+ stock'}
+                      </span>
+                    )}
                     <span style={{fontSize:'0.5rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(31,20,14,0.06)',color:mu}}>{item.category||'Galleta'}</span>
                     {item.badge_hoy&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(227,90,27,0.12)',color:or}}>Hoy</span>}
                     {item.badge_nuevo&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(142,68,173,0.12)',color:'#8e44ad'}}>Nuevo</span>}
                     {item.badge_agotado&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(192,57,43,0.12)',color:'#c0392b'}}>Agotado</span>}
                   </div>
                   <div style={{display:'flex',alignItems:'center',gap:'0.45rem',flexWrap:'wrap'}}>
-                    {stock!==null&&<span style={{fontSize:'0.62rem',color:mu}}>Disponible: <strong style={{color:ink}}>{stock}</strong> uds ·</span>}
                     <span style={{fontSize:'0.68rem',color:ink,fontWeight:600}}>{price?`$${parseFloat(price).toFixed(2)}`:'—'}</span>
-                    {cost!==null&&<span style={{fontSize:'0.6rem',color:mu}}>· costo ${cost.toFixed(2)}</span>}
+                    {(()=>{
+                      if(cost!==null) return <span style={{fontSize:'0.6rem',color:mu}}>· costo <strong style={{color:ink}}>${cost.toFixed(2)}</strong>/ud</span>
+                      const lines=calcEstimado(item)
+                      const recipeTotal=lines.reduce((s,l)=>s+l.cost,0)
+                      if(lines.length>0&&recipeTotal>0) return <span style={{fontSize:'0.6rem',color:mu}}>· costo <strong style={{color:'#2d8a60'}}>~${recipeTotal.toFixed(2)}</strong> receta</span>
+                      return null
+                    })()}
                     {margin!==null&&<span style={{fontSize:'0.6rem',color:mc(margin),fontWeight:600}}>· {margin}%</span>}
                     {margin!==null&&<div style={{width:36,height:3,background:'rgba(31,20,14,0.06)',borderRadius:2,flexShrink:0}}><div style={{height:'100%',width:Math.min(margin,100)+'%',background:mc(margin),borderRadius:2}}/></div>}
                   </div>
@@ -3934,6 +3972,16 @@ export default function Admin({session}){
         notes:'Registered via punch'
       })})
       sendPush('New Sale', `$${parseFloat(punchAmt).toFixed(2)} — ${card?.profiles?.business_name||card?.profiles?.full_name||'Client'}`, '/admin')
+      if(punchProduct){
+        const catItem=(catalog||[]).find(i=>i.name===punchProduct&&i.active!==false)
+        if(catItem){
+          const sr=Array.isArray(catItem.product_stock)?catItem.product_stock[0]:catItem.product_stock
+          const curQty=sr?.qty!=null?parseFloat(sr.qty):null
+          if(curQty!==null&&curQty>0){
+            fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:catItem.id,stock:curQty-1})})
+          }
+        }
+      }
       setPunchId('');setPunchAmt('');setPunchProduct('');setPunchProductSearch('');loadAll()
     }
     else showToast('Error: '+data.error)
@@ -4264,28 +4312,51 @@ export default function Admin({session}){
                   <div><label style={lbl}>Monto <span style={{color:'#c0392b'}}>*</span></label><input style={{...inp,marginBottom:0}} type="number" step="0.01" placeholder="0.00" value={punchAmt} onChange={e=>setPunchAmt(e.target.value)}/></div>
                 </div>
 
-                {/* Product search */}
-                <div style={{marginBottom:'1rem',position:'relative'}}>
+                {/* Product toggle menu */}
+                <div style={{marginBottom:'1rem'}}>
                   <label style={lbl}>Producto</label>
-                  <input
-                    value={punchProduct?punchProduct:punchProductSearch}
-                    onChange={e=>{if(punchProduct)setPunchProduct('');setPunchProductSearch(e.target.value);setPunchProductOpen(true)}}
-                    onFocus={()=>setPunchProductOpen(true)}
-                    placeholder="Buscar producto..."
-                    style={{...inp,marginBottom:0,paddingRight:punchProduct?'2.5rem':'0.85rem'}}
-                  />
-                  {punchProduct&&<button onClick={()=>{setPunchProduct('');setPunchProductSearch('');setPunchProductOpen(false)}} style={{position:'absolute',right:'0.5rem',bottom:'0.55rem',background:'none',border:'none',cursor:'pointer',color:mu,fontSize:'1rem',lineHeight:1}}>×</button>}
-                  {punchProductOpen&&!punchProduct&&(
-                    <div style={{position:'absolute',top:'100%',left:0,right:0,background:white,border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,zIndex:50,maxHeight:200,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-                      {punchFiltered.length===0?<div style={{padding:'0.75rem 1rem',fontSize:'0.72rem',color:mu}}>Sin resultados</div>:punchFiltered.map(item=>(
-                        <div key={item.id} onClick={()=>{setPunchProduct(item.name);setPunchProductSearch('');setPunchProductOpen(false)}}
-                          style={{padding:'0.65rem 1rem',fontSize:'0.78rem',color:ink,cursor:'pointer',borderBottom:'1px solid rgba(31,20,14,0.05)'}}
-                          onMouseEnter={e=>e.currentTarget.style.background='rgba(31,20,14,0.04)'}
-                          onMouseLeave={e=>e.currentTarget.style.background='white'}>
-                          {item.name}
-                          {item.price&&<span style={{fontSize:'0.65rem',color:mu,marginLeft:'0.5rem'}}>${item.price}</span>}
-                        </div>
-                      ))}
+                  <button type="button" onClick={()=>setPunchProductOpen(o=>!o)}
+                    style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 1rem',background:punchProduct?'rgba(227,90,27,0.06)':'rgba(31,20,14,0.03)',border:punchProduct?'1px solid rgba(227,90,27,0.35)':'1px solid rgba(31,20,14,0.12)',borderRadius:8,cursor:'pointer',fontFamily:ff,textAlign:'left'}}>
+                    <span style={{fontSize:'0.82rem',color:punchProduct?or:mu,fontWeight:punchProduct?600:400}}>
+                      {punchProduct||'Seleccionar producto...'}
+                    </span>
+                    <span style={{display:'flex',gap:'0.4rem',alignItems:'center'}}>
+                      {punchProduct&&<span onClick={e=>{e.stopPropagation();setPunchProduct('');setPunchProductSearch('');setPunchProductOpen(false)}}
+                        style={{fontSize:'0.75rem',color:mu,padding:'0.1rem 0.35rem',borderRadius:3,lineHeight:1,cursor:'pointer'}}>✕</span>}
+                      <span style={{fontSize:'0.65rem',color:mu,transform:punchProductOpen?'rotate(180deg)':'none',transition:'transform 0.2s',display:'block'}}>▾</span>
+                    </span>
+                  </button>
+                  {punchProductOpen&&(
+                    <div style={{background:white,border:'1px solid rgba(31,20,14,0.12)',borderRadius:8,marginTop:4,boxShadow:'0 6px 20px rgba(0,0,0,0.08)',overflow:'hidden'}}>
+                      <div style={{padding:'0.5rem 0.75rem',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
+                        <input autoFocus
+                          value={punchProductSearch}
+                          onChange={e=>setPunchProductSearch(e.target.value)}
+                          placeholder="Buscar por nombre..."
+                          style={{width:'100%',padding:'0.5rem 0.75rem',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,fontFamily:ff,fontSize:'0.78rem',outline:'none',boxSizing:'border-box'}}/>
+                      </div>
+                      <div style={{maxHeight:240,overflowY:'auto'}}>
+                        {punchFiltered.length===0
+                          ?<div style={{padding:'1rem',fontSize:'0.72rem',color:mu,textAlign:'center'}}>Sin resultados</div>
+                          :punchFiltered.map(item=>{
+                            const stk=Array.isArray(item.product_stock)?item.product_stock[0]?.qty:item.product_stock?.qty
+                            const isSelected=punchProduct===item.name
+                            return(
+                              <div key={item.id} onClick={()=>{setPunchProduct(item.name);setPunchProductSearch('');setPunchProductOpen(false)}}
+                                style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.65rem 1rem',cursor:'pointer',borderBottom:'1px solid rgba(31,20,14,0.04)',background:isSelected?'rgba(227,90,27,0.06)':'white',transition:'background 0.1s'}}
+                                onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background='rgba(31,20,14,0.03)'}}
+                                onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background='white'}}>
+                                <span style={{fontSize:'0.8rem',color:ink,fontWeight:isSelected?600:400}}>{item.name}</span>
+                                <span style={{display:'flex',alignItems:'center',gap:'0.5rem',flexShrink:0}}>
+                                  {item.price!=null&&<span style={{fontSize:'0.68rem',color:mu}}>${parseFloat(item.price).toFixed(2)}</span>}
+                                  {stk!=null&&<span style={{fontSize:'0.6rem',padding:'0.1rem 0.45rem',borderRadius:20,background:stk===0?'rgba(192,57,43,0.1)':stk<=5?'rgba(227,90,27,0.1)':'rgba(45,138,96,0.1)',color:stk===0?'#c0392b':stk<=5?or:'#2d8a60',fontWeight:600}}>{stk}</span>}
+                                  {isSelected&&<span style={{color:or,fontSize:'0.75rem'}}>✓</span>}
+                                </span>
+                              </div>
+                            )
+                          })
+                        }
+                      </div>
                     </div>
                   )}
                 </div>
