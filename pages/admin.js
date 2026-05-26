@@ -1012,7 +1012,10 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                       if(cost!==null) return <span style={{fontSize:'0.6rem',color:mu}}>· costo <strong style={{color:ink}}>${cost.toFixed(2)}</strong>/ud</span>
                       const lines=calcEstimado(item)
                       const recipeTotal=lines.reduce((s,l)=>s+l.cost,0)
-                      if(lines.length>0&&recipeTotal>0) return <span style={{fontSize:'0.6rem',color:mu}}>· costo <strong style={{color:'#2d8a60'}}>~${recipeTotal.toFixed(2)}</strong> receta</span>
+                      if(lines.length>0&&recipeTotal>0){
+                        if(stock>0) return <span style={{fontSize:'0.6rem',color:mu}}>· costo <strong style={{color:'#2d8a60'}}>~${(recipeTotal/stock).toFixed(2)}</strong>/ud</span>
+                        return <span style={{fontSize:'0.6rem',color:mu}}>· costo ~${recipeTotal.toFixed(2)} receta</span>
+                      }
                       return null
                     })()}
                     {margin!==null&&<span style={{fontSize:'0.6rem',color:mc(margin),fontWeight:600}}>· {margin}%</span>}
