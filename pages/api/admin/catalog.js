@@ -53,8 +53,8 @@ export default async function handler(req, res) {
     // Update product stock
     if (stock !== undefined) {
       const qty = parseFloat(stock) || 0
-      const { data: existingStock } = await supabase.from('product_stock').select('id').eq('catalog_item_id', product_id).single()
-      if (existingStock) {
+      const { data: stockRows } = await supabase.from('product_stock').select('id').eq('catalog_item_id', product_id)
+      if (stockRows && stockRows.length > 0) {
         await supabase.from('product_stock').update({ qty }).eq('catalog_item_id', product_id)
       } else {
         await supabase.from('product_stock').insert({ catalog_item_id: product_id, qty })
