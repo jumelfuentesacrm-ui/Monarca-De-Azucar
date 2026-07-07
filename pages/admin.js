@@ -2860,6 +2860,163 @@ function InventoryDropdown({ catalog, supplies, cards }) {
 }
 
 
+function VlogPanel({ showToast }) {
+  const ff='"DM Sans",system-ui,sans-serif'
+  const ffS='"Instrument Serif",serif'
+  const ink='#1F140E', or='#E35A1B', mu='#7A6452', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE', white='white'
+  const [posts, setPosts] = React.useState([])
+  const [loading, setLoading] = React.useState(true)
+  const [form, setForm] = React.useState({ title: '', body: '', image_url: '', published: true })
+  const [editing, setEditing] = React.useState(null)
+  const [saving, setSaving] = React.useState(false)
+
+  async function loadPosts() {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/admin/posts')
+      const d = await r.json()
+      setPosts(d.posts || [])
+    } catch { showToast('Error al cargar posts') } finally { setLoading(false) }
+  }
+
+  React.useEffect(() => { loadPosts() }, [])
+
+  function startEdit(post) {
+    setEditing(post.id)
+    setForm({ title: post.title || '', body: post.body || '', image_url: post.image_url || '', published: post.published !== false })
+  }
+
+  function cancelEdit() {
+    setEditing(null)
+    setForm({ title: '', body: '', image_url: '', published: true })
+  }
+
+  async function save() {
+    if (!form.title.trim()) return showToast('Necesitas un título')
+    setSaving(true)
+    try {
+      const method = editing ? 'PATCH' : 'POST'
+      const body = editing ? { id: editing, ...form } : form
+      const r = await fetch('/api/admin/posts', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      const d = await r.json()
+      if (d.error) { showToast('Error: ' + d.error); return }
+      showToast(editing ? 'Post actualizado' : 'Post creado')
+      cancelEdit()
+      await loadPosts()
+    } catch { showToast('Error al guardar') } finally { setSaving(false) }
+  }
+
+  async function togglePublished(post) {
+    try {
+      const r = await fetch('/api/admin/posts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: post.id, published: !post.published })
+      })
+      const d = await r.json()
+      if (d.error) { showToast('Error: ' + d.error); return }
+      setPosts(ps => ps.map(p => p.id === post.id ? d.post : p))
+    } catch { showToast('Error al actualizar') }
+  }
+
+  async function deletePost(post) {
+    if (!confirm(`Eliminar "${post.title}"?`)) return
+    try {
+      const r = await fetch('/api/admin/posts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: post.id })
+      })
+      const d = await r.json()
+      if (d.error) { showToast('Error: ' + d.error); return }
+      showToast('Post eliminado')
+      setPosts(ps => ps.filter(p => p.id !== post.id))
+    } catch { showToast('Error al eliminar') }
+  }
+
+  const inp = { fontFamily: ff, fontSize: '0.82rem', color: ink, background: white, border: '1px solid rgba(31,20,14,0.15)', borderRadius: 8, padding: '0.55rem 0.75rem', width: '100%', boxSizing: 'border-box', outline: 'none' }
+  const label = { fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.35rem', fontWeight: 600, display: 'block' }
+
+  return (
+    <div>
+      <div style={{ fontFamily: ffS, fontSize: '1.5rem', fontWeight: 400, marginBottom: '0.5rem' }}>Vlog</div>
+      <div style={{ fontSize: '0.68rem', color: mu, marginBottom: '1.5rem', lineHeight: 1.5 }}>
+        Publica noticias y actualizaciones para tus clientes. Se muestran en la app de lealtad.
+      </div>
+
+      {/* Posts list */}
+      {loading ? (
+        <div style={{ fontSize: '0.78rem', color: mu, padding: '1rem 0' }}>Cargando…</div>
+      ) : posts.length === 0 ? (
+        <div style={{ fontSize: '0.78rem', color: mu, padding: '1rem 0' }}>No hay posts aún.</div>
+      ) : (
+        <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {posts.map(post => (
+            <div key={post.id} style={{ background: cr, border: '1px solid rgba(31,20,14,0.08)', borderRadius: 10, padding: '0.85rem 1rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: ffS, fontSize: '1rem', color: ink, marginBottom: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.title}</div>
+                <div style={{ fontSize: '0.6rem', color: mu }}>{new Date(post.created_at).toLocaleDateString('es-PR', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+              </div>
+              <button onClick={() => togglePublished(post)}
+                style={{ flexShrink: 0, padding: '0.3rem 0.65rem', borderRadius: 999, fontFamily: ff, fontSize: '0.6rem', fontWeight: 600, cursor: 'pointer', border: '1px solid', background: post.published ? 'rgba(45,138,96,0.1)' : cr2, color: post.published ? '#2d8a60' : mu, borderColor: post.published ? 'rgba(45,138,96,0.3)' : cr3 }}>
+                {post.published ? 'Publicado' : 'Borrador'}
+              </button>
+              <button onClick={() => startEdit(post)}
+                style={{ flexShrink: 0, padding: '0.3rem 0.65rem', background: cr2, border: '1px solid ' + cr3, borderRadius: 999, fontFamily: ff, fontSize: '0.6rem', color: ink, cursor: 'pointer' }}>
+                Editar
+              </button>
+              <button onClick={() => deletePost(post)}
+                style={{ flexShrink: 0, padding: '0.3rem 0.65rem', background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 999, fontFamily: ff, fontSize: '0.6rem', color: '#c0392b', cursor: 'pointer' }}>
+                Eliminar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Form */}
+      <div style={{ background: cr, border: '1px solid rgba(31,20,14,0.1)', borderRadius: 12, padding: '1.25rem' }}>
+        <div style={{ fontFamily: ffS, fontSize: '1.1rem', color: ink, marginBottom: '1rem' }}>
+          {editing ? 'Editar post' : 'Nuevo post'}
+        </div>
+        <div style={{ marginBottom: '0.85rem' }}>
+          <span style={label}>Título</span>
+          <input style={inp} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Título del post"/>
+        </div>
+        <div style={{ marginBottom: '0.85rem' }}>
+          <span style={label}>Contenido</span>
+          <textarea style={{ ...inp, minHeight: 100, resize: 'vertical' }} value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="Escribe el contenido…"/>
+        </div>
+        <div style={{ marginBottom: '0.85rem' }}>
+          <span style={label}>URL de imagen (opcional)</span>
+          <input style={inp} value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://…"/>
+        </div>
+        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input type="checkbox" id="vlog-pub" checked={form.published} onChange={e => setForm(f => ({ ...f, published: e.target.checked }))} style={{ cursor: 'pointer' }}/>
+          <label htmlFor="vlog-pub" style={{ fontFamily: ff, fontSize: '0.75rem', color: mu, cursor: 'pointer' }}>Publicar (visible para clientes)</label>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button onClick={save} disabled={saving}
+            style={{ padding: '0.6rem 1.25rem', background: or, border: 'none', borderRadius: 8, fontFamily: ff, fontSize: '0.75rem', fontWeight: 600, color: white, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+            {saving ? 'Guardando…' : editing ? 'Actualizar' : 'Publicar'}
+          </button>
+          {editing && (
+            <button onClick={cancelEdit}
+              style={{ padding: '0.6rem 1.25rem', background: cr2, border: '1px solid ' + cr3, borderRadius: 8, fontFamily: ff, fontSize: '0.75rem', color: mu, cursor: 'pointer' }}>
+              Cancelar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 function PushPanel({ showToast }) {
   const ff='"DM Sans",system-ui,sans-serif'
   const ffS='"Instrument Serif",serif'
@@ -3822,7 +3979,7 @@ export default function Admin({session}){
             {/* OPERACIÓN */}
             <div style={{padding:'0.25rem 0'}}>
               <div style={{fontSize:'0.5rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',padding:'0 1.25rem',marginBottom:'0.35rem'}}>Operación</div>
-              {[['system','Configuración'],['catalog','Catálogo'],['supplies','Inventario'],['website','Website'],['push','Notificaciones'],['notifications','Alertas']].map(([id,label])=>(
+              {[['system','Configuración'],['catalog','Catálogo'],['supplies','Inventario'],['website','Website'],['push','Notificaciones'],['vlog','Vlog'],['notifications','Alertas']].map(([id,label])=>(
                 <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
                   <span style={{fontSize:'0.72rem',color:panel===id?gold:'rgba(255,255,255,0.7)'}}>{label}</span>
                 </button>
@@ -3847,6 +4004,7 @@ export default function Admin({session}){
             {panel==='campaigns'&&<CampaignsPanel cards={cards} users={users}/>}
             {panel==='website'&&<WebsitePanel catalog={catalog} showToast={showToast} loadAll={loadAll}/>}
             {panel==='push'&&<PushPanel showToast={showToast}/>}
+            {panel==='vlog'&&<VlogPanel showToast={showToast}/>}
             {panel==='catalog'&&<CatalogPanel catalog={catalog} supplies={supplies} onSetCost={(item)=>{setEditarCost(item);setCostForm({cost:'',units:'1',notes:item.catalog_costs?.notes||'',_savedCost:item.catalog_costs?.cost||null});setModal('cost')}} onSetSuppliers={(item)=>{setSuppliersItem(item);setSuppliersText(item.catalog_costs?.suppliers||'');setSuppliersTitle('');setModal('suppliers')}} showToast={showToast} loadAll={loadAll}/>}
             {panel==='stock'&&<StockPanel catalog={catalog} supplies={supplies} loadAll={loadAll} showToast={showToast}/>}
             {panel==='supplies'&&<SuppliesPanel supplies={supplies} setSupplies={setSupplies} catalog={catalog} onCompra={()=>setShowPurchase(true)} onCompraItem={(id)=>{setPurchaseSupplyId(id);setShowPurchase(true)}}
@@ -4029,6 +4187,7 @@ export default function Admin({session}){
                 ['campaigns','Campañas'],
                 ['website','Website'],
                 ['push','Notificaciones'],
+                ['vlog','Vlog'],
                 ['catalog','Catálogo'],
                 ['supplies','Inventario'],
                 ['system','Configuración'],

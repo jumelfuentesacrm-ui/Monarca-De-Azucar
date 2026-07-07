@@ -123,6 +123,12 @@ export default function Card({ session }) {
   const [selectedItem, setSelectedItem] = useState(null)
   const [selectedItemCat, setSelectedItemCat] = useState('')
   const [pushStatus, setPushStatus] = useState('unknown')
+  const [posts, setPosts] = React.useState([])
+  const [expandedPost, setExpandedPost] = React.useState(null)
+
+  React.useEffect(() => {
+    fetch('/api/public/posts').then(r=>r.json()).then(d=>setPosts(d.posts||[])).catch(()=>{})
+  }, [])
 
   React.useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -449,6 +455,24 @@ export default function Card({ session }) {
                     </div>
                   )}
 
+                  {posts.length > 0 && (
+                    <div style={{marginTop:8,paddingTop:20,borderTop:'1px solid rgba(31,20,14,0.07)'}}>
+                      <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:mu,marginBottom:16}}>Del equipo</div>
+                      {posts.map(post=>(
+                        <div key={post.id} style={{marginBottom:20,cursor:'pointer'}} onClick={()=>setExpandedPost(expandedPost===post.id?null:post.id)}>
+                          {post.image_url&&<img src={post.image_url} alt={post.title} style={{width:'100%',aspectRatio:'16/9',objectFit:'cover',display:'block',borderRadius:10,marginBottom:10}}/>}
+                          <div style={{fontSize:'0.5rem',color:mu,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:4}}>
+                            {new Date(post.created_at).toLocaleDateString('es-PR',{day:'numeric',month:'long',year:'numeric'})}
+                          </div>
+                          <div style={{fontFamily:ffS,fontSize:'1.1rem',color:ink,lineHeight:1.2,marginBottom:6}}>{post.title}</div>
+                          {expandedPost===post.id
+                            ? <div style={{fontSize:'0.78rem',color:mu,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{post.body}</div>
+                            : post.body&&<div style={{fontSize:'0.78rem',color:mu,lineHeight:1.6,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{post.body}</div>
+                          }
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                 </>
               )}
