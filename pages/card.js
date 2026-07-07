@@ -458,7 +458,7 @@ export default function Card({ session }) {
               ) : (<>
 
               {/* Section index — flat chips */}
-              <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:24,paddingBottom:16,borderBottom:'1px solid rgba(31,20,14,0.12)'}}>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:24}}>
                 {menuCatOrder.map((cat, ci) => {
                   const items = menuCatMap[cat]
                   const totalUnd = items.reduce((s,i) => s + (i.stock_qty != null ? i.stock_qty : 0), 0)

@@ -2638,7 +2638,7 @@ function WebsitePanel({ catalog, showToast, loadAll }) {
                 const catOrder=[...new Set(previewSorted.map(i=>i.category).filter(Boolean))]
                 // Category chips
                 return <>
-                  <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:10,paddingBottom:8,borderBottom:'1px solid rgba(31,20,14,0.12)'}}>
+                  <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:10}}>
                     {catOrder.map((cat,ci)=>(
                       <div key={cat} style={{padding:'3px 7px',background:'#EDE3CE',fontSize:'0.45rem',color:'#1F140E',letterSpacing:'0.05em',textTransform:'uppercase'}}>
                         Sec. {String(ci+1).padStart(2,'0')} · {cat}
