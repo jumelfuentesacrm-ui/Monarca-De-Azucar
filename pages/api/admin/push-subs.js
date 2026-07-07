@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
   const { data: subs, error } = await supabase
     .from('push_subscriptions')
-    .select('id, user_id, last_notif_sent_at, created_at')
+    .select('*')
     .not('user_id', 'is', null)
 
   if (error) return res.status(500).json({ error: error.message })
