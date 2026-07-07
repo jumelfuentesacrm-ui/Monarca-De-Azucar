@@ -53,11 +53,14 @@ export default async function handler(req, res) {
     // Update product stock
     if (stock !== undefined) {
       const qty = parseFloat(stock) || 0
-      const { data: stockRows } = await supabase.from('product_stock').select('id').eq('catalog_item_id', product_id)
+      const { data: stockRows, error: selErr } = await supabase.from('product_stock').select('id').eq('catalog_item_id', product_id)
+      if (selErr) return res.status(500).json({ error: 'stock select: ' + selErr.message })
       if (stockRows && stockRows.length > 0) {
-        await supabase.from('product_stock').update({ qty }).eq('catalog_item_id', product_id)
+        const { error: updErr } = await supabase.from('product_stock').update({ qty }).eq('catalog_item_id', product_id)
+        if (updErr) return res.status(500).json({ error: 'stock update: ' + updErr.message })
       } else {
-        await supabase.from('product_stock').insert({ catalog_item_id: product_id, qty })
+        const { error: insErr } = await supabase.from('product_stock').insert({ id: 'stock_' + Date.now(), catalog_item_id: product_id, qty })
+        if (insErr) return res.status(500).json({ error: 'stock insert: ' + insErr.message })
       }
     }
 
