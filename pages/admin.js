@@ -1108,7 +1108,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                   <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:'0.5rem',marginBottom:'0.5rem'}}>
                     <div><div style={flbl}>Nombre</div><input value={editForm.name} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
                     <div><div style={flbl}>Precio ($)</div><input type="number" step="0.01" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
-                    <div><div style={flbl}>Disponibles</div><input type="number" min="0" step="1" placeholder="0" value={editForm.stock||''} onChange={e=>setEditForm(f=>({...f,stock:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
+                    <div><div style={flbl}>Cantidad x Receta</div><input type="number" min="0" step="1" placeholder="0" value={editForm.stock||''} onChange={e=>setEditForm(f=>({...f,stock:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.5rem',marginBottom:'0.75rem'}}>
                     <div style={{position:'relative'}}>
