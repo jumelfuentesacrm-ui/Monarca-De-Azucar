@@ -42,6 +42,13 @@ export default async function handler(req, res) {
     return res.status(200).json({ message })
   }
 
+  if (req.method === 'PATCH') {
+    const { user_id } = req.body
+    if (!user_id) return res.status(400).json({ error: 'user_id required' })
+    await supabase.from('messages').update({ read: true }).eq('user_id', user_id).eq('sender', 'client').eq('read', false)
+    return res.status(200).json({ success: true })
+  }
+
   if (req.method === 'DELETE') {
     const { id } = req.body
     if (!id) return res.status(400).json({ error: 'id required' })

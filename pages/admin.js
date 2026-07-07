@@ -129,6 +129,20 @@ function DashboardPanel({ cards, sales, supplies, onSelectClient, userName, onOp
   const conversations = Object.values(convMap).sort((a,b)=>new Date(b.latest)-new Date(a.latest))
   const unreadCount = (messages||[]).filter(m=>m.sender==='client'&&!m.read).length
 
+  function getConvDot(conv) {
+    const clientMsgs = conv.msgs.filter(m=>m.sender==='client')
+    if (!clientMsgs.length) return null
+    const lastClient = [...clientMsgs].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0]
+    const hasReply = conv.msgs.some(m=>m.sender==='admin'&&new Date(m.created_at)>new Date(lastClient.created_at))
+    if (hasReply) return null
+    return lastClient.read ? 'yellow' : 'red'
+  }
+
+  async function markConvRead(userId) {
+    await fetch('/api/admin/messages',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId})}).catch(()=>{})
+    setMessages(prev=>prev.map(m=>m.user_id===userId&&m.sender==='client'?{...m,read:true}:m))
+  }
+
   const filteredConvs = conversations.filter(c=>c.name.toLowerCase().includes(msgSearch.toLowerCase()))
 
   // Clients donut
@@ -190,10 +204,11 @@ function DashboardPanel({ cards, sales, supplies, onSelectClient, userName, onOp
         {(msgOpen?filteredConvs:filteredConvs.slice(0,2)).map(conv=>{
           const lastMsg = [...conv.msgs].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0]
           const isOpen = selectedConv===conv.userId
+          const dot = getConvDot(conv)
           return(
             <div key={conv.userId} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
               {/* Conversation header */}
-              <div onClick={()=>setSelectedConv(isOpen?null:conv.userId)}
+              <div onClick={()=>{setSelectedConv(isOpen?null:conv.userId);if(!isOpen)markConvRead(conv.userId)}}
                 style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',cursor:'pointer',background:isOpen?'rgba(227,90,27,0.04)':'transparent'}}>
                 <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',fontWeight:700,color:'#E35A1B',flexShrink:0}}>
                   {conv.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
@@ -204,7 +219,10 @@ function DashboardPanel({ cards, sales, supplies, onSelectClient, userName, onOp
                     {lastMsg?.sender==='admin'?'Tú: ':''}{lastMsg?.file_url?'📎 Archivo':lastMsg?.content}
                   </div>
                 </div>
-                <div style={{fontSize:'0.58rem',color:'#7A6452',flexShrink:0}}>{new Date(lastMsg?.created_at).toLocaleDateString('es-PR',{month:'short',day:'numeric'})}</div>
+                <div style={{display:'flex',alignItems:'center',gap:'0.4rem',flexShrink:0}}>
+                  {dot&&<div style={{width:8,height:8,borderRadius:'50%',background:dot==='red'?'#E35A1B':'#f1c40f',flexShrink:0}}/>}
+                  <div style={{fontSize:'0.58rem',color:'#7A6452'}}>{new Date(lastMsg?.created_at).toLocaleDateString('es-PR',{month:'short',day:'numeric'})}</div>
+                </div>
                 <span style={{fontSize:'0.65rem',color:'#7A6452',transition:'transform 0.2s',display:'inline-block',transform:isOpen?'rotate(180deg)':'none'}}>▾</span>
               </div>
 
