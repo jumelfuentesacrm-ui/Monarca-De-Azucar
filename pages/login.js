@@ -25,13 +25,11 @@ export default function Login() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [form, setForm] = useState({ email:'', password:'', full_name:'', phone:'', confirm_password:'' })
-  const [phoneStep, setPhoneStep] = useState('enter') // 'enter' | 'otp'
   const [phoneNum, setPhoneNum] = useState('')
-  const [otp, setOtp] = useState('')
   const upd = (k,v) => setForm(f=>({...f,[k]:v}))
 
   function switchChannel(ch) {
-    setChannel(ch); setError(''); setSuccess(''); setPhoneStep('enter'); setOtp('')
+    setChannel(ch); setError(''); setSuccess('')
   }
   function switchMode(m) {
     setMode(m); setError(''); setSuccess('')
@@ -61,34 +59,48 @@ export default function Login() {
     setMode('login')
   }
 
-  async function sendOtp(e) {
-    e.preventDefault()
-    setError('')
-    const raw = phoneNum.replace(/\D/g, '')
-    if (raw.length < 10) { setError('Número inválido.'); return }
-    const formatted = raw.startsWith('1') ? '+' + raw : '+1' + raw
-    setLoading(true)
-    const { error } = await supabase.auth.signInWithOtp({ phone: formatted })
-    setLoading(false)
-    if (error) { setError('No se pudo enviar el código. Verifica el número.'); return }
-    setPhoneNum(formatted)
-    setPhoneStep('otp')
-    setSuccess('Código enviado por SMS.')
+  function phoneToEmail(num) {
+    return num.replace(/\D/g, '').slice(-10) + '@phone.monarcadeazucar.app'
   }
 
-  async function verifyOtp(e) {
+  async function handlePhoneLogin(e) {
     e.preventDefault()
-    setError('')
-    if (otp.length < 6) { setError('Código inválido.'); return }
+    setError(''); setLoading(true)
+    const digits = phoneNum.replace(/\D/g, '').slice(-10)
+    if (digits.length < 10) { setError('Número inválido.'); setLoading(false); return }
+    const { data, error } = await supabase.auth.signInWithPassword({ email: phoneToEmail(phoneNum), password: form.password })
+    if (error) { setError('Número o contraseña incorrectos.'); setLoading(false); return }
+    const roleRes = await fetch('/api/admin/check-role', { headers: { Authorization: 'Bearer ' + data.session.access_token } })
+    const roleData = await roleRes.json()
+    window.location.href = roleData?.role === 'admin' ? '/admin' : '/card'
+  }
+
+  async function handlePhoneSignup(e) {
+    e.preventDefault()
+    setError(''); setSuccess('')
+    if (form.password !== form.confirm_password) { setError('Las contraseñas no coinciden.'); return }
+    if (form.password.length < 6) { setError('Mínimo 6 caracteres.'); return }
+    const digits = phoneNum.replace(/\D/g, '').slice(-10)
+    if (digits.length < 10) { setError('Número inválido.'); return }
     setLoading(true)
-    const { data, error } = await supabase.auth.verifyOtp({ phone: phoneNum, token: otp, type: 'sms' })
-    if (error) { setError('Código incorrecto o expirado.'); setLoading(false); return }
-    const res = await fetch('/api/auth/ensure-profile', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + data.session.access_token }
+    const { data, error } = await supabase.auth.signUp({
+      email: phoneToEmail(phoneNum),
+      password: form.password,
+      options: { data: { full_name: form.full_name || null, phone: digits }, emailRedirectTo: null }
     })
-    const profile = await res.json()
-    window.location.href = profile?.role === 'admin' ? '/admin' : '/card'
+    setLoading(false)
+    if (error) {
+      if (error.message?.toLowerCase().includes('already registered')) { setError('Este número ya tiene una cuenta. Inicia sesión.') }
+      else { setError(error.message || 'Error al crear cuenta.') }
+      return
+    }
+    if (data.session) {
+      await fetch('/api/auth/ensure-profile', { method: 'POST', headers: { Authorization: 'Bearer ' + data.session.access_token } })
+      window.location.href = '/card'
+    } else {
+      setSuccess('¡Cuenta creada! Inicia sesión.')
+      setMode('login')
+    }
   }
 
   const inp = {
@@ -214,46 +226,39 @@ export default function Login() {
 
             {/* PHONE FLOW */}
             {channel === 'phone' && (<>
-              <h2 style={{fontFamily:ffS,fontSize:'1.7rem',fontWeight:400,marginBottom:'0.4rem',textAlign:'center',color:ink}}>
-                {phoneStep==='enter' ? 'Entra con tu número' : 'Verifica tu número'}
+              <h2 style={{fontFamily:ffS,fontSize:'1.7rem',fontWeight:400,marginBottom:'1.5rem',textAlign:'center',color:ink}}>
+                {mode==='login' ? 'Bienvenido de vuelta' : 'Crear cuenta'}
               </h2>
-              <p style={{fontSize:'0.75rem',color:mu,marginBottom:'1.5rem',lineHeight:1.7,textAlign:'center'}}>
-                {phoneStep==='enter'
-                  ? 'Te enviamos un código por mensaje de texto.'
-                  : `Código enviado a ${phoneNum}`}
-              </p>
-
-              {phoneStep === 'enter' ? (
-                <form onSubmit={sendOtp}>
-                  <label style={lbl}>Número de teléfono</label>
-                  <div style={{display:'flex',marginBottom:'1rem',gap:8}}>
-                    <div style={{...inp,width:'auto',flexShrink:0,marginBottom:0,display:'flex',alignItems:'center',padding:'0.85rem 0.85rem',color:mu,fontWeight:600,background:'rgba(31,20,14,0.04)'}}>+1</div>
-                    <input style={{...inp,marginBottom:0,flex:1}}
-                      type="tel" placeholder="939-000-0000"
-                      value={phoneNum} onChange={e=>setPhoneNum(e.target.value)}
-                      inputMode="numeric" required/>
-                  </div>
-                  <button type="submit" disabled={loading}
-                    style={{width:'100%',background:or,color:cr,border:'none',padding:'1rem',cursor:'pointer',fontFamily:ff,fontSize:'0.78rem',letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,borderRadius:999,opacity:loading?0.6:1}}>
-                    {loading ? 'Enviando...' : 'Enviar código →'}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={verifyOtp}>
-                  <label style={lbl}>Código de 6 dígitos</label>
-                  <input style={{...inp,textAlign:'center',fontSize:'1.4rem',letterSpacing:'0.3em',fontWeight:600}}
-                    type="text" inputMode="numeric" maxLength={6} placeholder="000000"
-                    value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,''))} required/>
-                  <button type="submit" disabled={loading}
-                    style={{width:'100%',background:or,color:cr,border:'none',padding:'1rem',cursor:'pointer',fontFamily:ff,fontSize:'0.78rem',letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,borderRadius:999,opacity:loading?0.6:1,marginBottom:'0.75rem'}}>
-                    {loading ? 'Verificando...' : 'Verificar código →'}
-                  </button>
-                  <button type="button" onClick={()=>{setPhoneStep('enter');setOtp('');setError('');setSuccess('')}}
-                    style={{width:'100%',background:'none',border:'none',fontFamily:ff,fontSize:'0.72rem',color:mu,cursor:'pointer',padding:'0.4rem'}}>
-                    Cambiar número
-                  </button>
-                </form>
-              )}
+              <form onSubmit={mode==='login' ? handlePhoneLogin : handlePhoneSignup}>
+                {mode==='signup' && <>
+                  <label style={lbl}>Nombre completo</label>
+                  <input style={inp} type="text" placeholder="Tu nombre" value={form.full_name} onChange={e=>upd('full_name',e.target.value)}/>
+                </>}
+                <label style={lbl}>Número de teléfono</label>
+                <div style={{display:'flex',marginBottom:'1rem',gap:8}}>
+                  <div style={{...inp,width:'auto',flexShrink:0,marginBottom:0,display:'flex',alignItems:'center',padding:'0.85rem 0.85rem',color:mu,fontWeight:600,background:'rgba(31,20,14,0.04)'}}>+1</div>
+                  <input style={{...inp,marginBottom:0,flex:1}}
+                    type="tel" placeholder="939-000-0000"
+                    value={phoneNum} onChange={e=>setPhoneNum(e.target.value)}
+                    inputMode="numeric" required/>
+                </div>
+                <label style={lbl}>Contraseña</label>
+                <input style={inp} type="password" placeholder="••••••••" value={form.password} onChange={e=>upd('password',e.target.value)} required/>
+                {mode==='signup' && <>
+                  <label style={lbl}>Confirmar contraseña</label>
+                  <input style={{...inp,marginBottom:'1.5rem'}} type="password" placeholder="••••••••" value={form.confirm_password} onChange={e=>upd('confirm_password',e.target.value)} required/>
+                </>}
+                <button type="submit" disabled={loading}
+                  style={{width:'100%',background:or,color:cr,border:'none',padding:'1rem',cursor:'pointer',fontFamily:ff,fontSize:'0.78rem',letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,borderRadius:999,opacity:loading?0.6:1,marginTop:mode==='login'?'0.5rem':0}}>
+                  {loading ? 'Un momento...' : (mode==='login' ? 'Entrar →' : 'Crear cuenta')}
+                </button>
+              </form>
+              <div style={{fontSize:'0.72rem',color:mu,marginTop:'1.25rem',textAlign:'center'}}>
+                {mode==='login'
+                  ? <span>¿No tienes cuenta? <span style={{color:or,cursor:'pointer',fontWeight:600}} onClick={()=>switchMode('signup')}>Regístrate</span></span>
+                  : <span>¿Ya tienes cuenta? <span style={{color:or,cursor:'pointer',fontWeight:600}} onClick={()=>switchMode('login')}>Inicia sesión</span></span>
+                }
+              </div>
             </>)}
 
             <div style={{marginTop:'2.5rem',paddingTop:'1.5rem',borderTop:'1px solid rgba(31,20,14,0.08)',textAlign:'center',fontSize:'0.62rem',color:'rgba(31,20,14,0.3)',letterSpacing:'0.1em'}}>
