@@ -26,6 +26,15 @@ export default function Login() {
   const [form, setForm] = useState({ email:'', password:'', full_name:'', phone:'', confirm_password:'' })
   const upd = (k,v) => setForm(f=>({...f,[k]:v}))
 
+  const redirectTo = typeof window !== 'undefined' ? window.location.origin + '/auth/callback' : ''
+
+  async function signInWithGoogle() {
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
+  }
+  async function signInWithApple() {
+    await supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo } })
+  }
+
   async function handleLogin(e) {
     e.preventDefault()
     setError(''); setLoading(true)
@@ -134,6 +143,26 @@ export default function Login() {
             <p style={{fontSize:'0.75rem',color:mu,marginBottom:'2rem',lineHeight:1.7,textAlign:'center'}}>
               {mode==='login' ? 'Accede a tu tarjeta de lealtad.' : 'Regístrate y te activamos tu tarjeta.'}
             </p>
+
+            {/* OAuth buttons */}
+            <div style={{display:'flex',flexDirection:'column',gap:'0.65rem',marginBottom:'1.5rem'}}>
+              <button type="button" onClick={signInWithGoogle}
+                style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'0.85rem 1rem',background:'white',border:'1px solid rgba(31,20,14,0.14)',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',fontWeight:500,color:ink,cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
+                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6C12.5 13 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.5 37.3 46.5 31.4 46.5 24.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.7 14.7 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8-5.9z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.2 0-11.5-4.2-13.4-9.9l-8 5.9C6.6 42.6 14.6 48 24 48z"/></svg>
+                Continuar con Google
+              </button>
+              <button type="button" onClick={signInWithApple}
+                style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'0.85rem 1rem',background:ink,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',fontWeight:500,color:'white',cursor:'pointer'}}>
+                <svg width="16" height="20" viewBox="0 0 814 1000" fill="white"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 442.5 32.3 300.2 56.3 200.1c10.4-43.4 33.5-83.5 65.9-112.8 56.3-52.1 147.5-80.7 235-80.7 72.9 0 131.6 41.7 176.7 41.7 43.1 0 110.3-43.7 191.4-43.7 31.4 0 134.5 3.6 196.7 111.7zm-223-116.4c31.4-35.1 54.6-84 54.6-132.9 0-6.8-.5-13.7-1.6-19.3-51.5 2-112.7 34.5-149.3 72-27 28.2-53.6 76.5-53.6 126.2 0 7.1 1.3 14.2 1.9 16.5 3.2.5 8.4 1.2 13.6 1.2 46.3 0 103.6-31 134.4-63.7z"/></svg>
+                Continuar con Apple
+              </button>
+            </div>
+
+            <div style={{display:'flex',alignItems:'center',gap:'0.75rem',marginBottom:'1.5rem'}}>
+              <div style={{flex:1,height:1,background:'rgba(31,20,14,0.1)'}}/>
+              <span style={{fontSize:'0.65rem',color:mu,letterSpacing:'0.08em',textTransform:'uppercase'}}>o con email</span>
+              <div style={{flex:1,height:1,background:'rgba(31,20,14,0.1)'}}/>
+            </div>
 
             {error && <div style={{color:'#a33b22',fontSize:'0.75rem',marginBottom:'0.85rem',padding:'0.65rem 0.9rem',background:'rgba(163,59,34,0.07)',borderRadius:8,border:'1px solid rgba(163,59,34,0.15)'}}>{error}</div>}
             {success && <div style={{color:'#3F7A4C',fontSize:'0.75rem',marginBottom:'0.85rem',padding:'0.65rem 0.9rem',background:'rgba(63,122,76,0.07)',borderRadius:8,border:'1px solid rgba(63,122,76,0.2)'}}>{success}</div>}
