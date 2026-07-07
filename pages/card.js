@@ -417,7 +417,7 @@ export default function Card({ session }) {
                         <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
                           <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'0.7rem',fontWeight:700,color:or}}>{card.stamp_history.length - i}</div>
                           <div style={{flex:1}}>
-                            <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{h.payment_amount || 'Visita registrada'}</div>
+                            <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{h.product_name || 'Visita registrada'}</div>
                             <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>{new Date(h.created_at).toLocaleDateString('es-PR',{day:'numeric',month:'long',year:'numeric'})}</div>
                           </div>
                           <span style={{fontSize:'0.62rem',color:or,fontWeight:600}}>+ pieza</span>
