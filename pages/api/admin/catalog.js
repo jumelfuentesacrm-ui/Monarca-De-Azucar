@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { randomUUID } from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -62,7 +63,7 @@ export default async function handler(req, res) {
         }
         if (!updated || updated.length === 0) {
           const { error: insErr } = await supabase
-            .from('product_stock').insert({ id: crypto.randomUUID(), catalog_item_id: product_id, qty })
+            .from('product_stock').insert({ id: randomUUID(), catalog_item_id: product_id, qty })
           if (insErr) {
             console.error('[catalog PATCH] stock insert error:', JSON.stringify(insErr))
             return res.status(500).json({ error: 'stock insert: ' + insErr.message, detail: insErr })

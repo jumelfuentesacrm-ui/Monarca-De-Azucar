@@ -753,7 +753,9 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
   async function saveStockInline(itemId, val) {
     const qty = parseFloat(val)
     if (isNaN(qty) || qty < 0) { setStockEditId(null); return }
-    await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:itemId,stock:qty})})
+    const res = await fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:itemId,stock:qty})})
+    const data = await res.json().catch(()=>({}))
+    if (!res.ok) { showToast('Error stock: ' + (data.error || res.status)); return }
     setStockEditId(null); loadAll()
   }
 
