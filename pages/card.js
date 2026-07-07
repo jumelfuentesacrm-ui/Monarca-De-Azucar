@@ -125,6 +125,7 @@ export default function Card({ session }) {
   const [pushStatus, setPushStatus] = useState('unknown')
   const [posts, setPosts] = React.useState([])
   const [expandedPost, setExpandedPost] = React.useState(null)
+  const [showHistory, setShowHistory] = React.useState(false)
 
   React.useEffect(() => {
     fetch('/api/public/posts').then(r=>r.json()).then(d=>setPosts(d.posts||[])).catch(()=>{})
@@ -351,28 +352,14 @@ export default function Card({ session }) {
             </div>
             ) : (
             <div className="fade-up">
-              {/* Horizontal greeting card */}
-              <div style={{background:cr2,borderRadius:16,padding:'16px 20px',border:'1px solid '+cr3,marginBottom:20,marginTop:20}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:'0.48rem',letterSpacing:'0.15em',textTransform:'uppercase',color:mu,marginBottom:4}}>Club Monarca · #{card?.card_number||'—'}</div>
-                    <div style={{fontFamily:ffS,fontSize:'clamp(1.2rem,5vw,1.6rem)',color:ink,fontStyle:'italic',lineHeight:1.1}}>
-                      {timeGreeting}, {firstName}.
-                    </div>
-                  </div>
-                  <div style={{textAlign:'right',flexShrink:0}}>
-                    <div style={{display:'flex',gap:5,marginBottom:4,justifyContent:'flex-end'}}>
-                      {[0,1,2,3,4].map(i=>(
-                        <div key={i} style={{width:10,height:10,borderRadius:'50%',background:i<cur?or:'rgba(31,20,14,0.12)',border:i<cur?'none':'1px solid rgba(31,20,14,0.18)',transition:'background 0.3s'}}/>
-                      ))}
-                    </div>
-                    <div style={{fontSize:'0.58rem',color:mu}}>{cur}/5 piezas</div>
-                  </div>
+              {/* Greeting — outside the card */}
+              <div style={{paddingTop:24,paddingBottom:16}}>
+                <div style={{fontSize:'0.48rem',letterSpacing:'0.15em',textTransform:'uppercase',color:mu,marginBottom:6}}>Club Monarca · #{card?.card_number||'—'}</div>
+                <div style={{fontFamily:ffS,fontSize:'clamp(1.4rem,6vw,1.9rem)',color:ink,fontStyle:'italic',lineHeight:1.1}}>
+                  {timeGreeting}, {firstName}.
                 </div>
                 {lastVisitDate&&(
-                  <div style={{fontSize:'0.6rem',color:mu,marginTop:10,paddingTop:10,borderTop:'1px solid rgba(31,20,14,0.08)'}}>
-                    Última visita: {lastVisitDate}
-                  </div>
+                  <div style={{fontSize:'0.62rem',color:mu,marginTop:6}}>Última visita: {lastVisitDate}</div>
                 )}
               </div>
 
@@ -382,7 +369,7 @@ export default function Card({ session }) {
                   <div style={{fontFamily:ffS,fontSize:'1.3rem',color:ink,margin:'16px 0 8px',fontStyle:'italic'}}>Tu tarjeta está siendo activada</div>
                   <p style={{fontSize:'0.76rem',color:mu,lineHeight:1.7,marginBottom:20}}>Pídele al equipo que active tu tarjeta en tu próxima visita.</p>
                   <a href="tel:+19393499006" style={{display:'inline-block',padding:'12px 28px',background:or,color:cr,borderRadius:999,fontSize:'0.72rem',fontWeight:600,textDecoration:'none'}}>
-                    📞 +1 (939) 349-9006
+                    +1 (939) 349-9006
                   </a>
                 </div>
               ) : (
@@ -412,6 +399,41 @@ export default function Card({ session }) {
                     <div style={{height:3,background:'rgba(31,20,14,0.08)',borderRadius:3,margin:'16px 0 0'}}>
                       <div style={{height:'100%',width:(cur/5*100)+'%',background:or,borderRadius:3,transition:'width 0.6s ease'}}/>
                     </div>
+
+                    {/* Last product + history toggle */}
+                    {card.stamp_history?.length > 0 && (()=>{
+                      const sorted = [...card.stamp_history].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
+                      const last = sorted[0]
+                      return (
+                        <div style={{marginTop:16,paddingTop:14,borderTop:'1px solid rgba(31,20,14,0.08)'}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                            <div>
+                              <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu,marginBottom:3}}>Lo último que probaste</div>
+                              <div style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{last.product_name||'Visita registrada'}</div>
+                              <div style={{fontSize:'0.6rem',color:mu,marginTop:2}}>{new Date(last.created_at).toLocaleDateString('es-PR',{day:'numeric',month:'long',timeZone:'America/Puerto_Rico'})}</div>
+                            </div>
+                            <button onClick={()=>setShowHistory(h=>!h)}
+                              style={{background:'none',border:'none',fontFamily:ff,fontSize:'0.65rem',color:or,fontWeight:600,cursor:'pointer',padding:'2px 0',flexShrink:0,marginTop:2}}>
+                              {showHistory?'Ver menos':'Ver más'}
+                            </button>
+                          </div>
+                          {showHistory&&(
+                            <div style={{marginTop:12}}>
+                              {sorted.map((h,i)=>(
+                                <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
+                                  <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'0.65rem',fontWeight:700,color:or}}>{sorted.length-i}</div>
+                                  <div style={{flex:1}}>
+                                    <div style={{fontSize:'0.75rem',color:ink,fontWeight:500}}>{h.product_name||'Visita registrada'}</div>
+                                    <div style={{fontSize:'0.6rem',color:mu,marginTop:1}}>{new Date(h.created_at).toLocaleDateString('es-PR',{day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}</div>
+                                  </div>
+                                  <span style={{fontSize:'0.6rem',color:or,fontWeight:600}}>+1</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   {/* REWARD */}
@@ -420,9 +442,8 @@ export default function Card({ session }) {
                       <MonarcaButterfly size={40} animate={true} color={or} style={{margin:'0 auto 12px'}}/>
                       <div style={{fontFamily:ffS,fontSize:'1.3rem',color:cr,fontStyle:'italic',marginBottom:6}}>¡Tu Monarca está completa!</div>
                       <p style={{fontSize:'0.7rem',color:'rgba(251,247,238,0.55)',marginBottom:16}}>Canjea en el mostrador en tu próxima visita.</p>
-                      {[['🍪','Galleta gratis','Cualquier sabor'],['🍞','Concha cortesía','Vainilla o canela'],['☕','Café del día','12oz'],['🥐','Empanada','Guayaba o queso']].map(([e,n,s])=>(
+                      {[['Galleta gratis','Cualquier sabor'],['Concha cortesía','Vainilla o canela'],['Café del día','12oz'],['Empanada','Guayaba o queso']].map(([n,s])=>(
                         <div key={n} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'rgba(251,247,238,0.06)',borderRadius:10,marginBottom:8,textAlign:'left'}}>
-                          <span style={{fontSize:'1.3rem'}}>{e}</span>
                           <div><div style={{fontSize:'0.8rem',color:cr,fontWeight:500}}>{n}</div><div style={{fontSize:'0.6rem',color:'rgba(251,247,238,0.4)'}}>{s}</div></div>
                         </div>
                       ))}
@@ -432,56 +453,48 @@ export default function Card({ session }) {
                     </div>
                   )}
 
-                  {/* QR */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
-                    <button onClick={()=>setShowQRFlip(true)}
-                      className="tap-scale"
-                      style={{padding:'12px',background:'transparent',border:'1.5px solid rgba(31,20,14,0.15)',borderRadius:999,fontFamily:ff,fontSize:'0.68rem',fontWeight:500,color:ink,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M17 20h3M20 17v3"/></svg>
-                      Mostrar QR
-                    </button>
-                    <button onClick={()=>showToast('¡Próximamente! Sistema de referidos 🦋')}
-                      className="tap-scale"
-                      style={{padding:'12px',background:'rgba(227,90,27,0.08)',border:'1.5px solid rgba(227,90,27,0.2)',borderRadius:999,fontFamily:ff,fontSize:'0.68rem',fontWeight:500,color:or,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
-                      🎁 Estampa gratis
-                    </button>
-                  </div>
-
-                  {/* HISTORY */}
-                  {card.stamp_history?.length > 0 && (
-                    <div style={{marginBottom:20}}>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-                        <div style={{fontSize:'0.56rem',letterSpacing:'0.16em',textTransform:'uppercase',color:mu}}>Últimas piezas</div>
-                      </div>
-                      {[...card.stamp_history].reverse().slice(0,5).map((h,i)=>(
-                        <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:'1px solid rgba(31,20,14,0.06)'}}>
-                          <div style={{width:32,height:32,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'0.7rem',fontWeight:700,color:or}}>{card.stamp_history.length - i}</div>
-                          <div style={{flex:1}}>
-                            <div style={{fontSize:'0.78rem',color:ink,fontWeight:500}}>{h.product_name || 'Visita registrada'}</div>
-                            <div style={{fontSize:'0.62rem',color:mu,marginTop:2}}>{new Date(h.created_at).toLocaleDateString('es-PR',{day:'numeric',month:'long',year:'numeric'})}</div>
-                          </div>
-                          <span style={{fontSize:'0.62rem',color:or,fontWeight:600}}>+ pieza</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
+                  {/* POSTS / VLOG */}
                   {posts.length > 0 && (
-                    <div style={{marginTop:8,paddingTop:20,borderTop:'1px solid rgba(31,20,14,0.07)'}}>
-                      <div style={{fontSize:'0.52rem',letterSpacing:'0.18em',textTransform:'uppercase',color:mu,marginBottom:16}}>Del equipo</div>
-                      {posts.map(post=>(
-                        <div key={post.id} style={{marginBottom:20,cursor:'pointer'}} onClick={()=>setExpandedPost(expandedPost===post.id?null:post.id)}>
-                          {post.image_url&&<img src={post.image_url} alt={post.title} style={{width:'100%',aspectRatio:'16/9',objectFit:'cover',display:'block',borderRadius:10,marginBottom:10}}/>}
-                          <div style={{fontSize:'0.5rem',color:mu,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:4}}>
-                            {new Date(post.created_at).toLocaleDateString('es-PR',{day:'numeric',month:'long',year:'numeric'})}
+                    <div style={{marginTop:4,paddingTop:20}}>
+                      {posts.map(post=>{
+                        const isYT = post.image_url && /youtube\.com|youtu\.be/.test(post.image_url)
+                        const ytId = isYT ? (post.image_url.match(/(?:v=|youtu\.be\/)([^&?/]+)/)||[])[1] : null
+                        return (
+                          <div key={post.id} style={{marginBottom:28}}>
+                            {isYT && ytId ? (
+                              <div style={{position:'relative',paddingBottom:'56.25%',height:0,overflow:'hidden',borderRadius:12,marginBottom:12}}>
+                                <iframe
+                                  src={`https://www.youtube.com/embed/${ytId}`}
+                                  title={post.title}
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                  allowFullScreen
+                                  style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:'none',borderRadius:12}}
+                                />
+                              </div>
+                            ) : post.image_url ? (
+                              <img src={post.image_url} alt={post.title} style={{width:'100%',aspectRatio:'16/9',objectFit:'cover',display:'block',borderRadius:12,marginBottom:12}}/>
+                            ) : null}
+                            <div style={{fontSize:'0.5rem',color:mu,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:5}}>
+                              {new Date(post.created_at).toLocaleDateString('es-PR',{day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}
+                            </div>
+                            <div style={{fontFamily:ffS,fontSize:'1.2rem',color:ink,lineHeight:1.2,marginBottom:6}}>{post.title}</div>
+                            {post.body&&(
+                              <div style={{fontSize:'0.78rem',color:mu,lineHeight:1.7}}>
+                                {expandedPost===post.id
+                                  ? <span style={{whiteSpace:'pre-wrap'}}>{post.body}</span>
+                                  : <span style={{overflow:'hidden',display:'-webkit-box',WebkitLineClamp:3,WebkitBoxOrient:'vertical'}}>{post.body}</span>
+                                }
+                                {post.body.length > 120 && (
+                                  <button onClick={()=>setExpandedPost(expandedPost===post.id?null:post.id)}
+                                    style={{background:'none',border:'none',color:or,fontFamily:ff,fontSize:'0.72rem',fontWeight:600,cursor:'pointer',padding:'4px 0 0',display:'block'}}>
+                                    {expandedPost===post.id?'Ver menos':'Leer más'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          <div style={{fontFamily:ffS,fontSize:'1.1rem',color:ink,lineHeight:1.2,marginBottom:6}}>{post.title}</div>
-                          {expandedPost===post.id
-                            ? <div style={{fontSize:'0.78rem',color:mu,lineHeight:1.7,whiteSpace:'pre-wrap'}}>{post.body}</div>
-                            : post.body&&<div style={{fontSize:'0.78rem',color:mu,lineHeight:1.6,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{post.body}</div>
-                          }
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
 
