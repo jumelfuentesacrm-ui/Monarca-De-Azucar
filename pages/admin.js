@@ -3980,7 +3980,7 @@ export default function Admin({session}){
           const sr=Array.isArray(catItem.product_stock)?catItem.product_stock[0]:catItem.product_stock
           const curQty=sr?.qty!=null?parseFloat(sr.qty):null
           if(curQty!==null&&curQty>0){
-            fetch('/api/admin/catalog',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:catItem.id,stock:curQty-1})})
+            fetch('/api/admin/stock',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({catalog_item_id:catItem.id,qty_sold:1})})
           }
         }
       }
