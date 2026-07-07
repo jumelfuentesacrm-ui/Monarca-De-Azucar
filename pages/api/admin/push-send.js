@@ -34,13 +34,16 @@ export default async function handler(req, res) {
   const results = await Promise.allSettled(
     subs.map(sub =>
       webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        {
+          endpoint: sub.subscription.endpoint,
+          keys: { p256dh: sub.subscription.keys.p256dh, auth: sub.subscription.keys.auth }
+        },
         payload
       ).then(() => {
-        supabase.from('push_subscriptions').update({ last_notif_sent_at: now }).eq('endpoint', sub.endpoint)
+        supabase.from('push_subscriptions').update({ last_notif_sent_at: now }).eq('id', sub.id)
       }).catch(async err => {
         if (err.statusCode === 410 || err.statusCode === 404) {
-          await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+          await supabase.from('push_subscriptions').delete().eq('id', sub.id)
         }
         throw err
       })

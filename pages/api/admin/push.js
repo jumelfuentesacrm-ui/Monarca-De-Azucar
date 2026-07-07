@@ -13,46 +13,60 @@ webpush.setVapidDetails(
 )
 
 export default async function handler(req, res) {
-  // Save subscription
+  // Save admin subscription (admin.js sends the full PushSubscription JSON as body)
   if (req.method === 'POST' && req.query.action === 'subscribe') {
     const { endpoint, keys } = req.body
     if (!endpoint || !keys) return res.status(400).json({ error: 'Invalid subscription' })
-    await supabaseAdmin.from('push_subscriptions').upsert({
-      endpoint,
-      p256dh: keys.p256dh,
-      auth: keys.auth
-    }, { onConflict: 'endpoint' })
+    const subscription = { endpoint, keys }
+
+    const { data: existing } = await supabaseAdmin
+      .from('push_subscriptions')
+      .select('id')
+      .filter('subscription->>endpoint', 'eq', endpoint)
+
+    if (existing?.length > 0) {
+      await supabaseAdmin.from('push_subscriptions')
+        .update({ subscription })
+        .filter('subscription->>endpoint', 'eq', endpoint)
+    } else {
+      await supabaseAdmin.from('push_subscriptions').insert({ subscription })
+    }
     return res.status(200).json({ success: true })
   }
 
-  // Send notification to all subscribers
+  // Send notification to all admin subscribers (user_id IS NULL)
   if (req.method === 'POST' && req.query.action === 'send') {
     const { title, body, url } = req.body
-    const { data: subs } = await supabaseAdmin.from('push_subscriptions').select('*')
+    const { data: subs } = await supabaseAdmin
+      .from('push_subscriptions')
+      .select('*')
+      .is('user_id', null)
     if (!subs?.length) return res.status(200).json({ sent: 0 })
 
     let sent = 0
     for (const sub of subs) {
       try {
         await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          {
+            endpoint: sub.subscription.endpoint,
+            keys: { p256dh: sub.subscription.keys.p256dh, auth: sub.subscription.keys.auth }
+          },
           JSON.stringify({ title, body, url: url || '/admin' })
         )
         sent++
-      } catch(e) {
-        // Remove invalid subscriptions
+      } catch (e) {
         if (e.statusCode === 410 || e.statusCode === 404) {
-          await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
+          await supabaseAdmin.from('push_subscriptions').delete().filter('subscription->>endpoint', 'eq', sub.subscription.endpoint)
         }
       }
     }
     return res.status(200).json({ sent })
   }
 
-  // Unsubscribe
+  // Unsubscribe admin device
   if (req.method === 'DELETE') {
     const { endpoint } = req.body
-    await supabaseAdmin.from('push_subscriptions').delete().eq('endpoint', endpoint)
+    await supabaseAdmin.from('push_subscriptions').delete().filter('subscription->>endpoint', 'eq', endpoint)
     return res.status(200).json({ success: true })
   }
 

@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       if (adminSubs?.length) {
         const payload = JSON.stringify({ title: 'Nuevo mensaje', body: content.trim().slice(0, 80), url: '/admin' })
         for (const sub of adminSubs) {
-          await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload).catch(() => {})
+          await webpush.sendNotification({ endpoint: sub.subscription.endpoint, keys: { p256dh: sub.subscription.keys.p256dh, auth: sub.subscription.keys.auth } }, payload).catch(() => {})
         }
       }
     } catch (_) {}
