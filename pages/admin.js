@@ -3021,26 +3021,70 @@ function PushPanel({ showToast }) {
   const ff='"DM Sans",system-ui,sans-serif'
   const ffS='"Instrument Serif",serif'
   const ink='#1F140E', or='#E35A1B', mu='#7A6452', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE'
+
+  const [clients, setClients] = React.useState([])
+  const [loading, setLoading] = React.useState(true)
+  const [segment, setSegment] = React.useState('Todos')
+  const [selected, setSelected] = React.useState(new Set())
   const [form, setForm] = React.useState({ title: '', body: '', url: '/card' })
   const [sending, setSending] = React.useState(false)
   const [result, setResult] = React.useState(null)
 
+  function loadClients() {
+    setLoading(true)
+    fetch('/api/admin/push-subs')
+      .then(r => r.json())
+      .then(d => { setClients(d.clients || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }
+  React.useEffect(() => { loadClients() }, [])
+
+  const statusColors = {
+    VIP:      { color: '#E35A1B', bg: 'rgba(227,90,27,0.12)' },
+    Regular:  { color: '#2d8a60', bg: 'rgba(45,138,96,0.1)' },
+    Activo:   { color: '#3498db', bg: 'rgba(52,152,219,0.1)' },
+    Nuevo:    { color: '#8e44ad', bg: 'rgba(142,68,173,0.1)' },
+    Inactivo: { color: '#e67e22', bg: 'rgba(230,126,34,0.1)' },
+    Perdido:  { color: '#c0392b', bg: 'rgba(192,57,43,0.1)' },
+  }
+
+  const segments = ['Todos', 'VIP', 'Regular', 'Activo', 'Nuevo', 'Inactivo', 'Perdido']
+  const filteredClients = segment === 'Todos' ? clients : clients.filter(c => c.status === segment)
+  const segmentCounts = Object.fromEntries(segments.map(s => [s, s === 'Todos' ? clients.length : clients.filter(c => c.status === s).length]))
+
+  function toggleClient(uid) {
+    setSelected(prev => { const n = new Set(prev); n.has(uid) ? n.delete(uid) : n.add(uid); return n })
+  }
+  function selectAll() {
+    setSelected(prev => { const n = new Set(prev); filteredClients.forEach(c => n.add(c.user_id)); return n })
+  }
+  function deselectAll() {
+    setSelected(prev => { const n = new Set(prev); filteredClients.forEach(c => n.delete(c.user_id)); return n })
+  }
+
   async function send() {
     if (!form.title.trim() || !form.body.trim()) return showToast('Necesitas título y mensaje')
-    setSending(true)
-    setResult(null)
+    if (!selected.size) return showToast('Selecciona al menos un cliente')
+    setSending(true); setResult(null)
     try {
       const r = await fetch('/api/admin/push-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, user_ids: [...selected] })
       })
       const data = await r.json()
       if (data.error) { showToast('Error: ' + data.error); return }
       setResult(data)
       showToast(`Enviado a ${data.sent} dispositivo${data.sent !== 1 ? 's' : ''}`)
       setForm(f => ({ ...f, title: '', body: '' }))
+      setSelected(new Set())
+      loadClients()
     } catch { showToast('Error al enviar') } finally { setSending(false) }
+  }
+
+  function formatDate(d) {
+    if (!d) return 'Nunca'
+    return new Date(d).toLocaleDateString('es-PR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Puerto_Rico' })
   }
 
   const presets = [
@@ -3052,11 +3096,81 @@ function PushPanel({ showToast }) {
 
   return (
     <div>
-      <div style={{ fontFamily: ffS, fontSize: '1.5rem', fontWeight: 400, marginBottom: '0.5rem' }}>
-        Notificaciones push
-      </div>
+      <div style={{ fontFamily: ffS, fontSize: '1.5rem', fontWeight: 400, marginBottom: '0.5rem' }}>Notificaciones push</div>
       <div style={{ fontSize: '0.68rem', color: mu, marginBottom: '1.5rem', lineHeight: 1.5 }}>
         Envía notificaciones directamente al teléfono de tus clientes. Solo llega a quienes activaron las notificaciones en la app.
+      </div>
+
+      {/* Segment filter */}
+      <div style={{ marginBottom: '1rem' }}>
+        <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.5rem', fontWeight: 600 }}>Segmento</div>
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          {segments.map(s => {
+            const count = segmentCounts[s]
+            if (count === 0 && s !== 'Todos') return null
+            const active = segment === s
+            const sc = statusColors[s]
+            return (
+              <button key={s} onClick={() => setSegment(s)} style={{
+                padding: '0.35rem 0.75rem',
+                background: active ? (sc ? sc.bg : 'rgba(31,20,14,0.08)') : cr2,
+                border: `1px solid ${active ? (sc ? sc.color : ink) : cr3}`,
+                borderRadius: 999, fontFamily: ff, fontSize: '0.63rem',
+                color: active ? (sc ? sc.color : ink) : mu,
+                fontWeight: active ? 600 : 400, cursor: 'pointer'
+              }}>
+                {s} <span style={{ opacity: 0.65 }}>{count}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Client list */}
+      <div style={{ background: cr, border: '1px solid rgba(31,20,14,0.1)', borderRadius: 12, marginBottom: '1.25rem', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', borderBottom: '1px solid rgba(31,20,14,0.07)' }}>
+          <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, fontWeight: 600 }}>
+            {loading ? 'Cargando...' : `${filteredClients.length} cliente${filteredClients.length !== 1 ? 's' : ''}`}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button onClick={selectAll} style={{ fontSize: '0.6rem', color: or, background: 'none', border: 'none', cursor: 'pointer', fontFamily: ff, padding: 0 }}>Seleccionar todos</button>
+            <span style={{ color: cr3, fontSize: '0.65rem' }}>·</span>
+            <button onClick={deselectAll} style={{ fontSize: '0.6rem', color: mu, background: 'none', border: 'none', cursor: 'pointer', fontFamily: ff, padding: 0 }}>Deseleccionar</button>
+          </div>
+        </div>
+        {loading ? (
+          <div style={{ padding: '1.5rem', textAlign: 'center', color: mu, fontSize: '0.72rem' }}>Cargando clientes...</div>
+        ) : filteredClients.length === 0 ? (
+          <div style={{ padding: '1.5rem', textAlign: 'center', color: mu, fontSize: '0.72rem' }}>
+            {clients.length === 0 ? 'Ningún cliente ha activado notificaciones aún' : `No hay clientes en el segmento ${segment}`}
+          </div>
+        ) : filteredClients.map((c, i) => {
+          const sc = statusColors[c.status] || { color: mu, bg: cr2 }
+          const isSel = selected.has(c.user_id)
+          return (
+            <div key={c.user_id} onClick={() => toggleClient(c.user_id)} style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+              padding: '0.75rem 1rem',
+              borderBottom: i < filteredClients.length - 1 ? '1px solid rgba(31,20,14,0.05)' : 'none',
+              background: isSel ? 'rgba(227,90,27,0.04)' : 'transparent',
+              cursor: 'pointer'
+            }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                border: `1.5px solid ${isSel ? or : 'rgba(31,20,14,0.2)'}`,
+                background: isSel ? or : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {isSel && <span style={{ color: 'white', fontSize: '0.58rem', fontWeight: 700, lineHeight: 1 }}>✓</span>}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '0.78rem', color: ink, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                <div style={{ fontSize: '0.58rem', color: mu, marginTop: '0.1rem' }}>Última notif: {formatDate(c.last_notif_sent_at)}</div>
+              </div>
+              <span style={{ fontSize: '0.54rem', padding: '0.18rem 0.55rem', borderRadius: 999, background: sc.bg, color: sc.color, fontWeight: 600, flexShrink: 0 }}>{c.status}</span>
+            </div>
+          )
+        })}
       </div>
 
       {/* Presets */}
@@ -3072,7 +3186,7 @@ function PushPanel({ showToast }) {
         </div>
       </div>
 
-      {/* Form */}
+      {/* Compose form */}
       <div style={{ background: cr, border: '1px solid rgba(31,20,14,0.1)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem' }}>
         <div style={{ marginBottom: '0.85rem' }}>
           <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.35rem', fontWeight: 600 }}>Título</div>
@@ -3080,28 +3194,34 @@ function PushPanel({ showToast }) {
             placeholder="¡Recién salido del horno!"
             style={{ width: '100%', padding: '0.7rem 0.85rem', border: '1px solid rgba(31,20,14,0.12)', borderRadius: 8, fontFamily: ff, fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
         </div>
-        <div style={{ marginBottom: '0.85rem' }}>
+        <div style={{ marginBottom: '1rem' }}>
           <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.35rem', fontWeight: 600 }}>Mensaje</div>
           <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
             placeholder="La hornada de hoy ya está lista. Ven antes de que se acabe."
             rows={3}
             style={{ width: '100%', padding: '0.7rem 0.85rem', border: '1px solid rgba(31,20,14,0.12)', borderRadius: 8, fontFamily: ff, fontSize: '0.82rem', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
         </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <div style={{ fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: mu, marginBottom: '0.35rem', fontWeight: 600 }}>URL destino (opcional)</div>
-          <input value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))}
-            placeholder="/card"
-            style={{ width: '100%', padding: '0.7rem 0.85rem', border: '1px solid rgba(31,20,14,0.12)', borderRadius: 8, fontFamily: ff, fontSize: '0.82rem', outline: 'none', boxSizing: 'border-box' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ fontSize: '0.65rem', color: mu }}>
+            {selected.size > 0
+              ? `${selected.size} cliente${selected.size !== 1 ? 's' : ''} seleccionado${selected.size !== 1 ? 's' : ''}`
+              : 'Ningún cliente seleccionado'}
+          </div>
+          <button onClick={send} disabled={sending || !form.title.trim() || !form.body.trim() || !selected.size}
+            style={{
+              padding: '0.75rem 1.5rem', background: sending ? mu : ink, color: cr, border: 'none',
+              borderRadius: 999, fontFamily: ff, fontSize: '0.72rem', fontWeight: 600,
+              cursor: (sending || !form.title.trim() || !form.body.trim() || !selected.size) ? 'not-allowed' : 'pointer',
+              opacity: (!form.title.trim() || !form.body.trim() || !selected.size) ? 0.5 : 1, whiteSpace: 'nowrap'
+            }}>
+            {sending ? 'Enviando...' : `Enviar${selected.size > 0 ? ` a ${selected.size}` : ''}`}
+          </button>
         </div>
-        <button onClick={send} disabled={sending || !form.title.trim() || !form.body.trim()}
-          style={{ padding: '0.75rem 1.5rem', background: sending ? mu : ink, color: cr, border: 'none', borderRadius: 999, fontFamily: ff, fontSize: '0.72rem', fontWeight: 600, cursor: sending ? 'not-allowed' : 'pointer', opacity: (!form.title.trim() || !form.body.trim()) ? 0.5 : 1 }}>
-          {sending ? 'Enviando...' : 'Enviar notificación'}
-        </button>
       </div>
 
       {result && (
         <div style={{ background: result.sent > 0 ? 'rgba(45,138,96,0.08)' : 'rgba(192,57,43,0.08)', border: `1px solid ${result.sent > 0 ? 'rgba(45,138,96,0.2)' : 'rgba(192,57,43,0.2)'}`, borderRadius: 8, padding: '0.75rem 1rem', fontSize: '0.72rem', color: result.sent > 0 ? '#2d8a60' : '#c0392b' }}>
-          {result.sent > 0 ? `✓ Enviado a ${result.sent} dispositivo${result.sent !== 1 ? 's' : ''}` : 'No hay dispositivos suscritos aún'}
+          {result.sent > 0 ? `✓ Enviado a ${result.sent} dispositivo${result.sent !== 1 ? 's' : ''}` : 'No se pudo enviar a ningún dispositivo'}
           {result.failed > 0 && ` · ${result.failed} fallaron`}
         </div>
       )}
