@@ -4110,7 +4110,7 @@ export default function Admin({session}){
     }).catch(()=>{})
   }
   const upd=(k,v)=>setForm(f=>({...f,[k]:v}))
-  const cardUrl=(card)=>`https://monarca-de-azucar.vercel.app/c/${card?.card_number}`
+  const cardUrl=()=>`https://monarca-de-azucar.vercel.app/card`
   const inp={width:'100%',padding:'0.75rem 0.9rem',border:'1px solid '+gl,borderRadius:3,background:white,fontFamily:ff,fontSize:'0.88rem',outline:'none',color:black,marginBottom:'1rem',boxSizing:'border-box'}
   const lbl={fontSize:'0.56rem',letterSpacing:'0.13em',textTransform:'uppercase',color:gray,display:'block',marginBottom:'0.35rem'}
 
