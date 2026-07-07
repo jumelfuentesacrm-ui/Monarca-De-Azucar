@@ -50,16 +50,27 @@ export default async function handler(req, res) {
     const { product_id, cost, notes, suppliers, active, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price, name, description, category, stock } = req.body
     if (!product_id) return res.status(400).json({ error: 'product_id required' })
 
-    // Update product stock — try update first, insert if no rows affected
+    // Update product stock
     if (stock !== undefined) {
       const qty = parseFloat(stock) || 0
-      const { data: updated, error: updErr } = await supabase
-        .from('product_stock').update({ qty }).eq('catalog_item_id', product_id).select('catalog_item_id')
-      if (updErr) return res.status(500).json({ error: 'stock update: ' + updErr.message })
-      if (!updated || updated.length === 0) {
-        const { error: insErr } = await supabase
-          .from('product_stock').insert({ catalog_item_id: product_id, qty })
-        if (insErr) return res.status(500).json({ error: 'stock insert: ' + insErr.message })
+      try {
+        const { data: updated, error: updErr } = await supabase
+          .from('product_stock').update({ qty }).eq('catalog_item_id', product_id).select('catalog_item_id')
+        if (updErr) {
+          console.error('[catalog PATCH] stock update error:', JSON.stringify(updErr))
+          return res.status(500).json({ error: 'stock update: ' + updErr.message, detail: updErr })
+        }
+        if (!updated || updated.length === 0) {
+          const { error: insErr } = await supabase
+            .from('product_stock').insert({ id: crypto.randomUUID(), catalog_item_id: product_id, qty })
+          if (insErr) {
+            console.error('[catalog PATCH] stock insert error:', JSON.stringify(insErr))
+            return res.status(500).json({ error: 'stock insert: ' + insErr.message, detail: insErr })
+          }
+        }
+      } catch (e) {
+        console.error('[catalog PATCH] stock exception:', e)
+        return res.status(500).json({ error: 'stock exception: ' + e.message })
       }
     }
 
