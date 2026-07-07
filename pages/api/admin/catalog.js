@@ -50,16 +50,15 @@ export default async function handler(req, res) {
     const { product_id, cost, notes, suppliers, active, badge_hoy, badge_nuevo, badge_temporada, badge_agotado, price, name, description, category, stock } = req.body
     if (!product_id) return res.status(400).json({ error: 'product_id required' })
 
-    // Update product stock
+    // Update product stock — try update first, insert if no rows affected
     if (stock !== undefined) {
       const qty = parseFloat(stock) || 0
-      const { data: stockRows, error: selErr } = await supabase.from('product_stock').select('id').eq('catalog_item_id', product_id)
-      if (selErr) return res.status(500).json({ error: 'stock select: ' + selErr.message })
-      if (stockRows && stockRows.length > 0) {
-        const { error: updErr } = await supabase.from('product_stock').update({ qty }).eq('catalog_item_id', product_id)
-        if (updErr) return res.status(500).json({ error: 'stock update: ' + updErr.message })
-      } else {
-        const { error: insErr } = await supabase.from('product_stock').insert({ id: 'stock_' + Date.now(), catalog_item_id: product_id, qty })
+      const { data: updated, error: updErr } = await supabase
+        .from('product_stock').update({ qty }).eq('catalog_item_id', product_id).select('catalog_item_id')
+      if (updErr) return res.status(500).json({ error: 'stock update: ' + updErr.message })
+      if (!updated || updated.length === 0) {
+        const { error: insErr } = await supabase
+          .from('product_stock').insert({ catalog_item_id: product_id, qty })
         if (insErr) return res.status(500).json({ error: 'stock insert: ' + insErr.message })
       }
     }
