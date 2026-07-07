@@ -457,20 +457,15 @@ export default function Card({ session }) {
                   {posts.length > 0 && (
                     <div style={{marginTop:4,paddingTop:20}}>
                       {posts.map(post=>{
-                        const isYT = post.image_url && /youtube\.com|youtu\.be/.test(post.image_url)
-                        const ytId = isYT ? (post.image_url.match(/(?:v=|youtu\.be\/)([^&?/]+)/)||[])[1] : null
+                        const isVideo = post.image_url && /\.(mp4|webm|mov|ogg)(\?|$)/i.test(post.image_url)
                         return (
                           <div key={post.id} style={{marginBottom:28}}>
-                            {isYT && ytId ? (
-                              <div style={{position:'relative',paddingBottom:'56.25%',height:0,overflow:'hidden',borderRadius:12,marginBottom:12}}>
-                                <iframe
-                                  src={`https://www.youtube.com/embed/${ytId}`}
-                                  title={post.title}
-                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                  allowFullScreen
-                                  style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',border:'none',borderRadius:12}}
-                                />
-                              </div>
+                            {isVideo ? (
+                              <video
+                                src={post.image_url}
+                                autoPlay muted loop playsInline
+                                style={{width:'100%',borderRadius:12,marginBottom:12,display:'block',maxHeight:400,objectFit:'cover'}}
+                              />
                             ) : post.image_url ? (
                               <img src={post.image_url} alt={post.title} style={{width:'100%',aspectRatio:'16/9',objectFit:'cover',display:'block',borderRadius:12,marginBottom:12}}/>
                             ) : null}
