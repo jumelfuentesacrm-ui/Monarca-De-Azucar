@@ -19,20 +19,22 @@ function Butterfly({ size=48 }) {
 }
 
 export default function Login() {
-  const [mode, setMode] = useState('login')
+  const [channel, setChannel] = useState('email') // 'email' | 'phone'
+  const [mode, setMode] = useState('login') // 'login' | 'signup'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [form, setForm] = useState({ email:'', password:'', full_name:'', phone:'', confirm_password:'' })
+  const [phoneStep, setPhoneStep] = useState('enter') // 'enter' | 'otp'
+  const [phoneNum, setPhoneNum] = useState('')
+  const [otp, setOtp] = useState('')
   const upd = (k,v) => setForm(f=>({...f,[k]:v}))
 
-  const redirectTo = typeof window !== 'undefined' ? window.location.origin + '/auth/callback' : ''
-
-  async function signInWithGoogle() {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
+  function switchChannel(ch) {
+    setChannel(ch); setError(''); setSuccess(''); setPhoneStep('enter'); setOtp('')
   }
-  async function signInWithApple() {
-    await supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo } })
+  function switchMode(m) {
+    setMode(m); setError(''); setSuccess('')
   }
 
   async function handleLogin(e) {
@@ -57,6 +59,36 @@ export default function Login() {
     if (!res.ok) { setError(data.error || 'Error al crear cuenta.'); return }
     setSuccess('¡Cuenta creada! Inicia sesión.')
     setMode('login')
+  }
+
+  async function sendOtp(e) {
+    e.preventDefault()
+    setError('')
+    const raw = phoneNum.replace(/\D/g, '')
+    if (raw.length < 10) { setError('Número inválido.'); return }
+    const formatted = raw.startsWith('1') ? '+' + raw : '+1' + raw
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithOtp({ phone: formatted })
+    setLoading(false)
+    if (error) { setError('No se pudo enviar el código. Verifica el número.'); return }
+    setPhoneNum(formatted)
+    setPhoneStep('otp')
+    setSuccess('Código enviado por SMS.')
+  }
+
+  async function verifyOtp(e) {
+    e.preventDefault()
+    setError('')
+    if (otp.length < 6) { setError('Código inválido.'); return }
+    setLoading(true)
+    const { data, error } = await supabase.auth.verifyOtp({ phone: phoneNum, token: otp, type: 'sms' })
+    if (error) { setError('Código incorrecto o expirado.'); setLoading(false); return }
+    const res = await fetch('/api/auth/ensure-profile', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + data.session.access_token }
+    })
+    const profile = await res.json()
+    window.location.href = profile?.role === 'admin' ? '/admin' : '/card'
   }
 
   const inp = {
@@ -88,12 +120,9 @@ export default function Login() {
 
         {/* LEFT — brand panel */}
         <div className="login-left" style={{background:ink,display:'none',flexDirection:'column',justifyContent:'space-between',padding:'3rem',position:'relative',overflow:'hidden'}}>
-          {/* BG butterfly watermark */}
           <div style={{position:'absolute',bottom:-40,right:-40,opacity:0.04,pointerEvents:'none',transform:'scale(1.5)'}}>
             <Butterfly size={400}/>
           </div>
-
-          {/* Logo */}
           <div>
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:'0.5rem'}}>
               <Butterfly size={32}/>
@@ -101,8 +130,6 @@ export default function Login() {
             </div>
             <div style={{fontSize:'0.56rem',letterSpacing:'0.2em',textTransform:'uppercase',color:'rgba(251,247,238,0.3)'}}>Panadería Artesanal · San Juan, PR</div>
           </div>
-
-          {/* Benefits */}
           <div>
             {[
               ['Tarjeta Digital','Cinco visitas, una en la casa. Sin app pesada.'],
@@ -120,7 +147,6 @@ export default function Login() {
               </div>
             ))}
           </div>
-
           <div style={{fontSize:'0.6rem',color:'rgba(251,247,238,0.2)',letterSpacing:'0.1em'}}>© 2026 Monarca de Azúcar</div>
         </div>
 
@@ -128,7 +154,7 @@ export default function Login() {
         <div className="login-right" style={{background:cr,display:'flex',alignItems:'center',justifyContent:'center',padding:'2rem'}}>
           <div style={{width:'100%',maxWidth:400}}>
 
-            {/* Mobile logo */}
+            {/* Logo */}
             <div style={{textAlign:'center',marginBottom:'2rem'}}>
               <div style={{display:'flex',justifyContent:'center',marginBottom:10}}>
                 <Butterfly size={52}/>
@@ -137,62 +163,98 @@ export default function Login() {
               <div style={{fontSize:'0.58rem',letterSpacing:'0.18em',textTransform:'uppercase',color:mu,marginTop:4}}>Club de Lealtad</div>
             </div>
 
-            <h2 style={{fontFamily:ffS,fontSize:'1.8rem',fontWeight:400,marginBottom:'0.3rem',textAlign:'center',color:ink}}>
-              {mode==='login' ? 'Bienvenido de vuelta' : 'Crear cuenta'}
-            </h2>
-            <p style={{fontSize:'0.75rem',color:mu,marginBottom:'2rem',lineHeight:1.7,textAlign:'center'}}>
-              {mode==='login' ? 'Accede a tu tarjeta de lealtad.' : 'Regístrate y te activamos tu tarjeta.'}
-            </p>
-
-            {/* OAuth buttons */}
-            <div style={{display:'flex',flexDirection:'column',gap:'0.65rem',marginBottom:'1.5rem'}}>
-              <button type="button" onClick={signInWithGoogle}
-                style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'0.85rem 1rem',background:'white',border:'1px solid rgba(31,20,14,0.14)',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',fontWeight:500,color:ink,cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,0.06)'}}>
-                <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.3 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6C12.5 13 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.5 37.3 46.5 31.4 46.5 24.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.7 14.7 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8-5.9z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.2 0-11.5-4.2-13.4-9.9l-8 5.9C6.6 42.6 14.6 48 24 48z"/></svg>
-                Continuar con Google
-              </button>
-              <button type="button" onClick={signInWithApple}
-                style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',padding:'0.85rem 1rem',background:ink,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.82rem',fontWeight:500,color:'white',cursor:'pointer'}}>
-                <svg width="16" height="20" viewBox="0 0 814 1000" fill="white"><path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 442.5 32.3 300.2 56.3 200.1c10.4-43.4 33.5-83.5 65.9-112.8 56.3-52.1 147.5-80.7 235-80.7 72.9 0 131.6 41.7 176.7 41.7 43.1 0 110.3-43.7 191.4-43.7 31.4 0 134.5 3.6 196.7 111.7zm-223-116.4c31.4-35.1 54.6-84 54.6-132.9 0-6.8-.5-13.7-1.6-19.3-51.5 2-112.7 34.5-149.3 72-27 28.2-53.6 76.5-53.6 126.2 0 7.1 1.3 14.2 1.9 16.5 3.2.5 8.4 1.2 13.6 1.2 46.3 0 103.6-31 134.4-63.7z"/></svg>
-                Continuar con Apple
-              </button>
-            </div>
-
-            <div style={{display:'flex',alignItems:'center',gap:'0.75rem',marginBottom:'1.5rem'}}>
-              <div style={{flex:1,height:1,background:'rgba(31,20,14,0.1)'}}/>
-              <span style={{fontSize:'0.65rem',color:mu,letterSpacing:'0.08em',textTransform:'uppercase'}}>o con email</span>
-              <div style={{flex:1,height:1,background:'rgba(31,20,14,0.1)'}}/>
+            {/* Channel tabs */}
+            <div style={{display:'flex',background:'rgba(31,20,14,0.06)',borderRadius:999,padding:3,marginBottom:'1.75rem'}}>
+              {[['email','Correo'],['phone','Teléfono']].map(([ch,label])=>(
+                <button key={ch} type="button" onClick={()=>switchChannel(ch)}
+                  style={{flex:1,padding:'0.6rem',border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.75rem',fontWeight:600,cursor:'pointer',transition:'all 0.2s',
+                    background:channel===ch?'white':'transparent',
+                    color:channel===ch?ink:mu,
+                    boxShadow:channel===ch?'0 1px 4px rgba(0,0,0,0.1)':'none'}}>
+                  {label}
+                </button>
+              ))}
             </div>
 
             {error && <div style={{color:'#a33b22',fontSize:'0.75rem',marginBottom:'0.85rem',padding:'0.65rem 0.9rem',background:'rgba(163,59,34,0.07)',borderRadius:8,border:'1px solid rgba(163,59,34,0.15)'}}>{error}</div>}
             {success && <div style={{color:'#3F7A4C',fontSize:'0.75rem',marginBottom:'0.85rem',padding:'0.65rem 0.9rem',background:'rgba(63,122,76,0.07)',borderRadius:8,border:'1px solid rgba(63,122,76,0.2)'}}>{success}</div>}
 
-            <form onSubmit={mode==='login' ? handleLogin : handleSignup}>
-              {mode==='signup' && <>
-                <label style={lbl}>Nombre completo</label>
-                <input style={inp} type="text" placeholder="Tu nombre" value={form.full_name} onChange={e=>upd('full_name',e.target.value)} required/>
-                <label style={lbl}>Teléfono</label>
-                <input style={inp} type="tel" placeholder="939-000-0000" value={form.phone} onChange={e=>upd('phone',e.target.value)}/>
-              </>}
-              <label style={lbl}>Correo electrónico</label>
-              <input style={inp} type="email" placeholder="tu@correo.com" value={form.email} onChange={e=>upd('email',e.target.value)} required/>
-              <label style={lbl}>Contraseña</label>
-              <input style={inp} type="password" placeholder="••••••••" value={form.password} onChange={e=>upd('password',e.target.value)} required/>
-              {mode==='signup' && <>
-                <label style={lbl}>Confirmar contraseña</label>
-                <input style={{...inp,marginBottom:'1.5rem'}} type="password" placeholder="••••••••" value={form.confirm_password} onChange={e=>upd('confirm_password',e.target.value)} required/>
-              </>}
-              <button type="submit" disabled={loading} style={{width:'100%',background:or,color:cr,border:'none',padding:'1rem',cursor:'pointer',fontFamily:ff,fontSize:'0.78rem',letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,borderRadius:999,opacity:loading?0.6:1,marginTop:mode==='login'?'0.5rem':0}}>
-                {loading ? 'Un momento...' : (mode==='login' ? 'Entrar →' : 'Crear cuenta')}
-              </button>
-            </form>
+            {/* EMAIL FLOW */}
+            {channel === 'email' && (<>
+              <h2 style={{fontFamily:ffS,fontSize:'1.7rem',fontWeight:400,marginBottom:'1.5rem',textAlign:'center',color:ink}}>
+                {mode==='login' ? 'Bienvenido de vuelta' : 'Crear cuenta'}
+              </h2>
+              <form onSubmit={mode==='login' ? handleLogin : handleSignup}>
+                {mode==='signup' && <>
+                  <label style={lbl}>Nombre completo</label>
+                  <input style={inp} type="text" placeholder="Tu nombre" value={form.full_name} onChange={e=>upd('full_name',e.target.value)} required/>
+                  <label style={lbl}>Teléfono</label>
+                  <input style={inp} type="tel" placeholder="939-000-0000" value={form.phone} onChange={e=>upd('phone',e.target.value)}/>
+                </>}
+                <label style={lbl}>Correo electrónico</label>
+                <input style={inp} type="email" placeholder="tu@correo.com" value={form.email} onChange={e=>upd('email',e.target.value)} required/>
+                <label style={lbl}>Contraseña</label>
+                <input style={inp} type="password" placeholder="••••••••" value={form.password} onChange={e=>upd('password',e.target.value)} required/>
+                {mode==='signup' && <>
+                  <label style={lbl}>Confirmar contraseña</label>
+                  <input style={{...inp,marginBottom:'1.5rem'}} type="password" placeholder="••••••••" value={form.confirm_password} onChange={e=>upd('confirm_password',e.target.value)} required/>
+                </>}
+                <button type="submit" disabled={loading}
+                  style={{width:'100%',background:or,color:cr,border:'none',padding:'1rem',cursor:'pointer',fontFamily:ff,fontSize:'0.78rem',letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,borderRadius:999,opacity:loading?0.6:1,marginTop:mode==='login'?'0.5rem':0}}>
+                  {loading ? 'Un momento...' : (mode==='login' ? 'Entrar →' : 'Crear cuenta')}
+                </button>
+              </form>
+              <div style={{fontSize:'0.72rem',color:mu,marginTop:'1.25rem',textAlign:'center'}}>
+                {mode==='login'
+                  ? <span>¿No tienes cuenta? <span style={{color:or,cursor:'pointer',fontWeight:600}} onClick={()=>switchMode('signup')}>Regístrate</span></span>
+                  : <span>¿Ya tienes cuenta? <span style={{color:or,cursor:'pointer',fontWeight:600}} onClick={()=>switchMode('login')}>Inicia sesión</span></span>
+                }
+              </div>
+            </>)}
 
-            <div style={{fontSize:'0.72rem',color:mu,marginTop:'1.5rem',textAlign:'center'}}>
-              {mode==='login'
-                ? <span>¿No tienes cuenta? <span style={{color:or,cursor:'pointer',fontWeight:600}} onClick={()=>{setMode('signup');setError('');setSuccess('')}}>Regístrate</span></span>
-                : <span>¿Ya tienes cuenta? <span style={{color:or,cursor:'pointer',fontWeight:600}} onClick={()=>{setMode('login');setError('');setSuccess('')}}>Inicia sesión</span></span>
-              }
-            </div>
+            {/* PHONE FLOW */}
+            {channel === 'phone' && (<>
+              <h2 style={{fontFamily:ffS,fontSize:'1.7rem',fontWeight:400,marginBottom:'0.4rem',textAlign:'center',color:ink}}>
+                {phoneStep==='enter' ? 'Entra con tu número' : 'Verifica tu número'}
+              </h2>
+              <p style={{fontSize:'0.75rem',color:mu,marginBottom:'1.5rem',lineHeight:1.7,textAlign:'center'}}>
+                {phoneStep==='enter'
+                  ? 'Te enviamos un código por mensaje de texto.'
+                  : `Código enviado a ${phoneNum}`}
+              </p>
+
+              {phoneStep === 'enter' ? (
+                <form onSubmit={sendOtp}>
+                  <label style={lbl}>Número de teléfono</label>
+                  <div style={{display:'flex',marginBottom:'1rem',gap:8}}>
+                    <div style={{...inp,width:'auto',flexShrink:0,marginBottom:0,display:'flex',alignItems:'center',padding:'0.85rem 0.85rem',color:mu,fontWeight:600,background:'rgba(31,20,14,0.04)'}}>+1</div>
+                    <input style={{...inp,marginBottom:0,flex:1}}
+                      type="tel" placeholder="939-000-0000"
+                      value={phoneNum} onChange={e=>setPhoneNum(e.target.value)}
+                      inputMode="numeric" required/>
+                  </div>
+                  <button type="submit" disabled={loading}
+                    style={{width:'100%',background:or,color:cr,border:'none',padding:'1rem',cursor:'pointer',fontFamily:ff,fontSize:'0.78rem',letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,borderRadius:999,opacity:loading?0.6:1}}>
+                    {loading ? 'Enviando...' : 'Enviar código →'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={verifyOtp}>
+                  <label style={lbl}>Código de 6 dígitos</label>
+                  <input style={{...inp,textAlign:'center',fontSize:'1.4rem',letterSpacing:'0.3em',fontWeight:600}}
+                    type="text" inputMode="numeric" maxLength={6} placeholder="000000"
+                    value={otp} onChange={e=>setOtp(e.target.value.replace(/\D/g,''))} required/>
+                  <button type="submit" disabled={loading}
+                    style={{width:'100%',background:or,color:cr,border:'none',padding:'1rem',cursor:'pointer',fontFamily:ff,fontSize:'0.78rem',letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,borderRadius:999,opacity:loading?0.6:1,marginBottom:'0.75rem'}}>
+                    {loading ? 'Verificando...' : 'Verificar código →'}
+                  </button>
+                  <button type="button" onClick={()=>{setPhoneStep('enter');setOtp('');setError('');setSuccess('')}}
+                    style={{width:'100%',background:'none',border:'none',fontFamily:ff,fontSize:'0.72rem',color:mu,cursor:'pointer',padding:'0.4rem'}}>
+                    Cambiar número
+                  </button>
+                </form>
+              )}
+            </>)}
 
             <div style={{marginTop:'2.5rem',paddingTop:'1.5rem',borderTop:'1px solid rgba(31,20,14,0.08)',textAlign:'center',fontSize:'0.62rem',color:'rgba(31,20,14,0.3)',letterSpacing:'0.1em'}}>
               © 2026 Monarca de Azúcar · @monarcadeazucar
