@@ -326,7 +326,7 @@ export default function Card({ session }) {
         {/* TOP NAV */}
         <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:100,background:theme.navBg,backdropFilter:'blur(12px)',borderBottom:'1px solid '+theme.border,padding:'env(safe-area-inset-top,6px) 16px 6px',display:'flex',alignItems:'center',justifyContent:'space-between',minHeight:44}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <MonarcaButterfly size={28} animate={true}/>
+            <img src="/logo-badge.svg" alt="Monarca de Azúcar" style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>
             <span style={{fontFamily:ffS,fontSize:'1rem',color:ink}}>
               Monarca <em style={{color:or,fontStyle:'italic'}}>de</em> Azúcar
             </span>
