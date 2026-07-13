@@ -149,7 +149,7 @@ export default function Login() {
               ['Ordena en Línea','Pide para recoger directo desde tu tarjeta.'],
             ].map(([title,sub])=>(
               <div key={title} style={{display:'flex',alignItems:'flex-start',gap:'1rem',marginBottom:'1.75rem'}}>
-                <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(227,90,27,0.15)',border:'1px solid rgba(227,90,27,0.3)',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(232,120,40,0.15)',border:'1px solid rgba(232,120,40,0.3)',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
                   <Butterfly size={14}/>
                 </div>
                 <div>

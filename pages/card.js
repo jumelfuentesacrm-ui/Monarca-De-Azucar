@@ -314,7 +314,7 @@ export default function Card({ session }) {
         body{background:${theme.bg};font-family:${ff};overscroll-behavior:none;color-scheme:light dark}
         html,body{height:100%}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-        @keyframes pulse-or{0%,100%{box-shadow:0 4px 20px rgba(227,90,27,0.4)}50%{box-shadow:0 8px 32px rgba(227,90,27,0.65)}}
+        @keyframes pulse-or{0%,100%{box-shadow:0 4px 20px rgba(232,120,40,0.4)}50%{box-shadow:0 8px 32px rgba(232,120,40,0.65)}}
         @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
         .fade-up{animation:fadeUp 0.4s ease both}
         .tap-scale:active{transform:scale(0.96);transition:transform 0.1s}
@@ -421,7 +421,7 @@ export default function Card({ session }) {
                             <div style={{marginTop:12}}>
                               {sorted.map((h,i)=>(
                                 <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderTop:'1px solid rgba(31,20,14,0.05)'}}>
-                                  <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'0.65rem',fontWeight:700,color:or}}>{sorted.length-i}</div>
+                                  <div style={{width:28,height:28,borderRadius:'50%',background:'rgba(232,120,40,0.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'0.65rem',fontWeight:700,color:or}}>{sorted.length-i}</div>
                                   <div style={{flex:1}}>
                                     <div style={{fontSize:'0.75rem',color:ink,fontWeight:500}}>{h.product_name||'Visita registrada'}</div>
                                     <div style={{fontSize:'0.6rem',color:mu,marginTop:1}}>{new Date(h.created_at).toLocaleDateString('es-PR',{day:'numeric',month:'long',year:'numeric',timeZone:'America/Puerto_Rico'})}</div>
@@ -671,7 +671,7 @@ export default function Card({ session }) {
                     <span style={{fontFamily:ffS,fontSize:'1.6rem',color:ink}}>${cartTotal.toFixed(2)}</span>
                   </div>
 
-                  <div style={{background:'rgba(227,90,27,0.06)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:10,padding:'12px 16px',marginBottom:20,fontSize:'0.65rem',color:mu,lineHeight:1.6}}>
+                  <div style={{background:'rgba(232,120,40,0.06)',border:'1px solid rgba(232,120,40,0.15)',borderRadius:10,padding:'12px 16px',marginBottom:20,fontSize:'0.65rem',color:mu,lineHeight:1.6}}>
                     Tu orden se enviará por WhatsApp. El equipo te confirmará disponibilidad y hora de recogido.
                   </div>
 
@@ -715,7 +715,7 @@ export default function Card({ session }) {
                 )}
                 {chatMessages.map((msg,i)=>(
                   <div key={msg.id||i} style={{display:'flex',justifyContent:msg.sender==='client'?'flex-end':'flex-start',marginBottom:8}}>
-                    {msg.sender==='admin'&&<div style={{width:28,height:28,borderRadius:'50%',background:'rgba(227,90,27,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.6rem',color:or,fontWeight:700,flexShrink:0,marginRight:8,marginTop:2}}>M</div>}
+                    {msg.sender==='admin'&&<div style={{width:28,height:28,borderRadius:'50%',background:'rgba(232,120,40,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.6rem',color:or,fontWeight:700,flexShrink:0,marginRight:8,marginTop:2}}>M</div>}
                     <div style={{maxWidth:'75%',padding:'10px 14px',borderRadius:msg.sender==='client'?'16px 16px 4px 16px':'16px 16px 16px 4px',background:msg.sender==='client'?or:theme.cr2,color:msg.sender==='client'?'#FBF7EE':ink,fontSize:'0.82rem',lineHeight:1.5}}>
                       {msg.file_url
                         ? <a href={msg.file_url} target="_blank" style={{color:msg.sender==='client'?'#FBF7EE':or,fontSize:'0.78rem',display:'flex',alignItems:'center',gap:6}}>
@@ -779,7 +779,7 @@ export default function Card({ session }) {
               </div>
 
               {/* Profile card */}
-              <div style={{background:'rgba(227,90,27,0.12)',borderRadius:16,padding:'20px',marginBottom:20,border:'1px solid rgba(227,90,27,0.2)'}}>
+              <div style={{background:'rgba(232,120,40,0.12)',borderRadius:16,padding:'20px',marginBottom:20,border:'1px solid rgba(232,120,40,0.2)'}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontFamily:ffS,fontSize:'1.3rem',color:ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{card?.profiles?.full_name||session?.user?.email}</div>
@@ -930,7 +930,7 @@ export default function Card({ session }) {
 
           {/* MENÚ — elevated orange */}
           <button onClick={()=>setTab('menu')} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,background:'none',border:'none',cursor:'pointer',fontFamily:ff,padding:'4px 0'}}>
-            <div style={{width:48,height:48,borderRadius:'50%',background:or,display:'flex',alignItems:'center',justifyContent:'center',marginTop:-18,boxShadow:'0 4px 20px rgba(227,90,27,0.45)',position:'relative'}}>
+            <div style={{width:48,height:48,borderRadius:'50%',background:or,display:'flex',alignItems:'center',justifyContent:'center',marginTop:-18,boxShadow:'0 4px 20px rgba(232,120,40,0.45)',position:'relative'}}>
               <svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
                 <line x1="0" y1="2" x2="20" y2="2"/>
                 <line x1="0" y1="8" x2="20" y2="8"/>

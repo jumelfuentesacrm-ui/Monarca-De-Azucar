@@ -43,7 +43,7 @@ function getStatus(card) {
     if (days >= 38) return { label:'Late Fee', color:'#e74c3c', bg:'rgba(231,76,60,0.1)' }
     if (days >= 35) return { label:'Grace', color:'#e67e22', bg:'rgba(230,126,34,0.1)' }
   }
-  if (stamps >= 15) return { label:'VIP', color:'#E87828', bg:'rgba(227,90,27,0.12)' }
+  if (stamps >= 15) return { label:'VIP', color:'#E87828', bg:'rgba(232,120,40,0.12)' }
   if (stamps >= 10) return { label:'Regular', color:'#2d8a60', bg:'rgba(45,138,96,0.1)' }
   if (stamps >= 5) return { label:'Active', color:'#3498db', bg:'rgba(52,152,219,0.1)' }
   return { label:'New', color:'#8e44ad', bg:'rgba(142,68,173,0.1)' }
@@ -209,8 +209,8 @@ function DashboardPanel({ cards, sales, supplies, onSelectClient, userName, onOp
             <div key={conv.userId} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
               {/* Conversation header */}
               <div onClick={()=>{setSelectedConv(isOpen?null:conv.userId);if(!isOpen)markConvRead(conv.userId)}}
-                style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',cursor:'pointer',background:isOpen?'rgba(227,90,27,0.04)':'transparent'}}>
-                <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(227,90,27,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',fontWeight:700,color:'#E87828',flexShrink:0}}>
+                style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',cursor:'pointer',background:isOpen?'rgba(232,120,40,0.04)':'transparent'}}>
+                <div style={{width:36,height:36,borderRadius:'50%',background:'rgba(232,120,40,0.1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',fontWeight:700,color:'#E87828',flexShrink:0}}>
                   {conv.name.split(' ').map(w=>w[0]).join('').slice(0,2)}
                 </div>
                 <div style={{flex:1,minWidth:0}}>
@@ -364,7 +364,7 @@ function ClientProfile({card,onBack}){
     <div>
       <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:'0.5rem',background:'none',border:'none',cursor:'pointer',color:gray,fontFamily:ff,fontSize:'0.65rem',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'1.5rem',padding:0}}>← Back to Dashboard</button>
       <div style={{background:black,borderRadius:12,padding:'1.75rem',marginBottom:'1.25rem',position:'relative',overflow:'hidden'}}>
-        <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse 60% 50% at 0% 50%,rgba(227,90,27,0.08) 0%,transparent 70%)'}}/>
+        <div style={{position:'absolute',inset:0,background:'radial-gradient(ellipse 60% 50% at 0% 50%,rgba(232,120,40,0.08) 0%,transparent 70%)'}}/>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:'1rem',marginBottom:'1.25rem'}}>
           <div>
             <div style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300,color:white,marginBottom:'0.2rem'}}>{card.profiles?.full_name}</div>
@@ -372,7 +372,7 @@ function ClientProfile({card,onBack}){
             {card.profiles?.phone&&<div style={{fontSize:'0.68rem',color:'rgba(255,255,255,0.35)',marginTop:'0.2rem'}}>{card.profiles?.phone}</div>}
           </div>
           <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap'}}>
-            {[['Cycle',cycle],['Stamps',cur+'/5'],['Payments',totalPaid],['Premios',rewardsClaimed]].map(([label,val])=>(<div key={label} style={{textAlign:'center',background:'rgba(255,255,255,0.05)',borderRadius:8,padding:'0.6rem 0.85rem',border:'1px solid rgba(227,90,27,0.1)'}}><div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:300,color:gold,lineHeight:1}}>{val}</div><div style={{fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',marginTop:'0.2rem'}}>{label}</div></div>))}
+            {[['Cycle',cycle],['Stamps',cur+'/5'],['Payments',totalPaid],['Premios',rewardsClaimed]].map(([label,val])=>(<div key={label} style={{textAlign:'center',background:'rgba(255,255,255,0.05)',borderRadius:8,padding:'0.6rem 0.85rem',border:'1px solid rgba(232,120,40,0.1)'}}><div style={{fontFamily:ffS,fontSize:'1.2rem',fontWeight:300,color:gold,lineHeight:1}}>{val}</div><div style={{fontSize:'0.5rem',letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',marginTop:'0.2rem'}}>{label}</div></div>))}
           </div>
         </div>
         <div style={{display:'flex',gap:'0.4rem'}}>{Array.from({length:5},(_,i)=><div key={i} style={{flex:1,height:5,borderRadius:3,background:i<cur?gold:'rgba(255,255,255,0.08)'}}/>)}</div>
@@ -380,7 +380,7 @@ function ClientProfile({card,onBack}){
       </div>
       <div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden',marginBottom:'1rem'}}>
         <div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:300}}>Payment Historial</div>
-        {card.stamp_history?.length>0?[...card.stamp_history].reverse().map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>Payment registered{h.payment_amount?' · '+h.payment_amount:''}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>{new Date(h.created_at).toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'})}</div></div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.2)'}}>+1 stamp</span></div>)):<div style={{padding:'1.5rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No history yet.</div>}
+        {card.stamp_history?.length>0?[...card.stamp_history].reverse().map((h,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>Payment registered{h.payment_amount?' · '+h.payment_amount:''}</div><div style={{fontSize:'0.62rem',color:gray,marginTop:'0.1rem'}}>{new Date(h.created_at).toLocaleDateString('en-US',{day:'numeric',month:'long',year:'numeric'})}</div></div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(232,120,40,0.1)',color:gold,border:'1px solid rgba(232,120,40,0.2)'}}>+1 stamp</span></div>)):<div style={{padding:'1.5rem',textAlign:'center',color:gray,fontSize:'0.82rem'}}>No history yet.</div>}
       </div>
       {card.rewards?.length>0&&(<div style={{background:white,borderRadius:10,border:'1px solid rgba(31,20,14,0.07)',overflow:'hidden'}}><div style={{padding:'1rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.06)',fontFamily:ffS,fontSize:'1.1rem',fontWeight:300}}>Premios</div>{card.rewards.map((r,i)=>(<div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'0.85rem 1.25rem',borderBottom:'1px solid rgba(31,20,14,0.04)'}}><div><div style={{fontSize:'0.78rem',color:black}}>{r.reward_type}</div>{r.reward_cost&&<div style={{fontSize:'0.65rem',color:gold,marginTop:'0.1rem'}}>{r.reward_cost}</div>}</div><span style={{fontSize:'0.58rem',padding:'0.2rem 0.65rem',borderRadius:20,background:'rgba(45,138,96,0.1)',color:'#2d8a60'}}>{r.status}</span></div>))}</div>)}
     </div>
@@ -432,7 +432,7 @@ function ClientsPanel({users,cards,search,setSearch,onEditar,onAddPayment,onCrea
                 <button onClick={()=>onEditar(user)} style={{padding:'0.35rem 0.65rem',background:'rgba(31,20,14,0.06)',color:black,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Editar</button>
                 {card
                   ?<button onClick={()=>onAddPayment(card)} style={{padding:'0.35rem 0.65rem',background:black,color:white,border:'none',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Pay</button>
-                  :<button onClick={()=>onCreateCard(user.id)} style={{padding:'0.35rem 0.65rem',background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Card</button>
+                  :<button onClick={()=>onCreateCard(user.id)} style={{padding:'0.35rem 0.65rem',background:'rgba(232,120,40,0.1)',color:gold,border:'1px solid rgba(232,120,40,0.25)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>+ Card</button>
                 }
                 <button onClick={()=>onArchivos(user)} style={{padding:'0.35rem 0.65rem',background:'rgba(52,152,219,0.08)',color:'#2980b9',border:'1px solid rgba(52,152,219,0.2)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Archivos</button>
                 <button onClick={()=>onHistorial(user)} style={{padding:'0.35rem 0.65rem',background:'rgba(45,138,96,0.08)',color:'#2d8a60',border:'1px solid rgba(45,138,96,0.2)',borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.56rem',letterSpacing:'0.07em',textTransform:'uppercase'}}>Historial</button>
@@ -499,7 +499,7 @@ function CampaignsPanel({ cards, users }) {
     return 'nuevos'
   }
   const groups = {
-    vip:        { label:'VIP',        desc:'15+ stamps, up to date',      color:'#E87828', bg:'rgba(227,90,27,0.12)', cards: cards.filter(c=>classifyClient(c)==='vip') },
+    vip:        { label:'VIP',        desc:'15+ stamps, up to date',      color:'#E87828', bg:'rgba(232,120,40,0.12)', cards: cards.filter(c=>classifyClient(c)==='vip') },
     regulares:  { label:'Regular',    desc:'10-14 stamps, up to date',    color:'#2d8a60', bg:'rgba(45,138,96,0.1)',   cards: cards.filter(c=>classifyClient(c)==='regulares') },
     activos:    { label:'Active',     desc:'5-9 stamps, up to date',      color:'#3498db', bg:'rgba(52,152,219,0.1)',  cards: cards.filter(c=>classifyClient(c)==='activos') },
     nuevos:     { label:'New',        desc:'1-4 stamps, up to date',      color:'#8e44ad', bg:'rgba(142,68,173,0.1)',  cards: cards.filter(c=>classifyClient(c)==='nuevos') },
@@ -603,7 +603,7 @@ function RecipeEditor({ itemId, itemName, supplies, showToast }) {
   }, 0)
 
   return (
-    <div style={{marginTop:'0.75rem',padding:'0.75rem',background:'rgba(227,90,27,0.04)',borderRadius:8,border:'1px solid rgba(227,90,27,0.12)'}}>
+    <div style={{marginTop:'0.75rem',padding:'0.75rem',background:'rgba(232,120,40,0.04)',borderRadius:8,border:'1px solid rgba(232,120,40,0.12)'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
         <div style={{fontSize:'0.58rem',letterSpacing:'0.12em',textTransform:'uppercase',color:mu}}>Ingredientes · {itemName}</div>
         <button onClick={()=>setAdding(a=>!a)} style={{fontSize:'0.6rem',padding:'0.3rem 0.7rem',background:or,color:white,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
@@ -858,7 +858,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                 <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
                   {allCats.filter(c=>c!=='Todos'&&c.toLowerCase().includes((addForm.category||'').toLowerCase())).map(c=>(
                     <button key={c} type="button" onMouseDown={()=>{setAddForm(f=>({...f,category:c}));setCatDropAdd(false)}}
-                      style={{display:'block',width:'100%',padding:'0.5rem 0.75rem',background:addForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.75rem',color:ink}}>
+                      style={{display:'block',width:'100%',padding:'0.5rem 0.75rem',background:addForm.category===c?'rgba(232,120,40,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.75rem',color:ink}}>
                       {c}
                     </button>
                   ))}
@@ -876,7 +876,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
 
       {/* Best margin */}
       {withMargin.length>0&&(
-        <div style={{background:white,borderRadius:10,border:'1px solid rgba(227,90,27,0.2)',padding:'0.85rem 1.1rem',marginBottom:'1.25rem'}}>
+        <div style={{background:white,borderRadius:10,border:'1px solid rgba(232,120,40,0.2)',padding:'0.85rem 1.1rem',marginBottom:'1.25rem'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
             <span style={{fontSize:'0.55rem',fontWeight:700,color:or,letterSpacing:'0.1em',textTransform:'uppercase'}}>★ Mejor margen</span>
             <button onClick={()=>setExpandMargin(e=>!e)} style={{background:'none',border:'none',cursor:'pointer',fontSize:'0.6rem',color:mu,fontFamily:ff}}>{expandMargin?'Ver menos':'Ver todo'}</button>
@@ -926,7 +926,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                 if(e.key==='Escape'){setNewCatName('');setAddingCat(false)}
               }}
               placeholder="Nombre de categoría..."
-              style={{padding:'0.25rem 0.6rem',border:'1px solid rgba(227,90,27,0.4)',borderRadius:6,fontFamily:ff,fontSize:'0.63rem',outline:'none',width:160}}/>
+              style={{padding:'0.25rem 0.6rem',border:'1px solid rgba(232,120,40,0.4)',borderRadius:6,fontFamily:ff,fontSize:'0.63rem',outline:'none',width:160}}/>
             <button type="button" onClick={async()=>{const v=newCatName.trim();setNewCatName('');setAddingCat(false);if(v)await addExtraCat(v)}}
               style={{padding:'0.25rem 0.65rem',borderRadius:6,background:or,color:white,border:'none',cursor:'pointer',fontFamily:ff,fontSize:'0.63rem',fontWeight:600,flexShrink:0}}>
               ✓
@@ -967,7 +967,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                           value={stockEditVal}
                           onChange={e=>setStockEditVal(e.target.value)}
                           onKeyDown={e=>{if(e.key==='Enter')saveStockInline(item.id,stockEditVal);if(e.key==='Escape')setStockEditId(null)}}
-                          style={{width:54,padding:'0.1rem 0.35rem',border:'1px solid rgba(227,90,27,0.5)',borderRadius:4,fontFamily:ff,fontSize:'0.66rem',outline:'none',textAlign:'center'}}/>
+                          style={{width:54,padding:'0.1rem 0.35rem',border:'1px solid rgba(232,120,40,0.5)',borderRadius:4,fontFamily:ff,fontSize:'0.66rem',outline:'none',textAlign:'center'}}/>
                         <button onMouseDown={()=>saveStockInline(item.id,stockEditVal)}
                           style={{fontSize:'0.55rem',padding:'0.1rem 0.4rem',background:or,color:'white',border:'none',borderRadius:4,cursor:'pointer'}}>✓</button>
                         <button onMouseDown={()=>setStockEditId(null)}
@@ -977,7 +977,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                       <span onClick={()=>{setStockEditId(item.id);setStockEditVal(stock!=null?String(stock):'0')}}
                         title="Clic para editar existencias"
                         style={{fontSize:'0.6rem',padding:'0.15rem 0.55rem',borderRadius:20,cursor:'pointer',userSelect:'none',
-                          background:stock===null?'rgba(31,20,14,0.06)':stock===0?'rgba(192,57,43,0.1)':stock<=5?'rgba(227,90,27,0.12)':'rgba(45,138,96,0.1)',
+                          background:stock===null?'rgba(31,20,14,0.06)':stock===0?'rgba(192,57,43,0.1)':stock<=5?'rgba(232,120,40,0.12)':'rgba(45,138,96,0.1)',
                           color:stock===null?mu:stock===0?'#c0392b':stock<=5?or:'#2d8a60',
                           border:stock===null?'1px dashed rgba(31,20,14,0.1)':'1px solid transparent',
                           fontWeight:600}}>
@@ -986,7 +986,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                     )}
                     <span style={{fontSize:'0.5rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(31,20,14,0.06)',color:mu}}>{item.category||'Galleta'}</span>
                     {item.active===false&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.4rem',borderRadius:20,background:'rgba(31,20,14,0.08)',color:mu,fontWeight:600}}>Oculto en web</span>}
-                    {item.badge_hoy&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(227,90,27,0.12)',color:or}}>Hoy</span>}
+                    {item.badge_hoy&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(232,120,40,0.12)',color:or}}>Hoy</span>}
                     {item.badge_nuevo&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(142,68,173,0.12)',color:'#8e44ad'}}>Nuevo</span>}
                     {item.badge_agotado&&<span style={{fontSize:'0.46rem',padding:'0.1rem 0.35rem',borderRadius:20,background:'rgba(192,57,43,0.12)',color:'#c0392b'}}>Agotado</span>}
                   </div>
@@ -1009,7 +1009,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                 {/* Actions */}
                 <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
                   <button onClick={()=>{setEditingId(isEditing?null:item.id);setEditForm({name:item.name,description:item.description||'',category:item.category||'Galleta',price:price||'',stock:stock!=null?String(stock):'',image_url:item.image_url||''})}}
-                    style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:isEditing?'rgba(227,90,27,0.1)':'rgba(31,20,14,0.06)',color:isEditing?or:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
+                    style={{fontSize:'0.6rem',padding:'0.3rem 0.65rem',background:isEditing?'rgba(232,120,40,0.1)':'rgba(31,20,14,0.06)',color:isEditing?or:ink,border:'none',borderRadius:4,cursor:'pointer',fontFamily:ff}}>
                     {isEditing?'Cerrar':'Editar'}
                   </button>
                   {(item.recipe_ingredients||[]).length>0&&(
@@ -1086,7 +1086,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
               })()}
               {/* Inline edit */}
               {isEditing&&(
-                <div style={{padding:'0.75rem 1.1rem 1rem',background:'rgba(227,90,27,0.025)',borderTop:'1px solid rgba(227,90,27,0.1)'}}>
+                <div style={{padding:'0.75rem 1.1rem 1rem',background:'rgba(232,120,40,0.025)',borderTop:'1px solid rgba(232,120,40,0.1)'}}>
                   <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:'0.5rem',marginBottom:'0.5rem'}}>
                     <div><div style={flbl}>Nombre</div><input value={editForm.name} onChange={e=>setEditForm(f=>({...f,name:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
                     <div><div style={flbl}>Precio ($)</div><input type="number" step="0.01" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))} style={{...finp,marginBottom:0}}/></div>
@@ -1104,7 +1104,7 @@ function CatalogPanel({ catalog, supplies, onSetCost, onSetSuppliers, showToast,
                         <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
                           {allCats.filter(c=>c!=='Todos').map(c=>(
                             <button key={c} type="button" onMouseDown={()=>{setEditForm(f=>({...f,category:c}));setCatDropEdit(false)}}
-                              style={{display:'block',width:'100%',padding:'0.5rem 0.75rem',background:editForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.75rem',color:ink}}>
+                              style={{display:'block',width:'100%',padding:'0.5rem 0.75rem',background:editForm.category===c?'rgba(232,120,40,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.75rem',color:ink}}>
                               {c}
                             </button>
                           ))}
@@ -1300,7 +1300,7 @@ function GastoHistorial({ clientId, showToast, supplies }) {
                 <div style={{display:'flex',gap:'0.5rem',marginTop:'0.15rem'}}>
                   <span style={{fontSize:'0.58rem',color:'#6B4F3A'}}>{e.expense_date}</span>
                   {e.recurring&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(52,152,219,0.1)',color:'#2980b9'}}>↻ {e.recurring_interval}</span>}
-                  {e.line_items&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(227,90,27,0.1)',color:gold}}>Supplies</span>}
+                  {e.line_items&&<span style={{fontSize:'0.55rem',padding:'0.1rem 0.45rem',borderRadius:20,background:'rgba(232,120,40,0.1)',color:gold}}>Supplies</span>}
                 </div>
               </div>
               <div style={{fontSize:'0.78rem',fontWeight:600,color:'#c0392b',flexShrink:0}}>-${parseFloat(e.amount).toFixed(2)}</div>
@@ -1939,7 +1939,7 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
               ))}
               {!exactMatch&&(
                 <button type="button" onClick={()=>{onAdd();setSearch('');setShowSearch(false)}}
-                  style={{display:'flex',alignItems:'center',gap:'0.5rem',width:'100%',padding:'0.75rem 1rem',background:'rgba(227,90,27,0.05)',border:'none',borderTop:'1px solid rgba(227,90,27,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600,textAlign:'left'}}>
+                  style={{display:'flex',alignItems:'center',gap:'0.5rem',width:'100%',padding:'0.75rem 1rem',background:'rgba(232,120,40,0.05)',border:'none',borderTop:'1px solid rgba(232,120,40,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600,textAlign:'left'}}>
                   <span style={{fontSize:'1rem',lineHeight:1}}>+</span> Añadir "<strong>{search.trim()}</strong>"
                 </button>
               )}
@@ -2041,7 +2041,7 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
             const stockQty = parseFloat(s.stock_qty||0)
             const hasCost = parseFloat(s.cost_per_unit||0) > 0
             return (
-              <div key={s.id} id={'supply-'+s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:i<items.length-1?'1px solid rgba(31,20,14,0.05)':'none',transition:'background 0.4s',background:highlightId===s.id?'rgba(227,90,27,0.08)':'transparent'}}>
+              <div key={s.id} id={'supply-'+s.id} style={{display:'flex',alignItems:'center',gap:'0.75rem',padding:'0.85rem 1.25rem',borderBottom:i<items.length-1?'1px solid rgba(31,20,14,0.05)':'none',transition:'background 0.4s',background:highlightId===s.id?'rgba(232,120,40,0.08)':'transparent'}}>
                 {/* Name + current $ value */}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:'0.78rem',color:ink,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.name}</div>
@@ -2062,7 +2062,7 @@ function SuppliesPanel({ supplies, setSupplies, catalog, onAdd, onEditar, onElim
                 {/* Actions */}
                 <div style={{display:'flex',gap:'0.3rem',flexShrink:0}}>
                   <button onClick={()=>onCompraItem(s.id)}
-                    style={{fontSize:'0.6rem',padding:'0.35rem 0.7rem',background:'rgba(227,90,27,0.1)',color:or,border:'1px solid rgba(227,90,27,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff,fontWeight:600,whiteSpace:'nowrap'}}>
+                    style={{fontSize:'0.6rem',padding:'0.35rem 0.7rem',background:'rgba(232,120,40,0.1)',color:or,border:'1px solid rgba(232,120,40,0.2)',borderRadius:4,cursor:'pointer',fontFamily:ff,fontWeight:600,whiteSpace:'nowrap'}}>
                     + Compra
                   </button>
                   <button onClick={()=>onEditar(s)}
@@ -2141,7 +2141,7 @@ function AgendaEvent({ ev, todayFlag }) {
           <div style={{fontSize:'0.6rem',color:gold,marginTop:'0.1rem'}}>{formatCalendarTime(ev)}</div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:'0.5rem',flexShrink:0}}>
-          {todayFlag&&<span style={{fontSize:'0.52rem',padding:'0.15rem 0.5rem',borderRadius:20,background:'rgba(227,90,27,0.12)',color:gold}}>Hoy</span>}
+          {todayFlag&&<span style={{fontSize:'0.52rem',padding:'0.15rem 0.5rem',borderRadius:20,background:'rgba(232,120,40,0.12)',color:gold}}>Hoy</span>}
           <span style={{fontSize:'0.65rem',color:'#6B4F3A',transform:open?'rotate(180deg)':'rotate(0)',display:'inline-block',transition:'transform 0.2s'}}>▾</span>
         </div>
       </div>
@@ -2304,9 +2304,9 @@ function BookingsPanel() {
                 const dayEvs=getEventsForDay(date)
                 const today=date&&date.toDateString()===new Date().toDateString()
                 return(
-                  <div key={i} style={{minHeight:80,padding:'0.4rem',borderRight:'1px solid rgba(31,20,14,0.04)',borderBottom:'1px solid rgba(31,20,14,0.04)',background:today?'rgba(227,90,27,0.04)':'transparent'}}>
-                    {date&&<div style={{fontSize:'0.65rem',fontWeight:today?700:400,color:today?gold:black,width:22,height:22,borderRadius:'50%',background:today?'rgba(227,90,27,0.15)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'0.25rem'}}>{date.getDate()}</div>}
-                    {dayEvs.slice(0,2).map((ev,j)=><div key={j} title={ev.summary} style={{fontSize:'0.52rem',background:'rgba(227,90,27,0.12)',color:gold,borderRadius:3,padding:'0.15rem 0.35rem',marginBottom:'0.15rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div>)}
+                  <div key={i} style={{minHeight:80,padding:'0.4rem',borderRight:'1px solid rgba(31,20,14,0.04)',borderBottom:'1px solid rgba(31,20,14,0.04)',background:today?'rgba(232,120,40,0.04)':'transparent'}}>
+                    {date&&<div style={{fontSize:'0.65rem',fontWeight:today?700:400,color:today?gold:black,width:22,height:22,borderRadius:'50%',background:today?'rgba(232,120,40,0.15)':'transparent',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'0.25rem'}}>{date.getDate()}</div>}
+                    {dayEvs.slice(0,2).map((ev,j)=><div key={j} title={ev.summary} style={{fontSize:'0.52rem',background:'rgba(232,120,40,0.12)',color:gold,borderRadius:3,padding:'0.15rem 0.35rem',marginBottom:'0.15rem',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div>)}
                     {dayEvs.length>2&&<div style={{fontSize:'0.5rem',color:gray}}>+{dayEvs.length-2}</div>}
                   </div>
                 )
@@ -2325,10 +2325,10 @@ function BookingsPanel() {
                 const today=d.toDateString()===new Date().toDateString()
                 const dayEvs=getEventsForDay(d)
                 return(
-                  <div key={i} style={{padding:'0.75rem 0.5rem',borderRight:'1px solid rgba(31,20,14,0.04)',background:today?'rgba(227,90,27,0.04)':'transparent',minHeight:150}}>
+                  <div key={i} style={{padding:'0.75rem 0.5rem',borderRight:'1px solid rgba(31,20,14,0.04)',background:today?'rgba(232,120,40,0.04)':'transparent',minHeight:150}}>
                     <div style={{fontSize:'0.52rem',color:gray,textTransform:'uppercase',letterSpacing:'0.08em'}}>{weekDayNombres[i]}</div>
                     <div style={{fontSize:'0.88rem',fontWeight:today?700:400,color:today?gold:black,marginBottom:'0.4rem'}}>{d.getDate()}</div>
-                    {dayEvs.map((ev,j)=><div key={j} style={{fontSize:'0.54rem',background:'rgba(227,90,27,0.1)',color:gold,borderRadius:3,padding:'0.2rem 0.4rem',marginBottom:'0.2rem',lineHeight:1.3}}><div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div><div style={{opacity:0.7}}>{formatTime(ev)}</div></div>)}
+                    {dayEvs.map((ev,j)=><div key={j} style={{fontSize:'0.54rem',background:'rgba(232,120,40,0.1)',color:gold,borderRadius:3,padding:'0.2rem 0.4rem',marginBottom:'0.2rem',lineHeight:1.3}}><div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.summary||'Booking'}</div><div style={{opacity:0.7}}>{formatTime(ev)}</div></div>)}
                   </div>
                 )
               })}
@@ -2477,7 +2477,7 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
                   <div style={{fontSize:'0.6rem',color:gray,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email||'—'}</div>
                 </div>
                 <span style={{fontSize:'0.58rem',padding:'0.18rem 0.55rem',borderRadius:20,
-                  background:isAdmin?'rgba(227,90,27,0.12)':'rgba(52,152,219,0.08)',
+                  background:isAdmin?'rgba(232,120,40,0.12)':'rgba(52,152,219,0.08)',
                   color:isAdmin?gold:'#2980b9',width:'fit-content',whiteSpace:'nowrap'}}>
                   {isAdmin?'Admin':'Client'}
                 </span>
@@ -2486,8 +2486,8 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
                 </span>
                 <div style={{display:'flex',gap:'0.35rem',flexWrap:'wrap'}}>
                   <button onClick={()=>changeRole(u)} disabled={roleChanging===u.id}
-                    style={{padding:'0.3rem 0.6rem',background:isAdmin?'rgba(192,57,43,0.08)':'rgba(227,90,27,0.1)',
-                      color:isAdmin?'#c0392b':gold,border:isAdmin?'none':'1px solid rgba(227,90,27,0.25)',
+                    style={{padding:'0.3rem 0.6rem',background:isAdmin?'rgba(192,57,43,0.08)':'rgba(232,120,40,0.1)',
+                      color:isAdmin?'#c0392b':gold,border:isAdmin?'none':'1px solid rgba(232,120,40,0.25)',
                       borderRadius:3,cursor:'pointer',fontFamily:ff,fontSize:'0.54rem',letterSpacing:'0.06em',textTransform:'uppercase',opacity:roleChanging===u.id?0.5:1}}>
                     {roleChanging===u.id?'Saving…':isAdmin?'Revoke Admin':'Make Admin'}
                   </button>
@@ -2546,7 +2546,7 @@ function AdminSystemPanel({ users, cards, allUsers, loadAll, showToast }) {
                 <div style={{fontSize:'0.6rem',color:gray,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email||'—'}</div>
               </div>
               <span style={{fontSize:'0.58rem',padding:'0.18rem 0.55rem',borderRadius:20,
-                background:u.role==='admin'?'rgba(227,90,27,0.12)':'rgba(52,152,219,0.08)',
+                background:u.role==='admin'?'rgba(232,120,40,0.12)':'rgba(52,152,219,0.08)',
                 color:u.role==='admin'?gold:'#2980b9',width:'fit-content'}}>
                 {u.role==='admin'?'Admin':'Client'}
               </span>
@@ -3096,7 +3096,7 @@ function PushPanel({ showToast }) {
   React.useEffect(() => { loadClients() }, [])
 
   const statusColors = {
-    VIP:      { color: '#E87828', bg: 'rgba(227,90,27,0.12)' },
+    VIP:      { color: '#E87828', bg: 'rgba(232,120,40,0.12)' },
     Regular:  { color: '#2d8a60', bg: 'rgba(45,138,96,0.1)' },
     Activo:   { color: '#3498db', bg: 'rgba(52,152,219,0.1)' },
     Nuevo:    { color: '#8e44ad', bg: 'rgba(142,68,173,0.1)' },
@@ -3208,7 +3208,7 @@ function PushPanel({ showToast }) {
               display: 'flex', alignItems: 'center', gap: '0.75rem',
               padding: '0.75rem 1rem',
               borderBottom: i < filteredClients.length - 1 ? '1px solid rgba(31,20,14,0.05)' : 'none',
-              background: isSel ? 'rgba(227,90,27,0.04)' : 'transparent',
+              background: isSel ? 'rgba(232,120,40,0.04)' : 'transparent',
               cursor: 'pointer'
             }}>
               <div style={{
@@ -3411,7 +3411,7 @@ function CostSuppliesSection({ supplies, costForm, setCostForm, ff, black, gold,
                       <button key={u} onClick={()=>{
                         setUnitSel(prev=>({...prev,[s.id]:u}))
                         setCostForm(f=>({...f,[unitKey]:u}))
-                      }} style={{padding:'0.2rem 0.55rem',borderRadius:999,border:'1px solid '+(selUnit===u?gold:'rgba(31,20,14,0.12)'),background:selUnit===u?'rgba(227,90,27,0.1)':'transparent',color:selUnit===u?gold:'rgba(31,20,14,0.5)',fontSize:'0.56rem',cursor:'pointer',fontFamily:ff}}>
+                      }} style={{padding:'0.2rem 0.55rem',borderRadius:999,border:'1px solid '+(selUnit===u?gold:'rgba(31,20,14,0.12)'),background:selUnit===u?'rgba(232,120,40,0.1)':'transparent',color:selUnit===u?gold:'rgba(31,20,14,0.5)',fontSize:'0.56rem',cursor:'pointer',fontFamily:ff}}>
                         {u}
                       </button>
                     ))}
@@ -3504,7 +3504,7 @@ function AlcanzaPara({ catalog, supplies }) {
         <div key={item.id} style={{borderBottom:'1px solid rgba(31,20,14,0.05)'}}>
           {/* Row */}
           <div onClick={()=>setExpanded(e=>e===item.id?null:item.id)}
-            style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.85rem 1.25rem',cursor:'pointer',background:expanded===item.id?'rgba(227,90,27,0.04)':'transparent'}}>
+            style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.85rem 1.25rem',cursor:'pointer',background:expanded===item.id?'rgba(232,120,40,0.04)':'transparent'}}>
             <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
               <span style={{fontSize:'0.82rem',color:ink,fontWeight:500}}>{item.name}</span>
               {missing.length > 0 && <span style={{fontSize:'0.56rem',padding:'0.15rem 0.5rem',borderRadius:999,background:'rgba(192,57,43,0.1)',color:'#c0392b'}}>Faltan ingredientes</span>}
@@ -3714,7 +3714,7 @@ function PurchaseModal({ supplies, onClose, onSuccess, showToast, initialSupplyI
           <label style={lbl}>Precio total pagado ($)</label>
           <input type="number" min="0" step="0.01" placeholder="0.00" value={priceTotal} onChange={e=>setPriceTotal(e.target.value)} style={{...inp,marginBottom:pricePerUnit?'0.25rem':'1rem'}}/>
           {pricePerUnit&&<div style={{fontSize:'0.6rem',color:mu,marginBottom:'1rem'}}>= ${pricePerUnit}/{unit}</div>}
-          {selected&&(()=>{const bu=selected.base_unit||'g';const qtyInBase=qty?parseFloat(qty)*((CONV[unit]||1)/(CONV[bu]||1)):0;const afterStock=parseFloat(selected.stock_qty||0)+qtyInBase;return(<div style={{background:'rgba(227,90,27,0.05)',borderRadius:8,padding:'0.75rem',marginBottom:'1rem',fontSize:'0.72rem',color:mu}}>Stock actual: <strong style={{color:ink}}>{parseFloat(selected.stock_qty||0).toFixed(2)} {bu}</strong>{qty&&<span> → <strong style={{color:or}}>{afterStock.toFixed(2)} {bu}</strong></span>}</div>)})()}
+          {selected&&(()=>{const bu=selected.base_unit||'g';const qtyInBase=qty?parseFloat(qty)*((CONV[unit]||1)/(CONV[bu]||1)):0;const afterStock=parseFloat(selected.stock_qty||0)+qtyInBase;return(<div style={{background:'rgba(232,120,40,0.05)',borderRadius:8,padding:'0.75rem',marginBottom:'1rem',fontSize:'0.72rem',color:mu}}>Stock actual: <strong style={{color:ink}}>{parseFloat(selected.stock_qty||0).toFixed(2)} {bu}</strong>{qty&&<span> → <strong style={{color:or}}>{afterStock.toFixed(2)} {bu}</strong></span>}</div>)})()}
           <label style={lbl}>Notas (opcional)</label>
           <input type="text" placeholder="Costco, oferta..." value={notes} onChange={e=>setNotes(e.target.value)} style={{...inp,marginBottom:'1.25rem'}}/>
           <button onClick={save} disabled={saving} style={{width:'100%',padding:'0.9rem',background:or,color:white,border:'none',borderRadius:999,fontFamily:ff,fontSize:'0.72rem',fontWeight:600,cursor:'pointer',opacity:saving?0.6:1}}>{saving?'Guardando...':'Registrar compra →'}</button>
@@ -4114,18 +4114,21 @@ export default function Admin({session}){
           .punch-row{grid-template-columns:1fr!important;}
           .mobile-nav{display:flex!important;}
         }
-        .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:${ink};z-index:200;border-top:1px solid rgba(227,90,27,0.15);padding-bottom:env(safe-area-inset-bottom,20px);}
+        .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:${ink};z-index:200;border-top:1px solid rgba(232,120,40,0.18);padding-bottom:env(safe-area-inset-bottom,20px);}
         .mobile-nav button{flex:1;padding:0.85rem 0.1rem;background:none;border:none;color:rgba(255,255,255,0.4);font-family:${ff};font-size:0.65rem;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.2rem;}
         .mobile-nav button.active{color:${gold};}
       `}</style>
       <div style={{background:'#F4EDDD',minHeight:'100vh',fontFamily:ff,paddingBottom:70}}>
-        <div style={{background:black,position:'fixed',top:0,left:0,right:0,zIndex:100,minHeight:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'env(safe-area-inset-top,0px) 1.25rem 0'}}>
-          <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-              <LogoButterfly size={22}/>
-              <div style={{fontFamily:ffS,fontSize:'1.05rem',color:white}}>Monarca <em style={{color:gold,fontStyle:'italic'}}>de</em> Azúcar</div>
+        <div style={{background:ink,position:'fixed',top:0,left:0,right:0,zIndex:100,minHeight:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'env(safe-area-inset-top,0px) 1.25rem 0',borderBottom:'1px solid rgba(232,120,40,0.15)'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'0.65rem'}}>
+            <img src="/android-chrome-192x192.png" alt="Monarca de Azúcar" style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',border:'1.5px solid rgba(232,120,40,0.4)',flexShrink:0}}/>
+            <div>
+              <div style={{fontFamily:ffS,fontSize:'0.95rem',fontWeight:500,color:white,letterSpacing:'0.08em',textTransform:'uppercase',lineHeight:1}}>Monarca de Azúcar</div>
+              <div style={{fontFamily:ff,fontSize:'0.5rem',color:'rgba(255,255,255,0.3)',letterSpacing:'0.15em',textTransform:'uppercase',marginTop:'0.15rem'}}>Admin</div>
             </div>
+          </div>
           <div style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
-            <button onClick={signOut} style={{background:'none',border:'none',color:'rgba(255,255,255,0.35)',padding:'0.25rem 0.5rem',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer',fontFamily:ff}}>Salir</button>
+            <button onClick={signOut} style={{background:'none',border:'1px solid rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.45)',padding:'0.3rem 0.7rem',fontSize:'0.52rem',letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer',fontFamily:ff,borderRadius:999}}>Salir</button>
           </div>
         </div>
         <div style={{display:'flex',paddingTop:52,minHeight:'100vh'}}>
@@ -4134,7 +4137,7 @@ export default function Admin({session}){
             {/* User badge */}
             <div style={{padding:'1rem 1.25rem 0.75rem',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
               <div style={{display:'flex',alignItems:'center',gap:'0.65rem'}}>
-                <div style={{width:30,height:30,borderRadius:'50%',background:'rgba(227,90,27,0.2)',border:'1px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.68rem',fontWeight:700,color:gold,flexShrink:0}}>
+                <div style={{width:30,height:30,borderRadius:'50%',background:'rgba(232,120,40,0.2)',border:'1px solid rgba(232,120,40,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.68rem',fontWeight:700,color:gold,flexShrink:0}}>
                   {(users.find(u=>u.id===session?.user?.id)?.full_name||'AD').split(' ').map(w=>w[0]).join('').slice(0,2)}
                 </div>
                 <div style={{minWidth:0}}>
@@ -4154,7 +4157,7 @@ export default function Admin({session}){
             <div style={{padding:'0.75rem 0 0.25rem'}}>
               <div style={{fontSize:'0.5rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',padding:'0 1.25rem',marginBottom:'0.35rem'}}>Negocio</div>
               {[['dashboard','Resumen'],['clients','Clientes'],['bookings','Órdenes'],['cards','Tarjetas'],['punch','Sellar visita'],['campaigns','Campañas']].map(([id,label])=>(
-                <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
+                <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(232,120,40,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
                   <span style={{fontSize:'0.72rem',color:panel===id?gold:'rgba(255,255,255,0.7)'}}>{label}</span>
                 </button>
               ))}
@@ -4166,7 +4169,7 @@ export default function Admin({session}){
             <div style={{padding:'0.25rem 0'}}>
               <div style={{fontSize:'0.5rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',padding:'0 1.25rem',marginBottom:'0.35rem'}}>Operación</div>
               {[['system','Configuración'],['catalog','Catálogo'],['supplies','Inventario'],['website','Website'],['push','Notificaciones'],['vlog','Vlog'],['notifications','Alertas']].map(([id,label])=>(
-                <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(227,90,27,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
+                <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(232,120,40,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
                   <span style={{fontSize:'0.72rem',color:panel===id?gold:'rgba(255,255,255,0.7)'}}>{label}</span>
                 </button>
               ))}
@@ -4176,7 +4179,7 @@ export default function Admin({session}){
             <div style={{marginTop:'auto',padding:'1rem 1.25rem',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
               <button onClick={()=>setShowDevTools(true)} style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'left',width:'100%'}}>
                 <div style={{fontSize:'0.48rem',color:'rgba(255,255,255,0.15)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.2rem'}}>Powered by</div>
-                <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.22)',fontFamily:ffS}}>A<span style={{color:'rgba(227,90,27,0.4)'}}>+</span> CRM</div>
+                <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.22)',fontFamily:ffS}}>A<span style={{color:'rgba(232,120,40,0.4)'}}>+</span> CRM</div>
               </button>
             </div>
           </div>
@@ -4264,7 +4267,7 @@ export default function Admin({session}){
                               background:i<stampsInCycle?gold:'rgba(255,255,255,0.15)',
                               border:i<stampsInCycle?'none':'1px solid rgba(255,255,255,0.2)',
                               transition:'all 0.2s',
-                              boxShadow:i<stampsInCycle?'0 0 6px rgba(227,90,27,0.6)':'none'
+                              boxShadow:i<stampsInCycle?'0 0 6px rgba(232,120,40,0.6)':'none'
                             }}/>
                           ))}
                         </div>
@@ -4276,7 +4279,7 @@ export default function Admin({session}){
                           {card.stamp_history?.length||0} visitas totales
                         </div>
                         <div style={{display:'flex',gap:'0.4rem'}} onClick={e=>e.stopPropagation()}>
-                          <button onClick={e=>{e.stopPropagation();setPunchId(card.id);setPanel('punch')}} style={{padding:'0.3rem 0.7rem',background:'rgba(227,90,27,0.15)',color:gold,border:'1px solid rgba(227,90,27,0.3)',borderRadius:999,fontFamily:ff,fontSize:'0.55rem',fontWeight:600,cursor:'pointer',letterSpacing:'0.06em'}}>+ Sello</button>
+                          <button onClick={e=>{e.stopPropagation();setPunchId(card.id);setPanel('punch')}} style={{padding:'0.3rem 0.7rem',background:'rgba(232,120,40,0.15)',color:gold,border:'1px solid rgba(232,120,40,0.3)',borderRadius:999,fontFamily:ff,fontSize:'0.55rem',fontWeight:600,cursor:'pointer',letterSpacing:'0.06em'}}>+ Sello</button>
                           <button onClick={e=>{e.stopPropagation();setQrCard(card);setModal('qr')}} style={{padding:'0.3rem 0.7rem',background:'rgba(255,255,255,0.06)',color:'rgba(255,255,255,0.5)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:999,fontFamily:ff,fontSize:'0.55rem',cursor:'pointer'}}>QR</button>
                         </div>
                       </div>
@@ -4303,7 +4306,7 @@ export default function Admin({session}){
                 <div style={{marginBottom:'1rem'}}>
                   <label style={lbl}>Producto</label>
                   <button type="button" onClick={()=>setPunchProductOpen(o=>!o)}
-                    style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 1rem',background:punchProduct?'rgba(227,90,27,0.06)':'rgba(31,20,14,0.03)',border:punchProduct?'1px solid rgba(227,90,27,0.35)':'1px solid rgba(31,20,14,0.12)',borderRadius:8,cursor:'pointer',fontFamily:ff,textAlign:'left'}}>
+                    style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 1rem',background:punchProduct?'rgba(232,120,40,0.06)':'rgba(31,20,14,0.03)',border:punchProduct?'1px solid rgba(232,120,40,0.35)':'1px solid rgba(31,20,14,0.12)',borderRadius:8,cursor:'pointer',fontFamily:ff,textAlign:'left'}}>
                     <span style={{fontSize:'0.82rem',color:punchProduct?or:mu,fontWeight:punchProduct?600:400}}>
                       {punchProduct||'Seleccionar producto...'}
                     </span>
@@ -4330,13 +4333,13 @@ export default function Admin({session}){
                             const isSelected=punchProduct===item.name
                             return(
                               <div key={item.id} onClick={()=>{setPunchProduct(item.name);setPunchProductSearch('');setPunchProductOpen(false)}}
-                                style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.65rem 1rem',cursor:'pointer',borderBottom:'1px solid rgba(31,20,14,0.04)',background:isSelected?'rgba(227,90,27,0.06)':'white',transition:'background 0.1s'}}
+                                style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.65rem 1rem',cursor:'pointer',borderBottom:'1px solid rgba(31,20,14,0.04)',background:isSelected?'rgba(232,120,40,0.06)':'white',transition:'background 0.1s'}}
                                 onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background='rgba(31,20,14,0.03)'}}
                                 onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background='white'}}>
                                 <span style={{fontSize:'0.8rem',color:ink,fontWeight:isSelected?600:400}}>{item.name}</span>
                                 <span style={{display:'flex',alignItems:'center',gap:'0.5rem',flexShrink:0}}>
                                   {item.price!=null&&<span style={{fontSize:'0.68rem',color:mu}}>${parseFloat(item.price).toFixed(2)}</span>}
-                                  {stk!=null&&<span style={{fontSize:'0.6rem',padding:'0.1rem 0.45rem',borderRadius:20,background:stk===0?'rgba(192,57,43,0.1)':stk<=5?'rgba(227,90,27,0.1)':'rgba(45,138,96,0.1)',color:stk===0?'#c0392b':stk<=5?or:'#2d8a60',fontWeight:600}}>{stk}</span>}
+                                  {stk!=null&&<span style={{fontSize:'0.6rem',padding:'0.1rem 0.45rem',borderRadius:20,background:stk===0?'rgba(192,57,43,0.1)':stk<=5?'rgba(232,120,40,0.1)':'rgba(45,138,96,0.1)',color:stk===0?'#c0392b':stk<=5?or:'#2d8a60',fontWeight:600}}>{stk}</span>}
                                   {isSelected&&<span style={{color:or,fontSize:'0.75rem'}}>✓</span>}
                                 </span>
                               </div>
@@ -4348,7 +4351,7 @@ export default function Admin({session}){
                   )}
                 </div>
 
-                {punchId&&(()=>{const card=cards.find(c=>c.id===punchId);const cur=card?(card.stamps%5===0&&card.stamps>0?5:card.stamps%5):0;return<div style={{background:'linear-gradient(135deg,#1a1917,#252320)',borderRadius:10,padding:'1.1rem',marginBottom:'1rem',border:'1px solid rgba(227,90,27,0.22)',color:white}}><div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.45rem'}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM · {card?.profiles?.business_name||card?.profiles?.full_name}</div><div style={{display:'flex',gap:5}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:15,height:15,borderRadius:'50%',border:'1.5px solid rgba(227,90,27,0.22)',background:i<cur?gold:i===cur?'rgba(227,90,27,0.35)':'transparent'}}/>)}</div></div>})()}
+                {punchId&&(()=>{const card=cards.find(c=>c.id===punchId);const cur=card?(card.stamps%5===0&&card.stamps>0?5:card.stamps%5):0;return<div style={{background:'linear-gradient(135deg,#1a1917,#252320)',borderRadius:10,padding:'1.1rem',marginBottom:'1rem',border:'1px solid rgba(232,120,40,0.22)',color:white}}><div style={{fontFamily:ffS,fontSize:'1rem',marginBottom:'0.45rem'}}>A<span style={{color:gold,fontStyle:'italic'}}>+</span> CRM · {card?.profiles?.business_name||card?.profiles?.full_name}</div><div style={{display:'flex',gap:5}}>{Array.from({length:5},(_,i)=><div key={i} style={{width:15,height:15,borderRadius:'50%',border:'1.5px solid rgba(232,120,40,0.22)',background:i<cur?gold:i===cur?'rgba(232,120,40,0.35)':'transparent'}}/>)}</div></div>})()}
                 <button onClick={()=>{setPunchProductOpen(false);doPunch()}} style={{width:'100%',background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.66rem',letterSpacing:'0.14em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Dar Sello</button>
               </div>
             </>})()}
@@ -4377,7 +4380,7 @@ export default function Admin({session}){
           ))}
           <button onClick={()=>setHamburgerOpen(o=>!o)}
             className={hamburgerOpen||['clients','campaigns','catalog','supplies','system','bookings'].includes(panel)?'active':''}
-            style={{border:'1px solid rgba(227,90,27,0.35)',borderRadius:4,margin:'0.35rem 0.15rem',padding:'0.2rem 0.6rem',background:hamburgerOpen?'rgba(227,90,27,0.12)':'transparent'}}>
+            style={{border:'1px solid rgba(232,120,40,0.35)',borderRadius:4,margin:'0.35rem 0.15rem',padding:'0.2rem 0.6rem',background:hamburgerOpen?'rgba(232,120,40,0.12)':'transparent'}}>
             <span style={{fontSize:'1.15rem',lineHeight:1,display:'block'}}>☰</span>
           </button>
         </div>
@@ -4403,7 +4406,7 @@ export default function Admin({session}){
               ].map(([id,label])=>(
                 <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
                   style={{display:'flex',alignItems:'center',width:'100%',padding:'0.9rem 1.5rem',
-                    background:panel===id?'rgba(227,90,27,0.08)':'none',border:'none',
+                    background:panel===id?'rgba(232,120,40,0.08)':'none',border:'none',
                     borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',
                     color:panel===id?gold:'rgba(255,255,255,0.65)',
                     fontFamily:ff,fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',
@@ -4419,7 +4422,7 @@ export default function Admin({session}){
         {modal==='card'&&(<div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:500,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={e=>e.target===e.currentTarget&&setModal(null)}>
           <div style={{background:white,borderRadius:'12px 12px 0 0',padding:'2rem',width:'100%',maxWidth:520,maxHeight:'90vh',overflowY:'auto'}}>
             <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300,marginBottom:'1.5rem'}}>Nueva Tarjeta</h3>
-            <div style={{background:'rgba(227,90,27,0.05)',border:'1px solid rgba(227,90,27,0.2)',borderRadius:8,padding:'1.25rem',marginBottom:'1.25rem'}}>
+            <div style={{background:'rgba(232,120,40,0.05)',border:'1px solid rgba(232,120,40,0.2)',borderRadius:8,padding:'1.25rem',marginBottom:'1.25rem'}}>
               <div style={{fontSize:'0.58rem',letterSpacing:'0.14em',textTransform:'uppercase',color:gold,marginBottom:'1rem'}}>Create New Client</div>
               <label style={lbl}>Nombre Completo</label><input style={inp} type="text" placeholder="Client name" value={form.new_name||''} onChange={e=>upd('new_name',e.target.value)}/>
               <label style={lbl}>Nombre del Negocio</label><input style={inp} type="text" placeholder="Business name" value={form.new_business||''} onChange={e=>upd('new_business',e.target.value)}/>
@@ -4449,7 +4452,7 @@ export default function Admin({session}){
             <p style={{fontSize:'0.58rem',color:gray,marginBottom:'1.25rem',wordBreak:'break-all',lineHeight:1.6}}>{cardUrl(qrCard)}</p>
             <div style={{display:'flex',gap:'0.75rem'}}>
               <button onClick={()=>window.open(cardUrl(qrCard),'_blank')} style={{flex:1,background:black,color:white,border:'none',padding:'0.85rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Open</button>
-              <button onClick={()=>{navigator.clipboard.writeText(cardUrl(qrCard));showToast('Link copied!')}} style={{flex:1,background:'rgba(227,90,27,0.1)',color:gold,border:'1px solid rgba(227,90,27,0.25)',padding:'0.85rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Copy</button>
+              <button onClick={()=>{navigator.clipboard.writeText(cardUrl(qrCard));showToast('Link copied!')}} style={{flex:1,background:'rgba(232,120,40,0.1)',color:gold,border:'1px solid rgba(232,120,40,0.25)',padding:'0.85rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>Copy</button>
               <button onClick={()=>setModal(null)} style={{background:'rgba(31,20,14,0.06)',color:black,border:'none',padding:'0.85rem 0.75rem',fontFamily:ff,fontSize:'0.62rem',letterSpacing:'0.12em',textTransform:'uppercase',borderRadius:3,cursor:'pointer'}}>X</button>
             </div>
           </div>
@@ -4481,7 +4484,7 @@ export default function Admin({session}){
               <h3 style={{fontFamily:ffS,fontSize:'1.5rem',fontWeight:300}}>Archivos — {filesClient.business_name||filesClient.full_name}</h3>
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
             </div>
-            <div style={{border:'2px dashed rgba(227,90,27,0.3)',borderRadius:8,padding:'2rem',textAlign:'center',marginBottom:'1.25rem',background:'rgba(227,90,27,0.03)'}}>
+            <div style={{border:'2px dashed rgba(232,120,40,0.3)',borderRadius:8,padding:'2rem',textAlign:'center',marginBottom:'1.25rem',background:'rgba(232,120,40,0.03)'}}>
               <div style={{fontSize:'1.5rem',marginBottom:'0.5rem'}}>+</div>
               <div style={{fontSize:'0.78rem',color:gray,marginBottom:'0.75rem'}}>Drag files here or click to select</div>
               <input type="file" multiple accept=".pdf,.doc,.docx,.jpg,.png,.csv,.xlsx" onChange={async(e)=>{const files=Array.from(e.target.files);for(const file of files){const fd=new FormData();fd.append('file',file);fd.append('user_id',filesClient.id);const res=await fetch('/api/admin/files',{method:'POST',body:fd});const data=await res.json();if(res.ok)showToast(file.name+' uploaded');else showToast('Error: '+data.error)};e.target.value='';setModal(null);setTimeout(()=>setModal('files'),100)}} style={{display:'none'}} id="file-input"/>
@@ -4565,7 +4568,7 @@ export default function Admin({session}){
               const units=Math.max(1,parseInt(costForm.units)||1)
               const perUnit=total/units
               return(
-                <div style={{background:'rgba(227,90,27,0.06)',border:'1px solid rgba(227,90,27,0.18)',borderRadius:8,padding:'0.75rem 1rem',marginBottom:'0.85rem',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div style={{background:'rgba(232,120,40,0.06)',border:'1px solid rgba(232,120,40,0.18)',borderRadius:8,padding:'0.75rem 1rem',marginBottom:'0.85rem',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                   <div style={{fontSize:'0.62rem',color:gray}}>
                     ${total.toFixed(2)} ÷ {units} {units===1?'unidad':'unidades'}
                   </div>
@@ -4607,7 +4610,7 @@ export default function Admin({session}){
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>x</button>
             </div>
             <p style={{fontSize:'0.72rem',color:gray,marginBottom:'1.25rem'}}>{suppliersItem.name}</p>
-            <div style={{background:'rgba(227,90,27,0.04)',border:'1px solid rgba(227,90,27,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1rem'}}>
+            <div style={{background:'rgba(232,120,40,0.04)',border:'1px solid rgba(232,120,40,0.15)',borderRadius:8,padding:'1rem',marginBottom:'1rem'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'0.5rem'}}>
                 <input value={suppliersTitle} onChange={e=>setSuppliersTitle(e.target.value)} placeholder="Note title..." style={{background:'none',border:'none',outline:'none',fontFamily:ffS,fontSize:'1rem',fontWeight:300,color:black,flex:1}} id="suppliers-title"/>
                 <span style={{fontSize:'0.58rem',color:gray,flexShrink:0,marginLeft:'0.5rem'}}>{new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
@@ -4721,7 +4724,7 @@ export default function Admin({session}){
               {supplyModal==='add'?(
                 <>
                   {/* ══ ADD: Compra inicial — campo principal ══ */}
-                  <div style={{marginBottom:'1rem',padding:'1rem',background:'rgba(227,90,27,0.05)',borderRadius:10,border:'2px solid rgba(227,90,27,0.2)'}}>
+                  <div style={{marginBottom:'1rem',padding:'1rem',background:'rgba(232,120,40,0.05)',borderRadius:10,border:'2px solid rgba(232,120,40,0.2)'}}>
                     <div style={{fontSize:'0.55rem',letterSpacing:'0.12em',textTransform:'uppercase',color:or,marginBottom:'0.15rem',fontWeight:600}}>¿Cuánto compraste?</div>
                     <div style={{fontSize:'0.62rem',color:mu,marginBottom:'0.85rem'}}>Esto define tu stock inicial y el costo por unidad</div>
 
@@ -4771,7 +4774,7 @@ export default function Admin({session}){
 
                     {/* Live preview */}
                     {supplyForm.purchase_qty&&supplyForm.purchase_price?(
-                      <div style={{background:'rgba(227,90,27,0.08)',borderRadius:6,padding:'0.5rem 0.75rem',fontSize:'0.68rem',color:ink}}>
+                      <div style={{background:'rgba(232,120,40,0.08)',borderRadius:6,padding:'0.5rem 0.75rem',fontSize:'0.68rem',color:ink}}>
                         <span style={{color:or,fontWeight:700}}>${(parseFloat(supplyForm.purchase_price)/parseFloat(supplyForm.purchase_qty)).toFixed(4)}</span>
                         <span style={{color:mu}}> por {supplyForm.purchase_unit||'g'} · stock inicial: </span>
                         <span style={{fontWeight:600}}>{supplyForm.purchase_qty} {supplyForm.purchase_unit||'g'}</span>
@@ -4800,13 +4803,13 @@ export default function Admin({session}){
                             <div style={{position:'absolute',top:'100%',left:0,right:0,background:white,border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
                               {filtered.map(c=>(
                                 <button key={c} type="button" onMouseDown={()=>{setSupplyForm(f=>({...f,category:c}));setCatDropOpen(false)}}
-                                  style={{display:'block',width:'100%',padding:'0.55rem 0.85rem',background:supplyForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.78rem',color:ink}}>
+                                  style={{display:'block',width:'100%',padding:'0.55rem 0.85rem',background:supplyForm.category===c?'rgba(232,120,40,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.78rem',color:ink}}>
                                   {c}
                                 </button>
                               ))}
                               {!exact&&supplyForm.category.trim()&&(
                                 <button type="button" onMouseDown={()=>setCatDropOpen(false)}
-                                  style={{display:'flex',alignItems:'center',gap:'0.4rem',width:'100%',padding:'0.6rem 0.85rem',background:'rgba(227,90,27,0.05)',border:'none',borderTop:'1px solid rgba(227,90,27,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600}}>
+                                  style={{display:'flex',alignItems:'center',gap:'0.4rem',width:'100%',padding:'0.6rem 0.85rem',background:'rgba(232,120,40,0.05)',border:'none',borderTop:'1px solid rgba(232,120,40,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600}}>
                                   <span>+</span> Añadir "<strong>{supplyForm.category.trim()}</strong>"
                                 </button>
                               )}
@@ -4852,13 +4855,13 @@ export default function Admin({session}){
                             <div style={{position:'absolute',top:'100%',left:0,right:0,background:white,border:'1px solid rgba(31,20,14,0.12)',borderRadius:6,boxShadow:'0 6px 18px rgba(31,20,14,0.1)',zIndex:600,overflow:'hidden',maxHeight:200,overflowY:'auto'}}>
                               {filtered.map(c=>(
                                 <button key={c} type="button" onMouseDown={()=>{setSupplyForm(f=>({...f,category:c}));setCatDropOpen(false)}}
-                                  style={{display:'block',width:'100%',padding:'0.55rem 0.85rem',background:supplyForm.category===c?'rgba(227,90,27,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.78rem',color:ink}}>
+                                  style={{display:'block',width:'100%',padding:'0.55rem 0.85rem',background:supplyForm.category===c?'rgba(232,120,40,0.06)':'none',border:'none',borderBottom:'1px solid rgba(31,20,14,0.04)',cursor:'pointer',textAlign:'left',fontFamily:ff,fontSize:'0.78rem',color:ink}}>
                                   {c}
                                 </button>
                               ))}
                               {!exact&&supplyForm.category.trim()&&(
                                 <button type="button" onMouseDown={()=>setCatDropOpen(false)}
-                                  style={{display:'flex',alignItems:'center',gap:'0.4rem',width:'100%',padding:'0.6rem 0.85rem',background:'rgba(227,90,27,0.05)',border:'none',borderTop:'1px solid rgba(227,90,27,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600}}>
+                                  style={{display:'flex',alignItems:'center',gap:'0.4rem',width:'100%',padding:'0.6rem 0.85rem',background:'rgba(232,120,40,0.05)',border:'none',borderTop:'1px solid rgba(232,120,40,0.12)',cursor:'pointer',color:or,fontFamily:ff,fontSize:'0.75rem',fontWeight:600}}>
                                   <span>+</span> Añadir "<strong>{supplyForm.category.trim()}</strong>"
                                 </button>
                               )}
@@ -4908,7 +4911,7 @@ export default function Admin({session}){
                   </div>
 
                   {/* Registrar compra (edit mode) */}
-                  <div style={{padding:'0.85rem',background:'rgba(227,90,27,0.04)',borderRadius:8,border:'1px solid rgba(227,90,27,0.12)'}}>
+                  <div style={{padding:'0.85rem',background:'rgba(232,120,40,0.04)',borderRadius:8,border:'1px solid rgba(232,120,40,0.12)'}}>
                     <div style={{fontSize:'0.5rem',letterSpacing:'0.12em',textTransform:'uppercase',color:or,marginBottom:'0.75rem'}}>Registrar nueva compra</div>
                     <div style={{display:'flex',gap:'0.25rem',flexWrap:'wrap',marginBottom:'0.4rem'}}>
                       {[['⅛','0.125'],['¼','0.25'],['⅓','0.333'],['½','0.5'],['⅔','0.667'],['¾','0.75'],['1','1'],['1½','1.5'],['2','2'],['3','3'],['4','4'],['5','5']].map(([label,val])=>(
@@ -5007,8 +5010,8 @@ export default function Admin({session}){
                 <div style={{fontFamily:ffS,fontSize:'1.3rem',fontWeight:400}}>Mi perfil</div>
                 <button onClick={()=>setProfileOpen(false)} style={{background:'none',border:'none',fontSize:'1.1rem',cursor:'pointer',color:gray}}>✕</button>
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(227,90,27,0.06)',borderRadius:12,border:'1px solid rgba(227,90,27,0.12)'}}>
-                <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(227,90,27,0.15)',border:'2px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(232,120,40,0.06)',borderRadius:12,border:'1px solid rgba(232,120,40,0.12)'}}>
+                <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(232,120,40,0.15)',border:'2px solid rgba(232,120,40,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                   <LogoButterfly size={32}/>
                 </div>
                 <div style={{flex:1}}>
@@ -5099,8 +5102,8 @@ export default function Admin({session}){
               </div>
 
               {/* Avatar */}
-              <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(227,90,27,0.06)',borderRadius:12,border:'1px solid rgba(227,90,27,0.12)'}}>
-                <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(227,90,27,0.15)',border:'2px solid rgba(227,90,27,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(232,120,40,0.06)',borderRadius:12,border:'1px solid rgba(232,120,40,0.12)'}}>
+                <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(232,120,40,0.15)',border:'2px solid rgba(232,120,40,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',overflow:'hidden'}}>
                   <LogoButterfly size={32}/>
                 </div>
                 <div style={{flex:1}}>
@@ -5269,7 +5272,7 @@ function ArchivosListForClient({ userId, showToast }) {
   return(
     <div>
       <div style={{fontSize:'0.56rem',letterSpacing:'0.13em',textTransform:'uppercase',color:'#6B4F3A',marginBottom:'0.75rem'}}>Guardard files</div>
-      {files.map(f=>(<div key={f.name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 0',borderBottom:'1px solid rgba(31,20,14,0.06)'}}><div style={{fontSize:'0.78rem',color:'#1F140E',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,marginRight:'1rem'}}>{f.name.replace(/^\d+_/,'')}</div><div style={{display:'flex',gap:'0.4rem',flexShrink:0}}><button onClick={()=>viewFile(f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(227,90,27,0.1)',color:'#E87828',border:'1px solid rgba(227,90,27,0.25)',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>Ver</button><button onClick={()=>deleteFile('clients/'+userId+'/'+f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>x</button></div></div>))}
+      {files.map(f=>(<div key={f.name} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0.75rem 0',borderBottom:'1px solid rgba(31,20,14,0.06)'}}><div style={{fontSize:'0.78rem',color:'#1F140E',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1,marginRight:'1rem'}}>{f.name.replace(/^\d+_/,'')}</div><div style={{display:'flex',gap:'0.4rem',flexShrink:0}}><button onClick={()=>viewFile(f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(232,120,40,0.1)',color:'#E87828',border:'1px solid rgba(232,120,40,0.25)',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>Ver</button><button onClick={()=>deleteFile('clients/'+userId+'/'+f.name)} style={{padding:'0.3rem 0.65rem',background:'rgba(192,57,43,0.08)',color:'#a93226',border:'none',borderRadius:3,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontSize:'0.56rem',textTransform:'uppercase'}}>x</button></div></div>))}
     </div>
   )
 }
