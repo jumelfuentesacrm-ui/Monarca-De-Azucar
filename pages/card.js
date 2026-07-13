@@ -2,17 +2,17 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-const or='#E35A1B'
+const or='#E87828', peach='#F0A050', brn='#5C3020'
 const ff='"DM Sans",system-ui,sans-serif'
-const ffS='"Instrument Serif",serif'
+const ffS='"Raleway",sans-serif'
 
 // Default light theme colors (used by standalone components)
-const ink='#1F140E', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE', mu='#7A6452'
+const ink='#1F140E', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE', mu='#6B4F3A'
 
 function useTheme() {
   // Fixed light mode always
   return {
-    ink: '#1F140E', cr: '#FBF7EE', cr2: '#F4EDDD', cr3: '#EDE3CE', mu: '#7A6452',
+    ink: '#1F140E', cr: '#FBF7EE', cr2: '#F4EDDD', cr3: '#EDE3CE', mu: '#6B4F3A',
     bg: '#FBF7EE', navBg: 'rgba(251,247,238,0.97)', border: 'rgba(31,20,14,0.08)'
   }
 }
@@ -42,7 +42,7 @@ function MonarcaButterfly({ size=40, animate=false, color=null, style={} }) {
   })
 
   const darkColor = color || '#1F140E'
-  const orangeColor = color || '#E35A1B'
+  const orangeColor = color || '#E87828'
 
   if (!BUTTERFLY_DARK || !BUTTERFLY_ORANGE) return null
 
@@ -63,7 +63,7 @@ function MonarcaButterfly({ size=40, animate=false, color=null, style={} }) {
 function LoadingScreen() {
   return (
     <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:cr,gap:20}}>
-      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
       <MonarcaButterfly size={72} animate={true}/>
       <div style={{fontFamily:ffS,fontSize:'1.1rem',color:mu,fontStyle:'italic'}}>Cargando tu tarjeta…</div>
     </div>
@@ -308,7 +308,7 @@ export default function Card({ session }) {
 
   return (
     <>
-      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0}
         body{background:${theme.bg};font-family:${ff};overscroll-behavior:none;color-scheme:light dark}
@@ -1101,7 +1101,7 @@ export default function Card({ session }) {
             />
             <div style={{textAlign:'center'}}>
               <div style={{fontFamily:ffS,fontSize:'1rem',color:'#1F140E'}}>{card.profiles?.full_name}</div>
-              <div style={{fontSize:'0.65rem',color:'#7A6452',marginTop:4,letterSpacing:'0.05em'}}>{card.card_number}</div>
+              <div style={{fontSize:'0.65rem',color:'#6B4F3A',marginTop:4,letterSpacing:'0.05em'}}>{card.card_number}</div>
             </div>
             <MonarcaButterfly size={28} animate={true}/>
           </div>
