@@ -4121,7 +4121,7 @@ export default function Admin({session}){
       <div style={{background:'#F4EDDD',minHeight:'100vh',fontFamily:ff,paddingBottom:70}}>
         <div style={{background:ink,position:'fixed',top:0,left:0,right:0,zIndex:100,minHeight:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'env(safe-area-inset-top,0px) 1.25rem 0',borderBottom:'1px solid rgba(232,120,40,0.15)'}}>
           <div style={{display:'flex',alignItems:'center',gap:'0.65rem'}}>
-            <img src="/android-chrome-192x192.png" alt="Monarca de Azúcar" style={{width:32,height:32,borderRadius:'50%',objectFit:'cover',border:'1.5px solid rgba(232,120,40,0.4)',flexShrink:0}}/>
+            <img src="/logo-badge.svg" alt="Monarca de Azúcar" style={{width:34,height:34,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>
             <div>
               <div style={{fontFamily:ffS,fontSize:'0.95rem',fontWeight:500,color:white,letterSpacing:'0.08em',textTransform:'uppercase',lineHeight:1}}>Monarca de Azúcar</div>
               <div style={{fontFamily:ff,fontSize:'0.5rem',color:'rgba(255,255,255,0.3)',letterSpacing:'0.15em',textTransform:'uppercase',marginTop:'0.15rem'}}>Admin</div>

@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- White fill -->
+  <circle cx="100" cy="100" r="97" fill="white"/>
+  <!-- Brown ring border -->
+  <circle cx="100" cy="100" r="97" fill="none" stroke="#4A2C18" stroke-width="2.2"/>
+  <circle cx="100" cy="100" r="91" fill="none" stroke="#4A2C18" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Decorative bracket arcs -->
+  <path d="M 40,76 A 68,68 0 0,1 160,76" fill="none" stroke="#1F140E" stroke-width="0.9" stroke-linecap="round"/>
+  <path d="M 40,124 A 68,68 0 0,0 160,124" fill="none" stroke="#1F140E" stroke-width="0.9" stroke-linecap="round"/>
+
+  <!-- Text paths -->
+  <defs>
+    <path id="tArc" d="M 13,100 A 87,87 0 0,1 187,100"/>
+    <path id="bArc" d="M 13,100 A 87,87 0 0,0 187,100"/>
+  </defs>
+
+  <!-- MONARCA -->
+  <text font-family="Raleway, Arial, sans-serif" font-size="13" font-weight="600" fill="#1F140E" letter-spacing="4">
+    <textPath href="#tArc" startOffset="50%" text-anchor="middle">MONARCA</textPath>
+  </text>
+
+  <!-- DE AZÚCAR -->
+  <text font-family="Raleway, Arial, sans-serif" font-size="10.5" font-weight="500" fill="#1F140E" letter-spacing="2.5">
+    <textPath href="#bArc" startOffset="50%" text-anchor="middle" dy="-5">DE AZÚCAR</textPath>
+  </text>
+
+  <!-- Small butterfly LEFT -->
+  <g transform="translate(33,99) scale(0.85)">
+    <path d="M0,-1 C-3,-9 -14,-10 -12,-3 C-10,2 -4,2 0,-1Z" fill="#F0A050"/>
+    <path d="M0,-1 C3,-9 14,-10 12,-3 C10,2 4,2 0,-1Z" fill="#F0A050"/>
+    <path d="M0,1 C-4,6 -10,7 -8,3 C-6,0 -2,-1 0,1Z" fill="#F0A050"/>
+    <path d="M0,1 C4,6 10,7 8,3 C6,0 2,-1 0,1Z" fill="#F0A050"/>
+    <ellipse cx="0" cy="0" rx="1.2" ry="3.5" fill="#2A1A10"/>
+  </g>
+
+  <!-- Small butterfly RIGHT -->
+  <g transform="translate(167,99) scale(0.85)">
+    <path d="M0,-1 C-3,-9 -14,-10 -12,-3 C-10,2 -4,2 0,-1Z" fill="#F0A050"/>
+    <path d="M0,-1 C3,-9 14,-10 12,-3 C10,2 4,2 0,-1Z" fill="#F0A050"/>
+    <path d="M0,1 C-4,6 -10,7 -8,3 C-6,0 -2,-1 0,1Z" fill="#F0A050"/>
+    <path d="M0,1 C4,6 10,7 8,3 C6,0 2,-1 0,1Z" fill="#F0A050"/>
+    <ellipse cx="0" cy="0" rx="1.2" ry="3.5" fill="#2A1A10"/>
+  </g>
+
+  <!-- Sparkle (4-point star) right of center -->
+  <g transform="translate(128,84)">
+    <path d="M0,-5.5 L0.9,-0.9 L5.5,0 L0.9,0.9 L0,5.5 L-0.9,0.9 L-5.5,0 L-0.9,-0.9Z" fill="#E87828"/>
+  </g>
+
+  <!-- ===== CUPCAKE ===== -->
+  <!-- Liner (trapezoid, orange) -->
+  <path d="M 81,139 L 77,116 L 123,116 L 119,139Z" fill="#E87828"/>
+  <!-- Liner ribs -->
+  <line x1="84" y1="139" x2="80" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <line x1="88" y1="139" x2="85" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <line x1="92" y1="139" x2="90" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <line x1="96" y1="139" x2="95" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <line x1="100" y1="139" x2="100" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <line x1="104" y1="139" x2="105" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <line x1="108" y1="139" x2="110" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <line x1="112" y1="139" x2="115" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <line x1="116" y1="139" x2="120" y2="116" stroke="#C96A18" stroke-width="0.9" opacity="0.6"/>
+  <!-- Liner rim -->
+  <path d="M 76,115 Q 100,110 124,115 L 124,118 Q 100,113 76,118Z" fill="#C96A18"/>
+
+  <!-- Frosting dome -->
+  <path d="M 76,115 C 76,96 88,83 100,80 C 112,83 124,96 124,115Z" fill="#FAF0D8"/>
+  <ellipse cx="100" cy="115" rx="24" ry="5.5" fill="#F5E8C0"/>
+  <!-- Frosting tip swirl -->
+  <path d="M 93,88 C 93,80 107,80 107,88 C 107,94 101,95 100,95" fill="#F5E8C0" stroke="#EDD8A0" stroke-width="0.5"/>
+  <path d="M 96,80 C 96,73 104,73 104,80 C 104,85 101,86 100,86" fill="#FAF0D8" stroke="#EDD8A0" stroke-width="0.5"/>
+  <ellipse cx="100" cy="73" rx="4" ry="5" fill="#F5E8C0"/>
+  <ellipse cx="100" cy="69" rx="2.5" ry="3" fill="#EDD8A0"/>
+  <!-- Frosting highlight -->
+  <path d="M 85,100 C 84,92 89,86 94,84" fill="none" stroke="white" stroke-width="1.5" opacity="0.55" stroke-linecap="round"/>
+
+  <!-- ===== BUTTERFLY (monarch) on frosting ===== -->
+  <!-- Body -->
+  <ellipse cx="100" cy="82" rx="1.8" ry="9" fill="#1F140E"/>
+  <!-- Antennae -->
+  <path d="M 99.5,73 C 97,68 93,64 90,62" fill="none" stroke="#1F140E" stroke-width="0.9" stroke-linecap="round"/>
+  <path d="M 100.5,73 C 103,68 107,64 110,62" fill="none" stroke="#1F140E" stroke-width="0.9" stroke-linecap="round"/>
+  <circle cx="90" cy="61.5" r="1.5" fill="#1F140E"/>
+  <circle cx="110" cy="61.5" r="1.5" fill="#1F140E"/>
+
+  <!-- Left upper wing -->
+  <path d="M 99,76 C 94,68 76,60 70,69 C 66,76 71,86 82,88 C 90,90 97,86 99,80Z" fill="#E87828"/>
+  <path d="M 99,76 C 94,68 76,60 70,69 C 66,76 71,86 82,88 C 90,90 97,86 99,80Z" fill="none" stroke="#1F140E" stroke-width="1.1"/>
+  <!-- Wing vein -->
+  <path d="M 87,64 C 83,70 77,77 80,84" fill="none" stroke="#1F140E" stroke-width="0.6" opacity="0.7"/>
+  <!-- White dots -->
+  <circle cx="71" cy="70" r="1.3" fill="white"/>
+  <circle cx="68" cy="75" r="1.1" fill="white"/>
+  <circle cx="69" cy="81" r="1" fill="white"/>
+  <circle cx="78" cy="62" r="1" fill="white"/>
+
+  <!-- Right upper wing -->
+  <path d="M 101,76 C 106,68 124,60 130,69 C 134,76 129,86 118,88 C 110,90 103,86 101,80Z" fill="#E87828"/>
+  <path d="M 101,76 C 106,68 124,60 130,69 C 134,76 129,86 118,88 C 110,90 103,86 101,80Z" fill="none" stroke="#1F140E" stroke-width="1.1"/>
+  <!-- Wing vein -->
+  <path d="M 113,64 C 117,70 123,77 120,84" fill="none" stroke="#1F140E" stroke-width="0.6" opacity="0.7"/>
+  <!-- White dots -->
+  <circle cx="129" cy="70" r="1.3" fill="white"/>
+  <circle cx="132" cy="75" r="1.1" fill="white"/>
+  <circle cx="131" cy="81" r="1" fill="white"/>
+  <circle cx="122" cy="62" r="1" fill="white"/>
+
+  <!-- Left lower wing -->
+  <path d="M 99,84 C 92,87 78,92 76,99 C 74,104 79,108 86,105 C 93,102 98,93 99,86Z" fill="#E87828"/>
+  <path d="M 99,84 C 92,87 78,92 76,99 C 74,104 79,108 86,105 C 93,102 98,93 99,86Z" fill="none" stroke="#1F140E" stroke-width="1.1"/>
+  <circle cx="76" cy="100" r="1" fill="white"/>
+  <circle cx="78" cy="105" r="0.9" fill="white"/>
+
+  <!-- Right lower wing -->
+  <path d="M 101,84 C 108,87 122,92 124,99 C 126,104 121,108 114,105 C 107,102 102,93 101,86Z" fill="#E87828"/>
+  <path d="M 101,84 C 108,87 122,92 124,99 C 126,104 121,108 114,105 C 107,102 102,93 101,86Z" fill="none" stroke="#1F140E" stroke-width="1.1"/>
+  <circle cx="124" cy="100" r="1" fill="white"/>
+  <circle cx="122" cy="105" r="0.9" fill="white"/>
+</svg>
