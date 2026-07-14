@@ -31,22 +31,13 @@ function LogoButterfly({ size=24 }) {
 
 
 function getStatus(card) {
-  if (!card) return { label:'New', color:'#8e44ad', bg:'rgba(142,68,173,0.1)' }
+  if (!card) return { label:'Nuevo', color:'#8e44ad', bg:'rgba(142,68,173,0.1)' }
   const stamps = card.stamps || 0
-  let days = null
-  if (card.stamp_history && card.stamp_history.length > 0) {
-    const last = new Date(card.stamp_history[card.stamp_history.length-1].created_at)
-    days = (Date.now()-last)/(1000*60*60*24)
-  }
-  if (days !== null) {
-    if (days >= 66) return { label:'Cancelarled', color:'#c0392b', bg:'rgba(192,57,43,0.1)' }
-    if (days >= 38) return { label:'Late Fee', color:'#e74c3c', bg:'rgba(231,76,60,0.1)' }
-    if (days >= 35) return { label:'Grace', color:'#e67e22', bg:'rgba(230,126,34,0.1)' }
-  }
-  if (stamps >= 15) return { label:'VIP', color:'#E87828', bg:'rgba(232,120,40,0.12)' }
-  if (stamps >= 10) return { label:'Regular', color:'#2d8a60', bg:'rgba(45,138,96,0.1)' }
-  if (stamps >= 5) return { label:'Active', color:'#3498db', bg:'rgba(52,152,219,0.1)' }
-  return { label:'New', color:'#8e44ad', bg:'rgba(142,68,173,0.1)' }
+  if (stamps >= 20) return { label:'VIP', color:'#E87828', bg:'rgba(232,120,40,0.12)' }
+  if (stamps >= 10) return { label:'Fiel', color:'#2d8a60', bg:'rgba(45,138,96,0.1)' }
+  if (stamps >= 5)  return { label:'Regular', color:'#3498db', bg:'rgba(52,152,219,0.1)' }
+  if (stamps >= 1)  return { label:'Nuevo', color:'#8e44ad', bg:'rgba(142,68,173,0.1)' }
+  return { label:'Sin compras', color:'#6B4F3A', bg:'rgba(107,79,58,0.1)' }
 }
 
 function getDaysSinceLastPurchase(card) {
@@ -60,11 +51,9 @@ function getNotifications(cards) {
   cards.forEach(card => {
     const days = getDaysSinceLastPurchase(card)
     if (days === null) return
-    const name = card.profiles?.business_name || card.profiles?.full_name || 'Client'
-    if (days >= 66) alerts.push({ card, days, level: 3, msg: `${name} — Service cancelled (${days} days)` })
-    else if (days >= 38) alerts.push({ card, days, level: 3, msg: `${name} — $30 late fee applied (${days} days)` })
-    else if (days >= 35) alerts.push({ card, days, level: 2, msg: `${name} — Grace period, 3 days to pay (${days} days)` })
-    else if (days >= 30) alerts.push({ card, days, level: 1, msg: `${name} — Payment due soon (${days} days)` })
+    const name = card.profiles?.full_name || 'Cliente'
+    if (days >= 60) alerts.push({ card, days, level: 2, msg: `${name} lleva ${days} días sin visitar — podría perderse 💌` })
+    else if (days >= 30) alerts.push({ card, days, level: 1, msg: `${name} no ha visitado en ${days} días` })
   })
   return alerts.sort((a,b) => b.days - a.days)
 }
@@ -499,20 +488,18 @@ function CampaignsPanel({ cards, users }) {
     return 'nuevos'
   }
   const groups = {
-    vip:        { label:'VIP',        desc:'15+ stamps, up to date',      color:'#E87828', bg:'rgba(232,120,40,0.12)', cards: cards.filter(c=>classifyClient(c)==='vip') },
-    regulares:  { label:'Regular',    desc:'10-14 stamps, up to date',    color:'#2d8a60', bg:'rgba(45,138,96,0.1)',   cards: cards.filter(c=>classifyClient(c)==='regulares') },
-    activos:    { label:'Active',     desc:'5-9 stamps, up to date',      color:'#3498db', bg:'rgba(52,152,219,0.1)',  cards: cards.filter(c=>classifyClient(c)==='activos') },
-    nuevos:     { label:'New',        desc:'1-4 stamps, up to date',      color:'#8e44ad', bg:'rgba(142,68,173,0.1)',  cards: cards.filter(c=>classifyClient(c)==='nuevos') },
-    recargo:    { label:'Late Fee',   desc:'35-65 days — $30 applied',    color:'#e74c3c', bg:'rgba(231,76,60,0.1)',   cards: cards.filter(c=>classifyClient(c)==='recargo') },
-    cancelados: { label:'Cancelarled',  desc:'66+ days without payment',    color:'#c0392b', bg:'rgba(192,57,43,0.1)',   cards: cards.filter(c=>classifyClient(c)==='cancelados') },
+    vip:        { label:'VIP 🌟',     desc:'20+ compras',          color:'#E87828', bg:'rgba(232,120,40,0.12)', cards: cards.filter(c=>classifyClient(c)==='vip') },
+    fieles:     { label:'Fieles',     desc:'10–19 compras',        color:'#2d8a60', bg:'rgba(45,138,96,0.1)',   cards: cards.filter(c=>classifyClient(c)==='regulares') },
+    regulares:  { label:'Regulares',  desc:'5–9 compras',          color:'#3498db', bg:'rgba(52,152,219,0.1)',  cards: cards.filter(c=>classifyClient(c)==='activos') },
+    nuevos:     { label:'Nuevos 🎉',  desc:'1–4 compras',          color:'#8e44ad', bg:'rgba(142,68,173,0.1)',  cards: cards.filter(c=>classifyClient(c)==='nuevos') },
+    dormidos:   { label:'Te extrañamos 💌', desc:'Sin visita en 60+ días', color:'#6B4F3A', bg:'rgba(107,79,58,0.1)',  cards: cards.filter(c=>{const d=getDaysSinceLastPurchase(c);return d!==null&&d>=60}) },
   }
   const defaultMessages = {
-    vip:        'Hi [name]! Thank you for being a VIP at [business]. Your loyalty means everything to us 🙌',
-    regulares:  'Hi [name]! You keep adding up at [business]. Every payment gets you closer to your next reward 💪',
-    activos:    'Hi [name]! You have stamps saved at [business]. Keep it up, you\'re doing great! ⭐',
-    nuevos:     'Hi [name]! Welcome to [business]. You started your loyalty card, let\'s get more! 🎉',
-    recargo:    'Hi [name], you have a pending balance at [business]. Getting current avoids suspension. Thank you!',
-    cancelados: 'Hi [name], your service at [business] is suspended due to non-payment. Contact us to reactivate. We\'re here to help!',
+    vip:       '¡Hola [name]! Gracias por ser nuestra clienta favorita en Monarca de Azúcar 🦋 Tenemos algo especial para ti esta semana.',
+    fieles:    '¡Hola [name]! Cada visita a Monarca de Azúcar nos alegra el día 🍰 Ven pronto, recién sacamos pan del horno.',
+    regulares: '¡Hola [name]! Te esperamos en Monarca de Azúcar ✨ Estás muy cerca de tu próximo premio.',
+    nuevos:    '¡Bienvenida [name] a Monarca de Azúcar! 🎉 Empezaste tu tarjeta — sigue visitándonos y acumula sellos para ganar recompensas.',
+    dormidos:  '¡Hola [name]! Te extrañamos en Monarca de Azúcar 💌 Ven a visitarnos — el café y los pasteles están esperando por ti.',
   }
   function selectGroup(key){setSelectedGroup(key);setMessage(defaultMessages[key]);setSent(false)}
   const group=selectedGroup?groups[selectedGroup]:null
@@ -4121,7 +4108,9 @@ export default function Admin({session}){
       <div style={{background:'#F4EDDD',minHeight:'100vh',fontFamily:ff,paddingBottom:70}}>
         <div style={{background:ink,position:'fixed',top:0,left:0,right:0,zIndex:100,minHeight:52,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'env(safe-area-inset-top,0px) 1.25rem 0',borderBottom:'1px solid rgba(232,120,40,0.15)'}}>
           <div style={{display:'flex',alignItems:'center',gap:'0.65rem'}}>
-            <img src="/logo-badge.svg" alt="Monarca de Azúcar" style={{width:34,height:34,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>
+            <div style={{display:'grid',placeItems:'center',width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#2A1209 0%,#3D1A0A 100%)',color:'#E87828',boxShadow:'0 2px 10px rgba(232,120,40,0.35)',flexShrink:0}}>
+                <svg viewBox="0 0 48 48" fill="none" width={20} height={20}><path d="M24 8c-2 6-6 10-14 12 6 2 10 4 14 8 4-4 8-6 14-8-8-2-12-6-14-12z" fill="currentColor" opacity="0.9"/><path d="M24 40c-2-4-6-6-12-8 4-1 8 0 12 3 4-3 8-4 12-3-6 2-10 4-12 8z" fill="currentColor" opacity="0.6"/><circle cx="24" cy="20" r="1.5" fill="currentColor"/></svg>
+              </div>
             <div>
               <div style={{fontFamily:ffS,fontSize:'0.95rem',fontWeight:500,color:white,letterSpacing:'0.08em',textTransform:'uppercase',lineHeight:1}}>Monarca de Azúcar</div>
               <div style={{fontFamily:ff,fontSize:'0.5rem',color:'rgba(255,255,255,0.3)',letterSpacing:'0.15em',textTransform:'uppercase',marginTop:'0.15rem'}}>Admin</div>
@@ -4156,8 +4145,9 @@ export default function Admin({session}){
             {/* NEGOCIO */}
             <div style={{padding:'0.75rem 0 0.25rem'}}>
               <div style={{fontSize:'0.5rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',padding:'0 1.25rem',marginBottom:'0.35rem'}}>Negocio</div>
-              {[['dashboard','Resumen'],['clients','Clientes'],['bookings','Órdenes'],['cards','Tarjetas'],['punch','Sellar visita'],['campaigns','Campañas']].map(([id,label])=>(
+              {[['dashboard','📊','Hoy'],['clients','👥','Clientes'],['cards','🎟','Tarjetas'],['punch','⭐','Sellar visita'],['campaigns','📣','Campañas']].map(([id,icon,label])=>(
                 <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(232,120,40,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
+                  <span style={{fontSize:'0.85rem',lineHeight:1}}>{icon}</span>
                   <span style={{fontSize:'0.72rem',color:panel===id?gold:'rgba(255,255,255,0.7)'}}>{label}</span>
                 </button>
               ))}
@@ -4168,18 +4158,18 @@ export default function Admin({session}){
             {/* OPERACIÓN */}
             <div style={{padding:'0.25rem 0'}}>
               <div style={{fontSize:'0.5rem',letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.22)',padding:'0 1.25rem',marginBottom:'0.35rem'}}>Operación</div>
-              {[['system','Configuración'],['catalog','Catálogo'],['supplies','Inventario'],['website','Website'],['push','Notificaciones'],['vlog','Vlog'],['notifications','Alertas']].map(([id,label])=>(
+              {[['catalog','🍰','Catálogo'],['stock','🌾','Producción'],['supplies','📦','Inventario'],['website','🌐','Website'],['push','🔔','Notificaciones'],['vlog','📝','Publicaciones'],['system','⚙️','Configuración']].map(([id,icon,label])=>(
                 <button key={id} onClick={()=>setPanel(id)} style={{display:'flex',alignItems:'center',gap:'0.6rem',padding:'0.65rem 1.25rem',width:'100%',background:panel===id?'rgba(232,120,40,0.1)':'none',border:'none',borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',cursor:'pointer',textAlign:'left',fontFamily:ff}}>
+                  <span style={{fontSize:'0.85rem',lineHeight:1}}>{icon}</span>
                   <span style={{fontSize:'0.72rem',color:panel===id?gold:'rgba(255,255,255,0.7)'}}>{label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Powered by */}
+            {/* Footer brand */}
             <div style={{marginTop:'auto',padding:'1rem 1.25rem',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
               <button onClick={()=>setShowDevTools(true)} style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'left',width:'100%'}}>
-                <div style={{fontSize:'0.48rem',color:'rgba(255,255,255,0.15)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'0.2rem'}}>Powered by</div>
-                <div style={{fontSize:'0.62rem',color:'rgba(255,255,255,0.22)',fontFamily:ffS}}>A<span style={{color:'rgba(232,120,40,0.4)'}}>+</span> CRM</div>
+                <div style={{fontSize:'0.52rem',color:'rgba(255,255,255,0.2)',letterSpacing:'0.12em',textTransform:'uppercase',fontFamily:ffS}}>Monarca de Azúcar</div>
               </button>
             </div>
           </div>
@@ -4361,25 +4351,19 @@ export default function Admin({session}){
         {/* MOBILE NAV */}
         <div className="mobile-nav">
           {[
-            ['dashboard','Resumen'],
-            ['bookings','Órdenes'],
-          ].map(([id,label])=>(
+            ['dashboard','📊','Hoy'],
+            ['clients','👥','Clientes'],
+            ['catalog','🍰','Productos'],
+            ['supplies','📦','Inventario'],
+          ].map(([id,icon,label])=>(
             <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
               className={panel===id?'active':''}>
-              {label}
-            </button>
-          ))}
-
-          {[
-            ['clients','Clientes'],
-          ].map(([id,label])=>(
-            <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
-              className={panel===id?'active':''}>
+              <span style={{fontSize:'1rem'}}>{icon}</span>
               {label}
             </button>
           ))}
           <button onClick={()=>setHamburgerOpen(o=>!o)}
-            className={hamburgerOpen||['clients','campaigns','catalog','supplies','system','bookings'].includes(panel)?'active':''}
+            className={hamburgerOpen||['cards','punch','campaigns','stock','website','push','vlog','system'].includes(panel)?'active':''}
             style={{border:'1px solid rgba(232,120,40,0.35)',borderRadius:4,margin:'0.35rem 0.15rem',padding:'0.2rem 0.6rem',background:hamburgerOpen?'rgba(232,120,40,0.12)':'transparent'}}>
             <span style={{fontSize:'1.15rem',lineHeight:1,display:'block'}}>☰</span>
           </button>
@@ -4394,23 +4378,23 @@ export default function Admin({session}){
               paddingBottom:'calc(52px + env(safe-area-inset-bottom,16px))'}}>
               <div style={{width:36,height:3,background:'rgba(255,255,255,0.15)',borderRadius:2,margin:'0.75rem auto 0.5rem'}}/>
               {[
-                ['cards','Tarjetas'],
-                ['punch','Sellar visita'],
-                ['campaigns','Campañas'],
-                ['website','Website'],
-                ['push','Notificaciones'],
-                ['vlog','Vlog'],
-                ['catalog','Catálogo'],
-                ['supplies','Inventario'],
-                ['system','Configuración'],
-              ].map(([id,label])=>(
+                ['cards','🎟','Tarjetas'],
+                ['punch','⭐','Sellar visita'],
+                ['campaigns','📣','Campañas'],
+                ['stock','🌾','Producción'],
+                ['website','🌐','Website'],
+                ['push','🔔','Notificaciones'],
+                ['vlog','📝','Publicaciones'],
+                ['system','⚙️','Configuración'],
+              ].map(([id,icon,label])=>(
                 <button key={id} onClick={()=>{setPanel(id);setHamburgerOpen(false)}}
-                  style={{display:'flex',alignItems:'center',width:'100%',padding:'0.9rem 1.5rem',
+                  style={{display:'flex',alignItems:'center',gap:'0.75rem',width:'100%',padding:'0.9rem 1.5rem',
                     background:panel===id?'rgba(232,120,40,0.08)':'none',border:'none',
                     borderLeft:panel===id?'2px solid '+gold:'2px solid transparent',
                     color:panel===id?gold:'rgba(255,255,255,0.65)',
                     fontFamily:ff,fontSize:'0.72rem',letterSpacing:'0.1em',textTransform:'uppercase',
                     cursor:'pointer',textAlign:'left'}}>
+                  <span style={{fontSize:'0.9rem'}}>{icon}</span>
                   {label}
                 </button>
               ))}
@@ -5012,7 +4996,7 @@ export default function Admin({session}){
               </div>
               <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(232,120,40,0.06)',borderRadius:12,border:'1px solid rgba(232,120,40,0.12)'}}>
                 <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(232,120,40,0.15)',border:'2px solid rgba(232,120,40,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                  <LogoButterfly size={32}/>
+                  <svg viewBox="0 0 48 48" fill="none" width={32} height={32} style={{color:'#E87828'}}><path d="M24 8c-2 6-6 10-14 12 6 2 10 4 14 8 4-4 8-6 14-8-8-2-12-6-14-12z" fill="currentColor" opacity="0.9"/><path d="M24 40c-2-4-6-6-12-8 4-1 8 0 12 3 4-3 8-4 12-3-6 2-10 4-12 8z" fill="currentColor" opacity="0.6"/><circle cx="24" cy="20" r="1.5" fill="currentColor"/></svg>
                 </div>
                 <div style={{flex:1}}>
                   <div style={{fontFamily:ffS,fontSize:'1.1rem',color:black}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
@@ -5104,7 +5088,7 @@ export default function Admin({session}){
               {/* Avatar */}
               <div style={{display:'flex',alignItems:'center',gap:'1rem',marginBottom:'1.5rem',padding:'1rem',background:'rgba(232,120,40,0.06)',borderRadius:12,border:'1px solid rgba(232,120,40,0.12)'}}>
                 <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(232,120,40,0.15)',border:'2px solid rgba(232,120,40,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',overflow:'hidden'}}>
-                  <LogoButterfly size={32}/>
+                  <svg viewBox="0 0 48 48" fill="none" width={32} height={32} style={{color:'#E87828'}}><path d="M24 8c-2 6-6 10-14 12 6 2 10 4 14 8 4-4 8-6 14-8-8-2-12-6-14-12z" fill="currentColor" opacity="0.9"/><path d="M24 40c-2-4-6-6-12-8 4-1 8 0 12 3 4-3 8-4 12-3-6 2-10 4-12 8z" fill="currentColor" opacity="0.6"/><circle cx="24" cy="20" r="1.5" fill="currentColor"/></svg>
                 </div>
                 <div style={{flex:1}}>
                   <div style={{fontFamily:ffS,fontSize:'1.1rem',color:black}}>{users.find(u=>u.id===session?.user?.id)?.full_name||'Admin'}</div>
