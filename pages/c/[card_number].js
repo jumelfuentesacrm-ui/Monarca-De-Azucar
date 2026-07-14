@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 
-const or='#E35A1B', ink='#1F140E', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE', mu='#7A6452'
+const or='#E87828', ink='#1F140E', cr='#FBF7EE', cr2='#F4EDDD', cr3='#EDE3CE', mu='#7A6452'
 const ff='"DM Sans",system-ui,sans-serif'
-const ffS='"Instrument Serif",serif'
+const ffS='"Raleway",sans-serif'
 
 function Mariposa({ size=28, animate=false, color=or, stroke=ink }) {
   return (
@@ -82,7 +82,7 @@ export default function PublicCard() {
 
   if (loading) return (
     <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:cr,gap:16}}>
-      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
       <Mariposa size={52} animate={true} color={or} stroke={ink}/>
       <div style={{fontFamily:ffS,fontSize:'1.1rem',color:mu,fontStyle:'italic'}}>Cargando tu tarjeta…</div>
     </div>
@@ -90,7 +90,7 @@ export default function PublicCard() {
 
   if (error) return (
     <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:cr,gap:16}}>
-      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
       <Mariposa size={48} animate={false} color="rgba(31,20,14,0.15)" stroke="rgba(31,20,14,0.15)"/>
       <div style={{fontFamily:ffS,fontSize:'1.4rem',color:ink,textAlign:'center'}}>Tarjeta no encontrada</div>
       <p style={{fontSize:'0.78rem',color:mu,textAlign:'center',maxWidth:280}}>Verifica el código QR e intenta de nuevo.</p>
@@ -104,7 +104,7 @@ export default function PublicCard() {
 
   return (
     <>
-      <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0}
         body{background:${cr};font-family:${ff}}

@@ -6,7 +6,10 @@ export default function App({ Component, pageProps }) {
   const [session, setSession] = useState(undefined)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const fallback = new Promise(resolve =>
+      setTimeout(() => resolve({ data: { session: null } }), 4000)
+    )
+    Promise.race([supabase.auth.getSession(), fallback]).then(({ data: { session } }) => {
       setSession(session)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
